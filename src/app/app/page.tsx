@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, CircleDollarSign, ReceiptText, Scale, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, CircleDollarSign, Scale, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import styles from "@/components/live.module.css";
@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
+
+type LedgerLine = { journal_entry_id: string; company_account_id: string; debit: number | string; credit: number | string };
+type LedgerAccount = { id: string; code: string; account_type: string };
 
 function money(value: number, currency = "EUR") {
   return new Intl.NumberFormat("en-LU", {
@@ -22,24 +25,64 @@ export default async function LiveOverviewPage() {
 
   const year = new Date().getFullYear();
   const supabase = await createClient();
-  const { data: transactions, error } = await supabase
-    .from("source_transactions")
-    .select("id,occurred_on,direction,amount_gross,amount_net,vat_amount,currency,counterparty_name,description,classification_status")
-    .eq("company_id", workspace.company.id)
-    .gte("occurred_on", `${year}-01-01`)
-    .lte("occurred_on", `${year}-12-31`)
-    .order("occurred_on", { ascending: false });
+  const [{ data: transactions, error }, { data: entryData, error: entryError }, { data: accountData, error: accountError }] = await Promise.all([
+    supabase
+      .from("source_transactions")
+      .select("id,occurred_on,direction,amount_gross,amount_net,vat_amount,currency,counterparty_name,description,classification_status")
+      .eq("company_id", workspace.company.id)
+      .gte("occurred_on", `${year}-01-01`)
+      .lte("occurred_on", `${year}-12-31`)
+      .order("occurred_on", { ascending: false }),
+    supabase
+      .from("journal_entries")
+      .select("id,entry_number")
+      .eq("company_id", workspace.company.id)
+      .eq("status", "posted")
+      .gte("entry_date", `${year}-01-01`)
+      .lte("entry_date", `${year}-12-31`),
+    supabase
+      .from("company_accounts")
+      .select("id,code,account_type")
+      .eq("company_id", workspace.company.id),
+  ]);
 
   if (error) throw new Error(`Could not load bookkeeping data: ${error.message}`);
+  if (entryError) throw new Error(`Could not load posted ledger: ${entryError.message}`);
+  if (accountError) throw new Error(`Could not load chart of accounts: ${accountError.message}`);
 
   const rows = transactions ?? [];
+  const postedEntries = entryData ?? [];
+  const accounts = (accountData ?? []) as LedgerAccount[];
+  const accountMap = new Map(accounts.map((account) => [account.id, account]));
+  let ledgerLines: LedgerLine[] = [];
+
+  if (postedEntries.length > 0) {
+    const { data: lineData, error: lineError } = await supabase
+      .from("journal_lines")
+      .select("journal_entry_id,company_account_id,debit,credit")
+      .in("journal_entry_id", postedEntries.map((entry) => entry.id));
+    if (lineError) throw new Error(`Could not load ledger balances: ${lineError.message}`);
+    ledgerLines = (lineData ?? []) as LedgerLine[];
+  }
+
   let revenue = 0;
   let expenses = 0;
   let outputVat = 0;
   let inputVat = 0;
-  let attention = 0;
 
-  for (const row of rows) {
+  for (const line of ledgerLines) {
+    const account = accountMap.get(line.company_account_id);
+    if (!account) continue;
+    const debit = Number(line.debit);
+    const credit = Number(line.credit);
+    if (account.account_type === "revenue") revenue += credit - debit;
+    if (account.account_type === "expense") expenses += debit - credit;
+    if (account.code === "461411") outputVat += credit - debit;
+    if (account.code === "421611") inputVat += debit - credit;
+  }
+
+  const pendingRows = rows.filter((row) => row.classification_status !== "posted");
+  for (const row of pendingRows) {
     const net = Number(row.amount_net ?? row.amount_gross ?? 0);
     const vat = Number(row.vat_amount ?? 0);
     if (row.direction === "income") {
@@ -49,18 +92,18 @@ export default async function LiveOverviewPage() {
       expenses += net;
       inputVat += vat;
     }
-    if (["unclassified", "review"].includes(row.classification_status)) attention += 1;
   }
 
+  const attention = pendingRows.length;
   const profit = revenue - expenses;
   const vatPosition = outputVat - inputVat;
   const currency = workspace.company.base_currency || "EUR";
   const recent = rows.slice(0, 6);
 
   const metrics = [
-    { label: "Recorded revenue", value: money(revenue, currency), meta: `${rows.filter((r) => r.direction === "income").length} income entries`, icon: ArrowUpRight, tone: styles.positive },
-    { label: "Recorded expenses", value: money(expenses, currency), meta: `${rows.filter((r) => r.direction === "expense").length} expense entries`, icon: ArrowDownLeft, tone: "" },
-    { label: "Provisional profit", value: money(profit, currency), meta: "Before closing and tax adjustments", icon: Scale, tone: profit >= 0 ? styles.positive : styles.warning },
+    { label: "Revenue", value: money(revenue, currency), meta: `${postedEntries.length} posted entries · ${attention} provisional`, icon: ArrowUpRight, tone: styles.positive },
+    { label: "Expenses", value: money(expenses, currency), meta: "Assets stop affecting P&L once classified", icon: ArrowDownLeft, tone: "" },
+    { label: "Provisional profit", value: money(profit, currency), meta: "Posted ledger + activity awaiting review", icon: Scale, tone: profit >= 0 ? styles.positive : styles.warning },
     { label: "VAT position", value: money(vatPosition, currency), meta: vatPosition >= 0 ? "Provisional amount payable" : "Provisional credit", icon: CircleDollarSign, tone: vatPosition > 0 ? styles.warning : styles.positive },
   ];
 
@@ -70,9 +113,9 @@ export default async function LiveOverviewPage() {
         <div>
           <p className={styles.eyebrow}>Live books · {year}</p>
           <h1>Your company, in real time.</h1>
-          <p>These figures are calculated from your recorded business activity. They remain provisional until transactions are classified and posted to the accounting ledger.</p>
+          <p>Posted entries come from the double-entry ledger. Activity still awaiting classification remains visible as provisional so nothing disappears from your operating view.</p>
         </div>
-        <span className={styles.liveBadge}><i className={styles.pulse} />Supabase live workspace</span>
+        <span className={styles.liveBadge}><i className={styles.pulse} />Live accounting workspace</span>
       </div>
 
       <section className={styles.metricGrid}>
@@ -95,7 +138,7 @@ export default async function LiveOverviewPage() {
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}><WalletCards size={20} /></div>
               <h3>Your ledger starts with one transaction.</h3>
-              <p>Add an income or expense entry. Compta will immediately update your revenue, expenses, provisional profit and VAT position.</p>
+              <p>Add an income or expense entry. Compta will immediately surface it, then convert it into accounting once reviewed.</p>
               <Link href="/app/transactions" className={styles.actionLink}>Record first transaction <ArrowRight size={14} /></Link>
             </div>
           ) : (
@@ -109,7 +152,7 @@ export default async function LiveOverviewPage() {
                     </span>
                     <span className={styles.transactionCopy}><strong>{row.counterparty_name || row.description || (income ? "Income" : "Expense")}</strong><small>{new Date(`${row.occurred_on}T12:00:00`).toLocaleDateString("en-LU", { day: "2-digit", month: "short", year: "numeric" })}{row.vat_amount ? ` · VAT ${money(Number(row.vat_amount), row.currency)}` : ""}</small></span>
                     <span className={styles.amount}>{income ? "+" : "−"}{money(Number(row.amount_gross), row.currency)}</span>
-                    <span className={`${styles.status} ${["unclassified", "review"].includes(row.classification_status) ? styles.statusReview : ""}`}>{row.classification_status}</span>
+                    <span className={`${styles.status} ${row.classification_status !== "posted" ? styles.statusReview : styles.postedStatus}`}>{row.classification_status}</span>
                   </div>
                 );
               })}
@@ -120,13 +163,13 @@ export default async function LiveOverviewPage() {
         <aside className={`${styles.panel} ${styles.healthCard}`}>
           <p className={styles.eyebrow}>Accounting readiness</p>
           <h2>{attention === 0 ? "Nothing needs review." : `${attention} ${attention === 1 ? "item" : "items"} need review.`}</h2>
-          <p>Source transactions stay editable while you work. Once classified and posted, the journal becomes immutable and corrections use reversal entries.</p>
+          <p>Source transactions stay editable while you work. Once classified and posted, both the journal and linked source evidence are protected from silent edits.</p>
           <div className={styles.healthScore}><strong>{rows.length === 0 ? 0 : Math.round(((rows.length - attention) / rows.length) * 100)}</strong><span>% classified</span></div>
           <div className={styles.healthTrack}><span style={{ width: `${rows.length === 0 ? 0 : Math.round(((rows.length - attention) / rows.length) * 100)}%` }} /></div>
           <div className={styles.healthMeta}>
             <span><span>Transactions recorded</span><strong>{rows.length}</strong></span>
             <span><span>Needs review</span><strong>{attention}</strong></span>
-            <span><span>Posted entries</span><strong>{rows.filter((r) => r.classification_status === "posted").length}</strong></span>
+            <span><span>Posted journal entries</span><strong>{postedEntries.length}</strong></span>
           </div>
         </aside>
       </section>

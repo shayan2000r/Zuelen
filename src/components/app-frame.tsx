@@ -27,7 +27,7 @@ const nav = [
   { label: "Overview", icon: LayoutDashboard, href: "/app" },
   { label: "Transactions", icon: WalletCards, href: "/app/transactions" },
   { label: "Invoices", icon: ReceiptText, href: undefined },
-  { label: "Accounting", icon: BookOpen, href: undefined },
+  { label: "Accounting", icon: BookOpen, href: "/app/accounting" },
   { label: "Taxes", icon: Landmark, href: undefined },
   { label: "Compliance", icon: FileCheck2, href: undefined },
   { label: "Documents", icon: FileText, href: undefined },
@@ -58,6 +58,7 @@ export function AppFrame({
   const pathname = usePathname();
   const [mobileNav, setMobileNav] = useState(false);
   const userLabel = useMemo(() => email?.split("@")[0] ?? "Owner", [email]);
+  const section = pathname.startsWith("/app/transactions") ? "Transactions" : pathname.startsWith("/app/accounting") ? "Accounting" : "Overview";
 
   return (
     <main className="app-shell">
@@ -129,7 +130,7 @@ export function AppFrame({
         <header className="topbar">
           <div className="topbar-left">
             <button className="icon-btn mobile-only" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={19} /></button>
-            <div className="crumb"><Building2 size={15} /><span>{companyName}</span><span>/</span><strong>{pathname.includes("transactions") ? "Transactions" : "Overview"}</strong></div>
+            <div className="crumb"><Building2 size={15} /><span>{companyName}</span><span>/</span><strong>{section}</strong></div>
           </div>
           <div className="topbar-actions">
             <button className="search-btn" type="button"><Search size={16} /><span>Search Compta</span><kbd>⌘ K</kbd></button>
