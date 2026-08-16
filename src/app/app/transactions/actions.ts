@@ -56,7 +56,6 @@ export async function createSourceTransaction(
   });
 
   if (error) return { status: "error", message: error.message };
-
   revalidatePath("/app");
   revalidatePath("/app/transactions");
   return { status: "success", message: "Transaction recorded. It is ready for accounting review." };
@@ -71,10 +70,7 @@ export async function postSourceTransaction(
 
   const sourceTransactionId = String(formData.get("source_transaction_id") ?? "").trim();
   const accountCode = String(formData.get("account_code") ?? "").trim();
-
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceTransactionId)) {
-    return { status: "error", message: "The transaction reference is invalid." };
-  }
+  if (!/^[0-9a-f-]{36}$/i.test(sourceTransactionId)) return { status: "error", message: "The transaction reference is invalid." };
   if (!/^\d{3,6}$/.test(accountCode)) return { status: "error", message: "Choose a valid accounting category." };
 
   const supabase = await createClient();
@@ -87,9 +83,65 @@ export async function postSourceTransaction(
   revalidatePath("/app");
   revalidatePath("/app/transactions");
   revalidatePath("/app/accounting");
-  return {
-    status: "success",
-    message: "Posted successfully. The journal entry is now immutable.",
-    journalEntryId: typeof data === "string" ? data : undefined,
-  };
+  return { status: "success", message: "Posted successfully. The journal entry is now immutable.", journalEntryId: typeof data === "string" ? data : undefined };
+}
+
+export async function editSourceTransactionAction(
+  _previous: TransactionActionState,
+  formData: FormData,
+): Promise<TransactionActionState> {
+  const workspace = await getWorkspace();
+  if (!workspace.authenticated || !workspace.company) return { status: "error", message: "Your session expired. Please sign in again." };
+
+  const id = String(formData.get("source_transaction_id") ?? "");
+  const occurredOn = String(formData.get("occurred_on") ?? "");
+  const direction = String(formData.get("direction") ?? "");
+  const gross = Number(formData.get("amount_gross"));
+  const vat = Number(formData.get("vat_amount") || 0);
+  const counterparty = String(formData.get("counterparty_name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { status: "error", message: "Invalid transaction." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) return { status: "error", message: "Choose a valid transaction date." };
+  if (!["income", "expense"].includes(direction)) return { status: "error", message: "Choose income or expense." };
+  if (!Number.isFinite(gross) || gross <= 0) return { status: "error", message: "Gross amount must be greater than zero." };
+  if (!Number.isFinite(vat) || vat < 0 || vat > gross) return { status: "error", message: "VAT must be between zero and gross amount." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_source_transaction_safe", {
+    p_source_transaction_id: id,
+    p_occurred_on: occurredOn,
+    p_direction: direction,
+    p_amount_gross: gross,
+    p_vat_amount: vat,
+    p_counterparty_name: counterparty || null,
+    p_description: description || null,
+  });
+  if (error) return { status: "error", message: error.message };
+
+  revalidatePath("/app");
+  revalidatePath("/app/transactions");
+  revalidatePath("/app/accounting");
+  revalidatePath("/app/taxes");
+  return { status: "success", message: "Transaction updated." };
+}
+
+export async function deleteSourceTransactionAction(
+  _previous: TransactionActionState,
+  formData: FormData,
+): Promise<TransactionActionState> {
+  const workspace = await getWorkspace();
+  if (!workspace.authenticated || !workspace.company) return { status: "error", message: "Your session expired. Please sign in again." };
+  const id = String(formData.get("source_transaction_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { status: "error", message: "Invalid transaction." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_source_transaction_safe", { p_source_transaction_id: id });
+  if (error) return { status: "error", message: error.message };
+
+  revalidatePath("/app");
+  revalidatePath("/app/transactions");
+  revalidatePath("/app/accounting");
+  revalidatePath("/app/taxes");
+  return { status: "success", message: "Transaction deleted from active books." };
 }
