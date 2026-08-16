@@ -32,7 +32,7 @@ export async function getWorkspace(): Promise<Workspace> {
     };
   }
 
-  const email = typeof claims.email === "string" ? claims.email : null;
+  const email = typeof claims?.email === "string" ? claims.email : null;
   const { data: organization } = await supabase
     .from("organizations")
     .select("id,name,slug")
