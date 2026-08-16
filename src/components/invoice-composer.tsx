@@ -4,7 +4,7 @@ import { ArrowLeft, BadgeCheck, FileCheck2, LoaderCircle, Plus, Send, Trash2 } f
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { createAndIssueInvoice, initialInvoiceState } from "@/app/app/invoices/actions";
+import { createAndIssueInvoice, type InvoiceActionState } from "@/app/app/invoices/actions";
 import styles from "./invoice.module.css";
 
 type Company = {
@@ -18,18 +18,17 @@ type Company = {
 };
 
 type Line = { id: number; description: string; quantity: number; unit_price: number; vat_rate: number };
+const initialInvoiceState: InvoiceActionState = { status: "idle", message: "", invoiceId: null };
 
 function dateOffset(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
 }
-
 function addressValue(address: Record<string, unknown>, key: string) {
   const value = address[key];
   return typeof value === "string" ? value : "";
 }
-
 function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-LU", { style: "currency", currency, minimumFractionDigits: 2 }).format(value);
 }
@@ -43,35 +42,22 @@ export function InvoiceComposer({ company }: { company: Company }) {
   const [customerPostal, setCustomerPostal] = useState("");
   const [customerCity, setCustomerCity] = useState("");
   const [customerCountry, setCustomerCountry] = useState("LU");
-  const [lines, setLines] = useState<Line[]>([
-    { id: 1, description: "Website design & development", quantity: 1, unit_price: 1490, vat_rate: 17 },
-  ]);
+  const [lines, setLines] = useState<Line[]>([{ id: 1, description: "Professional services", quantity: 1, unit_price: 0, vat_rate: 17 }]);
 
   useEffect(() => {
     if (state.status === "success" && state.invoiceId) router.push(`/app/invoices/${state.invoiceId}`);
   }, [router, state.invoiceId, state.status]);
 
-  const serializedLines = useMemo(
-    () => lines.map((line) => ({ ...line, vat_rate: vatTreatment === "eu_b2b_reverse_charge" ? 0 : Number(line.vat_rate) })),
-    [lines, vatTreatment],
-  );
+  const serializedLines = useMemo(() => lines.map((line) => ({ ...line, vat_rate: vatTreatment === "eu_b2b_reverse_charge" ? 0 : Number(line.vat_rate) })), [lines, vatTreatment]);
   const totals = useMemo(() => serializedLines.reduce((acc, line) => {
     const net = Number(line.quantity || 0) * Number(line.unit_price || 0);
     const vat = net * Number(line.vat_rate || 0) / 100;
     return { net: acc.net + net, vat: acc.vat + vat, gross: acc.gross + net + vat };
   }, { net: 0, vat: 0, gross: 0 }), [serializedLines]);
 
-  function updateLine(index: number, patch: Partial<Line>) {
-    setLines((current) => current.map((line, i) => i === index ? { ...line, ...patch } : line));
-  }
-
-  function addLine() {
-    setLines((current) => [...current, { id: Date.now(), description: "", quantity: 1, unit_price: 0, vat_rate: 17 }]);
-  }
-
-  function removeLine(index: number) {
-    setLines((current) => current.length === 1 ? current : current.filter((_, i) => i !== index));
-  }
+  function updateLine(index: number, patch: Partial<Line>) { setLines((current) => current.map((line, i) => i === index ? { ...line, ...patch } : line)); }
+  function addLine() { setLines((current) => [...current, { id: Date.now(), description: "", quantity: 1, unit_price: 0, vat_rate: 17 }]); }
+  function removeLine(index: number) { setLines((current) => current.length === 1 ? current : current.filter((_, i) => i !== index)); }
 
   const issuerStreet = addressValue(company.registered_address, "street");
   const issuerPostal = addressValue(company.registered_address, "postal_code");
@@ -80,29 +66,20 @@ export function InvoiceComposer({ company }: { company: Company }) {
   return (
     <div className={styles.composerShell}>
       <form action={formAction} className={styles.composerForm}>
-        <div className={styles.formTop}>
-          <Link href="/app/invoices" className={styles.backLink}><ArrowLeft size={14} />Invoices</Link>
-          <span className={styles.legalReady}><BadgeCheck size={13} />LU invoice profile ready</span>
-        </div>
-        <div className={styles.composerHeading}>
-          <p>Issue invoice</p>
-          <h1>Turn work into receivables.</h1>
-          <span>Compta creates the document and the double-entry accounting at the same time.</span>
-        </div>
-
+        <div className={styles.formTop}><Link href="/app/invoices" className={styles.backLink}><ArrowLeft size={14} />Invoices</Link><span className={styles.legalReady}><BadgeCheck size={13} />LU invoice profile ready</span></div>
+        <div className={styles.composerHeading}><p>Issue invoice</p><h1>Turn work into receivables.</h1><span>Compta creates the document and the double-entry accounting at the same time.</span></div>
         <section className={styles.formSection}>
           <div className={styles.sectionTitle}><span>01</span><div><strong>Customer</strong><small>Who are you billing?</small></div></div>
           <div className={styles.formGrid}>
-            <label className={styles.full}><span>Customer / legal name</span><input name="customer_name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Generous Minds B.V." required /></label>
-            <label><span>Email</span><input name="customer_email" type="email" placeholder="finance@client.com" /></label>
+            <label className={styles.full}><span>Customer / legal name</span><input name="customer_name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Example Client S.A." required /></label>
+            <label><span>Email</span><input name="customer_email" type="email" placeholder="billing@client.com" /></label>
             <label><span>Country</span><input name="customer_country" value={customerCountry} onChange={(event) => setCustomerCountry(event.target.value.toUpperCase().slice(0, 2))} placeholder="LU" maxLength={2} required /></label>
-            <label className={styles.full}><span>Billing street</span><input name="customer_street" value={customerStreet} onChange={(event) => setCustomerStreet(event.target.value)} placeholder="12 avenue de la Gare" required /></label>
-            <label><span>Postal code</span><input name="customer_postal_code" value={customerPostal} onChange={(event) => setCustomerPostal(event.target.value)} placeholder="L-1610" required /></label>
+            <label className={styles.full}><span>Billing street</span><input name="customer_street" value={customerStreet} onChange={(event) => setCustomerStreet(event.target.value)} placeholder="12 rue du Commerce" required /></label>
+            <label><span>Postal code</span><input name="customer_postal_code" value={customerPostal} onChange={(event) => setCustomerPostal(event.target.value)} placeholder="L-1234" required /></label>
             <label><span>City</span><input name="customer_city" value={customerCity} onChange={(event) => setCustomerCity(event.target.value)} placeholder="Luxembourg" required /></label>
             <label className={styles.full}><span>Customer VAT number</span><input name="customer_vat_number" placeholder={vatTreatment === "eu_b2b_reverse_charge" ? "Required for reverse charge" : "Optional for Luxembourg customer"} required={vatTreatment === "eu_b2b_reverse_charge"} /></label>
           </div>
         </section>
-
         <section className={styles.formSection}>
           <div className={styles.sectionTitle}><span>02</span><div><strong>Invoice logic</strong><small>Dates and VAT treatment</small></div></div>
           <div className={styles.formGrid}>
@@ -113,45 +90,31 @@ export function InvoiceComposer({ company }: { company: Company }) {
           </div>
           {vatTreatment === "eu_b2b_reverse_charge" ? <div className={styles.ruleNote}><FileCheck2 size={14} /><span>VAT is forced to 0% and “auto-liquidation” is added to the issued invoice.</span></div> : null}
         </section>
-
         <section className={styles.formSection}>
           <div className={styles.sectionTitle}><span>03</span><div><strong>Services</strong><small>What are you charging for?</small></div></div>
-          <div className={styles.lineEditor}>
-            {lines.map((line, index) => (
-              <div className={styles.editorLine} key={line.id}>
-                <label className={styles.lineDescription}><span>Description</span><input value={line.description} onChange={(event) => updateLine(index, { description: event.target.value })} placeholder="Service description" required /></label>
-                <label><span>Qty</span><input type="number" min="0.0001" step="0.0001" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} required /></label>
-                <label><span>Unit price</span><input type="number" min="0" step="0.01" value={line.unit_price} onChange={(event) => updateLine(index, { unit_price: Number(event.target.value) })} required /></label>
-                <label><span>VAT</span><select value={vatTreatment === "eu_b2b_reverse_charge" ? 0 : line.vat_rate} disabled={vatTreatment === "eu_b2b_reverse_charge"} onChange={(event) => updateLine(index, { vat_rate: Number(event.target.value) })}><option value={17}>17%</option><option value={14}>14%</option><option value={8}>8%</option><option value={3}>3%</option><option value={0}>0%</option></select></label>
-                <button type="button" className={styles.removeLine} onClick={() => removeLine(index)} aria-label="Remove line"><Trash2 size={14} /></button>
-              </div>
-            ))}
-          </div>
+          <div className={styles.lineEditor}>{lines.map((line, index) => (
+            <div className={styles.editorLine} key={line.id}>
+              <label className={styles.lineDescription}><span>Description</span><input value={line.description} onChange={(event) => updateLine(index, { description: event.target.value })} placeholder="Service description" required /></label>
+              <label><span>Qty</span><input type="number" min="0.0001" step="0.0001" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} required /></label>
+              <label><span>Unit price</span><input type="number" min="0" step="0.01" value={line.unit_price} onChange={(event) => updateLine(index, { unit_price: Number(event.target.value) })} required /></label>
+              <label><span>VAT</span><select value={vatTreatment === "eu_b2b_reverse_charge" ? 0 : line.vat_rate} disabled={vatTreatment === "eu_b2b_reverse_charge"} onChange={(event) => updateLine(index, { vat_rate: Number(event.target.value) })}><option value={17}>17%</option><option value={14}>14%</option><option value={8}>8%</option><option value={3}>3%</option><option value={0}>0%</option></select></label>
+              <button type="button" className={styles.removeLine} onClick={() => removeLine(index)} aria-label="Remove line"><Trash2 size={14} /></button>
+            </div>
+          ))}</div>
           <button type="button" className={styles.addLine} onClick={addLine}><Plus size={14} />Add line</button>
           <input type="hidden" name="lines_json" value={JSON.stringify(serializedLines)} />
           <label className={styles.notesField}><span>Notes</span><textarea name="notes" placeholder="Optional payment or project note" /></label>
         </section>
-
         {state.message ? <div className={`${styles.actionMessage} ${state.status === "error" ? styles.actionError : ""}`}>{state.message}</div> : null}
         <button className={styles.issueButton} type="submit" disabled={pending}>{pending ? <LoaderCircle size={16} className={styles.spin} /> : <Send size={15} />}<span>{pending ? "Issuing & posting…" : "Issue invoice & post ledger"}</span></button>
       </form>
-
       <aside className={styles.previewStage}>
         <div className={styles.previewToolbar}><span>Live document preview</span><span>DRAFT</span></div>
         <article className={styles.invoicePaper}>
-          <header className={styles.invoiceHeader}>
-            <div><div className={styles.paperBrand}>C</div><strong>{company.legal_name}</strong><small>{company.legal_form}</small></div>
-            <div className={styles.invoiceWord}><span>INVOICE</span><small>Number assigned on issue</small></div>
-          </header>
-          <div className={styles.invoiceMetaGrid}>
-            <div><span>FROM</span><strong>{company.legal_name}</strong><p>{issuerStreet}<br />{issuerPostal} {issuerCity}<br />Luxembourg</p></div>
-            <div><span>BILL TO</span><strong>{customerName || "Customer name"}</strong><p>{customerStreet || "Billing street"}<br />{customerPostal || "Postal"} {customerCity || "City"}<br />{customerCountry || "LU"}</p></div>
-          </div>
+          <header className={styles.invoiceHeader}><div><div className={styles.paperBrand}>C</div><strong>{company.legal_name}</strong><small>{company.legal_form}</small></div><div className={styles.invoiceWord}><span>INVOICE</span><small>Number assigned on issue</small></div></header>
+          <div className={styles.invoiceMetaGrid}><div><span>FROM</span><strong>{company.legal_name}</strong><p>{issuerStreet}<br />{issuerPostal} {issuerCity}<br />Luxembourg</p></div><div><span>BILL TO</span><strong>{customerName || "Customer name"}</strong><p>{customerStreet || "Billing street"}<br />{customerPostal || "Postal"} {customerCity || "City"}<br />{customerCountry || "LU"}</p></div></div>
           <div className={styles.previewDates}><div><span>ISSUE</span><strong>{dateOffset(0)}</strong></div><div><span>DUE</span><strong>{dateOffset(14)}</strong></div><div><span>CURRENCY</span><strong>{company.base_currency}</strong></div></div>
-          <div className={styles.previewTable}>
-            <div className={styles.previewTableHead}><span>DESCRIPTION</span><span>QTY</span><span>RATE</span><span>AMOUNT</span></div>
-            {serializedLines.map((line) => <div className={styles.previewTableRow} key={line.id}><span>{line.description || "Service"}<small>{line.vat_rate}% VAT</small></span><span>{line.quantity}</span><span>{money(line.unit_price, company.base_currency)}</span><strong>{money(line.quantity * line.unit_price, company.base_currency)}</strong></div>)}
-          </div>
+          <div className={styles.previewTable}><div className={styles.previewTableHead}><span>DESCRIPTION</span><span>QTY</span><span>RATE</span><span>AMOUNT</span></div>{serializedLines.map((line) => <div className={styles.previewTableRow} key={line.id}><span>{line.description || "Service"}<small>{line.vat_rate}% VAT</small></span><span>{line.quantity}</span><span>{money(line.unit_price, company.base_currency)}</span><strong>{money(line.quantity * line.unit_price, company.base_currency)}</strong></div>)}</div>
           <div className={styles.previewTotals}><div><span>Subtotal</span><strong>{money(totals.net, company.base_currency)}</strong></div><div><span>VAT</span><strong>{money(totals.vat, company.base_currency)}</strong></div><div className={styles.totalRow}><span>Total</span><strong>{money(totals.gross, company.base_currency)}</strong></div></div>
           {vatTreatment === "eu_b2b_reverse_charge" ? <div className={styles.reverseCharge}>AUTO-LIQUIDATION · REVERSE CHARGE</div> : null}
           <footer className={styles.invoiceFooter}><span>R.C.S. Luxembourg {company.rcs_number || "—"}</span><span>Autorisation {company.business_permit_number || "—"}</span><span>TVA {company.vat_number || "—"}</span></footer>

@@ -10,8 +10,6 @@ export type InvoiceActionState = {
   invoiceId: string | null;
 };
 
-export const initialInvoiceState: InvoiceActionState = { status: "idle", message: "", invoiceId: null };
-
 export async function createAndIssueInvoice(
   _previous: InvoiceActionState,
   formData: FormData,
@@ -34,18 +32,10 @@ export async function createAndIssueInvoice(
   const city = String(formData.get("customer_city") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
-  if (!customerName || !street || !postalCode || !city) {
-    return { status: "error", message: "Customer name and full billing address are required.", invoiceId: null };
-  }
-  if (!/^[A-Z]{2}$/.test(customerCountry)) {
-    return { status: "error", message: "Use a two-letter country code such as LU, FR or DE.", invoiceId: null };
-  }
-  if (![issueDate, serviceDate, dueDate].every((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))) {
-    return { status: "error", message: "Invoice, service and due dates are required.", invoiceId: null };
-  }
-  if (!["domestic", "eu_b2b_reverse_charge"].includes(vatTreatment)) {
-    return { status: "error", message: "Unsupported VAT treatment.", invoiceId: null };
-  }
+  if (!customerName || !street || !postalCode || !city) return { status: "error", message: "Customer name and full billing address are required.", invoiceId: null };
+  if (!/^[A-Z]{2}$/.test(customerCountry)) return { status: "error", message: "Use a two-letter country code such as LU, FR or DE.", invoiceId: null };
+  if (![issueDate, serviceDate, dueDate].every((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))) return { status: "error", message: "Invoice, service and due dates are required.", invoiceId: null };
+  if (!["domestic", "eu_b2b_reverse_charge"].includes(vatTreatment)) return { status: "error", message: "Unsupported VAT treatment.", invoiceId: null };
 
   let lines: unknown;
   try {
@@ -53,9 +43,7 @@ export async function createAndIssueInvoice(
   } catch {
     return { status: "error", message: "The invoice lines could not be read.", invoiceId: null };
   }
-  if (!Array.isArray(lines) || lines.length === 0) {
-    return { status: "error", message: "Add at least one invoice line.", invoiceId: null };
-  }
+  if (!Array.isArray(lines) || lines.length === 0) return { status: "error", message: "Add at least one invoice line.", invoiceId: null };
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_and_issue_service_invoice", {
