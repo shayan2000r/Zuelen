@@ -2,7 +2,7 @@
 
 import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Landmark, LoaderCircle, LockKeyhole } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
-import { initialTransactionState, postSourceTransaction } from "@/app/app/transactions/actions";
+import { postSourceTransaction, type TransactionActionState } from "@/app/app/transactions/actions";
 import styles from "./live.module.css";
 
 type Account = {
@@ -23,6 +23,8 @@ type Transaction = {
   counterparty_name: string | null;
   description: string | null;
 };
+
+const initialTransactionState: TransactionActionState = { status: "idle", message: "" };
 
 function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-LU", {
@@ -73,9 +75,7 @@ export function TransactionReviewCard({ transaction, accounts }: { transaction: 
         <label>
           <span>Accounting category</span>
           <select name="account_code" value={accountCode} onChange={(event) => setAccountCode(event.target.value)} disabled={pending || eligible.length === 0}>
-            {eligible.map((account) => (
-              <option value={account.code} key={account.id}>{account.code} · {account.label}</option>
-            ))}
+            {eligible.map((account) => <option value={account.code} key={account.id}>{account.code} · {account.label}</option>)}
           </select>
         </label>
 
