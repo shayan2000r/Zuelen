@@ -13,6 +13,10 @@ export type Workspace = {
     fiscal_year_start_month: number;
     vat_registered: boolean;
     vat_number: string | null;
+    rcs_number: string | null;
+    business_permit_number: string | null;
+    municipality: string | null;
+    registered_address: Record<string, unknown>;
   } | null;
 };
 
@@ -47,7 +51,7 @@ export async function getWorkspace(): Promise<Workspace> {
   const { data: company } = await supabase
     .from("companies")
     .select(
-      "id,legal_name,legal_form,base_currency,fiscal_year_start_month,vat_registered,vat_number",
+      "id,legal_name,legal_form,base_currency,fiscal_year_start_month,vat_registered,vat_number,rcs_number,business_permit_number,municipality,registered_address",
     )
     .eq("organization_id", organization.id)
     .order("created_at", { ascending: true })
@@ -59,6 +63,6 @@ export async function getWorkspace(): Promise<Workspace> {
     userId,
     email,
     organization,
-    company: company ?? null,
+    company: company ? { ...company, registered_address: (company.registered_address ?? {}) as Record<string, unknown> } : null,
   };
 }

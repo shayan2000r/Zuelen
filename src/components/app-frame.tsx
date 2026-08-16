@@ -26,7 +26,7 @@ import styles from "./live.module.css";
 const nav = [
   { label: "Overview", icon: LayoutDashboard, href: "/app" },
   { label: "Transactions", icon: WalletCards, href: "/app/transactions" },
-  { label: "Invoices", icon: ReceiptText, href: undefined },
+  { label: "Invoices", icon: ReceiptText, href: "/app/invoices" },
   { label: "Accounting", icon: BookOpen, href: "/app/accounting" },
   { label: "Taxes", icon: Landmark, href: undefined },
   { label: "Compliance", icon: FileCheck2, href: undefined },
@@ -58,7 +58,13 @@ export function AppFrame({
   const pathname = usePathname();
   const [mobileNav, setMobileNav] = useState(false);
   const userLabel = useMemo(() => email?.split("@")[0] ?? "Owner", [email]);
-  const section = pathname.startsWith("/app/transactions") ? "Transactions" : pathname.startsWith("/app/accounting") ? "Accounting" : "Overview";
+  const section = pathname.startsWith("/app/transactions")
+    ? "Transactions"
+    : pathname.startsWith("/app/invoices")
+      ? "Invoices"
+      : pathname.startsWith("/app/accounting")
+        ? "Accounting"
+        : "Overview";
 
   return (
     <main className="app-shell">
