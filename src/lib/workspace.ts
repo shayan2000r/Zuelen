@@ -12,6 +12,7 @@ export type Workspace = {
     base_currency: string;
     fiscal_year_start_month: number;
     vat_registered: boolean;
+    vat_filing_frequency: string | null;
     vat_number: string | null;
     rcs_number: string | null;
     business_permit_number: string | null;
@@ -25,44 +26,11 @@ export async function getWorkspace(): Promise<Workspace> {
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
   const claims = claimsData?.claims;
   const userId = typeof claims?.sub === "string" ? claims.sub : null;
+  if (claimsError || !userId) return { authenticated:false,userId:null,email:null,organization:null,company:null };
 
-  if (claimsError || !userId) {
-    return {
-      authenticated: false,
-      userId: null,
-      email: null,
-      organization: null,
-      company: null,
-    };
-  }
-
-  const email = typeof claims?.email === "string" ? claims.email : null;
-  const { data: organization } = await supabase
-    .from("organizations")
-    .select("id,name,slug")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (!organization) {
-    return { authenticated: true, userId, email, organization: null, company: null };
-  }
-
-  const { data: company } = await supabase
-    .from("companies")
-    .select(
-      "id,legal_name,legal_form,base_currency,fiscal_year_start_month,vat_registered,vat_number,rcs_number,business_permit_number,municipality,registered_address",
-    )
-    .eq("organization_id", organization.id)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  return {
-    authenticated: true,
-    userId,
-    email,
-    organization,
-    company: company ? { ...company, registered_address: (company.registered_address ?? {}) as Record<string, unknown> } : null,
-  };
+  const email=typeof claims?.email==="string"?claims.email:null;
+  const {data:organization}=await supabase.from("organizations").select("id,name,slug").order("created_at",{ascending:true}).limit(1).maybeSingle();
+  if(!organization)return{authenticated:true,userId,email,organization:null,company:null};
+  const {data:company}=await supabase.from("companies").select("id,legal_name,legal_form,base_currency,fiscal_year_start_month,vat_registered,vat_filing_frequency,vat_number,rcs_number,business_permit_number,municipality,registered_address").eq("organization_id",organization.id).order("created_at",{ascending:true}).limit(1).maybeSingle();
+  return{authenticated:true,userId,email,organization,company:company?{...company,registered_address:(company.registered_address??{}) as Record<string,unknown>}:null};
 }

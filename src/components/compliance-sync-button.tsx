@@ -1,0 +1,4 @@
+"use client";
+import{CheckCircle2,LoaderCircle,RefreshCw}from"lucide-react";import{useActionState}from"react";import{syncComplianceCalendar,type ComplianceState}from"@/app/app/compliance/actions";import styles from"./compliance.module.css";
+const initial:ComplianceState={status:"idle",message:""};
+export function ComplianceSyncButton({year}:{year:number}){const[state,action,pending]=useActionState(syncComplianceCalendar,initial);return <form action={action} className={styles.syncForm}><input type="hidden" name="year" value={year}/><button type="submit" disabled={pending}>{pending?<LoaderCircle className={styles.spin} size={14}/>:<RefreshCw size={14}/>}Refresh rules</button>{state.message?<span className={state.status==="error"?styles.syncError:styles.syncSuccess}>{state.status==="success"?<CheckCircle2 size={12}/>:null}{state.message}</span>:null}</form>}
