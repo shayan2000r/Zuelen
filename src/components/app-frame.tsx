@@ -26,11 +26,11 @@ import styles from "./live.module.css";
 const nav = [
   { label: "Overview", icon: LayoutDashboard, href: "/app" },
   { label: "Transactions", icon: WalletCards, href: "/app/transactions" },
-  { label: "Invoices", icon: ReceiptText },
-  { label: "Accounting", icon: BookOpen },
-  { label: "Taxes", icon: Landmark },
-  { label: "Compliance", icon: FileCheck2 },
-  { label: "Documents", icon: FileText },
+  { label: "Invoices", icon: ReceiptText, href: undefined },
+  { label: "Accounting", icon: BookOpen, href: undefined },
+  { label: "Taxes", icon: Landmark, href: undefined },
+  { label: "Compliance", icon: FileCheck2, href: undefined },
+  { label: "Documents", icon: FileText, href: undefined },
 ] as const;
 
 function initials(value: string) {
