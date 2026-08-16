@@ -6,62 +6,34 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
-
-function money(value: number, currency: string) {
-  return new Intl.NumberFormat("en-LU", { style: "currency", currency, minimumFractionDigits: 2 }).format(value);
-}
-
-function customerName(snapshot: unknown) {
-  if (!snapshot || typeof snapshot !== "object") return "Customer";
-  const value = (snapshot as Record<string, unknown>).name;
-  return typeof value === "string" && value ? value : "Customer";
-}
+function money(value: number, currency: string) { return new Intl.NumberFormat("en-LU", { style: "currency", currency, minimumFractionDigits: 2 }).format(value); }
+function customerName(snapshot: unknown) { if (!snapshot || typeof snapshot !== "object") return "Customer"; const value = (snapshot as Record<string, unknown>).name; return typeof value === "string" && value ? value : "Customer"; }
 
 export default async function InvoicesPage() {
   const workspace = await getWorkspace();
   if (!workspace.authenticated) redirect("/sign-in");
   if (!workspace.company) redirect("/setup");
-
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("sales_invoices")
-    .select("id,invoice_number,status,payment_status,issue_date,due_date,currency,subtotal,vat_total,total,customer_snapshot,issued_at")
-    .eq("company_id", workspace.company.id)
-    .order("issue_date", { ascending: false })
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(`Could not load invoices: ${error.message}`);
-
-  const invoices = data ?? [];
+  const [invoiceResult, paymentResult] = await Promise.all([
+    supabase.from("sales_invoices").select("id,invoice_number,status,payment_status,issue_date,due_date,currency,subtotal,vat_total,total,customer_snapshot,issued_at").eq("company_id", workspace.company.id).order("issue_date", { ascending: false }).order("created_at", { ascending: false }),
+    supabase.from("invoice_payments").select("invoice_id,amount").eq("company_id", workspace.company.id),
+  ]);
+  if (invoiceResult.error) throw new Error(`Could not load invoices: ${invoiceResult.error.message}`);
+  if (paymentResult.error) throw new Error(`Could not load payments: ${paymentResult.error.message}`);
+  const invoices = invoiceResult.data ?? [];
+  const paidByInvoice = new Map<string, number>();
+  for (const payment of paymentResult.data ?? []) paidByInvoice.set(payment.invoice_id, (paidByInvoice.get(payment.invoice_id) ?? 0) + Number(payment.amount));
   const today = new Date().toISOString().slice(0, 10);
-  const outstanding = invoices.filter((invoice) => invoice.payment_status !== "paid" && invoice.status === "issued").reduce((sum, invoice) => sum + Number(invoice.total), 0);
+  const outstanding = invoices.filter((invoice) => invoice.status === "issued").reduce((sum, invoice) => sum + Math.max(0, Number(invoice.total) - (paidByInvoice.get(invoice.id) ?? 0)), 0);
   const overdue = invoices.filter((invoice) => invoice.payment_status !== "paid" && invoice.status === "issued" && invoice.due_date < today).length;
   const paid = invoices.filter((invoice) => invoice.payment_status === "paid").length;
   const currency = workspace.company.base_currency || "EUR";
 
   return (
     <div className={styles.invoicePage}>
-      <div className={styles.invoiceIntro}>
-        <div><p className={styles.kicker}>Sales & receivables</p><h1>Invoices</h1><p>Issue the document once. Compta creates the receivable, revenue and VAT accounting behind it automatically.</p></div>
-        <Link href="/app/invoices/new" className={styles.newInvoiceButton}><Plus size={15} />New invoice</Link>
-      </div>
-
-      <section className={styles.invoiceMetrics}>
-        <article><span><ReceiptText size={14} />Outstanding</span><strong>{money(outstanding, currency)}</strong><small>{invoices.filter((invoice) => invoice.payment_status !== "paid" && invoice.status === "issued").length} open invoices</small></article>
-        <article><span><Clock3 size={14} />Overdue</span><strong>{overdue}</strong><small>{overdue === 0 ? "Nothing needs chasing" : "Past due date"}</small></article>
-        <article><span><CircleCheck size={14} />Paid</span><strong>{paid}</strong><small>Payment matching comes next</small></article>
-      </section>
-
-      <section className={styles.invoiceListPanel}>
-        <div className={styles.invoiceListHead}><div><p className={styles.kicker}>Sales register</p><h2>Issued invoices</h2></div><span>{invoices.length} documents</span></div>
-        {invoices.length === 0 ? (
-          <div className={styles.invoiceEmpty}><div><FileText size={22} /></div><h3>Your first invoice will do more than look good.</h3><p>It will create a customer receivable and post revenue and VAT to the ledger at the same time.</p><Link href="/app/invoices/new" className={styles.emptyAction}>Create first invoice <ArrowRight size={14} /></Link></div>
-        ) : (
-          <div className={styles.invoiceTableWrap}><table className={styles.invoiceTable}><thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Status</th><th>Total</th></tr></thead><tbody>{invoices.map((invoice) => {
-            const isOverdue = invoice.payment_status !== "paid" && invoice.due_date < today;
-            return <tr key={invoice.id}><td><Link href={`/app/invoices/${invoice.id}`}>{invoice.invoice_number || "Draft"}</Link></td><td><strong>{customerName(invoice.customer_snapshot)}</strong></td><td>{new Date(`${invoice.issue_date}T12:00:00`).toLocaleDateString("en-LU", { day: "2-digit", month: "short", year: "numeric" })}</td><td>{new Date(`${invoice.due_date}T12:00:00`).toLocaleDateString("en-LU", { day: "2-digit", month: "short" })}</td><td><span className={`${styles.paymentPill} ${invoice.payment_status === "paid" ? styles.paidPill : isOverdue ? styles.overduePill : ""}`}>{isOverdue ? "overdue" : invoice.payment_status}</span></td><td><strong>{money(Number(invoice.total), invoice.currency)}</strong></td></tr>;
-          })}</tbody></table></div>
-        )}
-      </section>
+      <div className={styles.invoiceIntro}><div><p className={styles.kicker}>Sales & receivables</p><h1>Invoices</h1><p>Issue once, then track the receivable until cash actually arrives. Revenue is never booked twice.</p></div><Link href="/app/invoices/new" className={styles.newInvoiceButton}><Plus size={15} />New invoice</Link></div>
+      <section className={styles.invoiceMetrics}><article><span><ReceiptText size={14} />Outstanding</span><strong>{money(outstanding, currency)}</strong><small>Open customer balance</small></article><article><span><Clock3 size={14} />Overdue</span><strong>{overdue}</strong><small>{overdue === 0 ? "Nothing needs chasing" : "Past due date"}</small></article><article><span><CircleCheck size={14} />Paid</span><strong>{paid}</strong><small>Settled receivables</small></article></section>
+      <section className={styles.invoiceListPanel}><div className={styles.invoiceListHead}><div><p className={styles.kicker}>Sales register</p><h2>Issued invoices</h2></div><span>{invoices.length} documents</span></div>{invoices.length === 0 ? <div className={styles.invoiceEmpty}><div><FileText size={22} /></div><h3>Your first invoice will do more than look good.</h3><p>It will create a customer receivable and post revenue and VAT to the ledger at the same time.</p><Link href="/app/invoices/new" className={styles.emptyAction}>Create first invoice <ArrowRight size={14} /></Link></div> : <div className={styles.invoiceTableWrap}><table className={styles.invoiceTable}><thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Status</th><th>Balance</th></tr></thead><tbody>{invoices.map((invoice) => { const isOverdue = invoice.payment_status !== "paid" && invoice.due_date < today; const balance = Math.max(0, Number(invoice.total) - (paidByInvoice.get(invoice.id) ?? 0)); return <tr key={invoice.id}><td><Link href={`/app/invoices/${invoice.id}`}>{invoice.invoice_number || "Draft"}</Link></td><td><strong>{customerName(invoice.customer_snapshot)}</strong></td><td>{new Date(`${invoice.issue_date}T12:00:00`).toLocaleDateString("en-LU", { day: "2-digit", month: "short", year: "numeric" })}</td><td>{new Date(`${invoice.due_date}T12:00:00`).toLocaleDateString("en-LU", { day: "2-digit", month: "short" })}</td><td><span className={`${styles.paymentPill} ${invoice.payment_status === "paid" ? styles.paidPill : isOverdue ? styles.overduePill : ""}`}>{isOverdue ? "overdue" : invoice.payment_status}</span></td><td><strong>{money(balance, invoice.currency)}</strong></td></tr>; })}</tbody></table></div>}</section>
     </div>
   );
 }
