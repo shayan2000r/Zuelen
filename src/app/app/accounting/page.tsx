@@ -1,209 +1,42 @@
-import { ArrowRight, BookOpen, CheckCircle2, LockKeyhole } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2, ChevronDown, LockKeyhole, Search } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TransactionRowActions } from "@/components/transaction-row-actions";
 import { AccountingInvoiceActions, AccountingPaymentActions, AccountingReadOnlyAction } from "@/components/accounting-entry-actions";
-import actionStyles from "@/components/accounting-actions.module.css";
-import styles from "@/components/live.module.css";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import styles from "./accounting.module.css";
 
 export const dynamic = "force-dynamic";
+type JournalLine={id:string;journal_entry_id:string;company_account_id:string;description:string|null;debit:number|string;credit:number|string;currency:string};
+type Account={id:string;code:string;label:string;account_type:string};
+type SourceTransaction={id:string;occurred_on:string;direction:string;amount_gross:number|string;vat_amount:number|string|null;counterparty_name:string|null;description:string|null;classification_status:string;posted_journal_entry_id:string|null};
+type Invoice={id:string;status:string;payment_status:string};
+type Payment={id:string;invoice_id:string;amount:number|string;paid_on:string;reference:string|null;bank_transaction_id:string|null;journal_entry_id:string};
+type Params=Promise<{q?:string;kind?:string;from?:string;to?:string}>;
+function money(value:number,currency:string){return new Intl.NumberFormat("en-LU",{style:"currency",currency,minimumFractionDigits:2}).format(value)}
+function validDate(value:string|undefined){return value&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value:""}
 
-type JournalLine = {
-  id: string;
-  journal_entry_id: string;
-  company_account_id: string;
-  description: string | null;
-  debit: number | string;
-  credit: number | string;
-  currency: string;
-};
-type Account = { id: string; code: string; label: string; account_type: string };
-type SourceTransaction = {
-  id: string;
-  occurred_on: string;
-  direction: string;
-  amount_gross: number | string;
-  vat_amount: number | string | null;
-  counterparty_name: string | null;
-  description: string | null;
-  classification_status: string;
-  posted_journal_entry_id: string | null;
-};
-type Invoice = { id: string; status: string; payment_status: string };
-type Payment = {
-  id: string;
-  invoice_id: string;
-  amount: number | string;
-  paid_on: string;
-  reference: string | null;
-  bank_transaction_id: string | null;
-  journal_entry_id: string;
-};
-
-function money(value: number, currency: string) {
-  return new Intl.NumberFormat("en-LU", { style: "currency", currency, minimumFractionDigits: 2 }).format(value);
-}
-
-export default async function AccountingPage() {
-  const workspace = await getWorkspace();
-  if (!workspace.authenticated) redirect("/sign-in");
-  if (!workspace.company) redirect("/setup");
-
-  const supabase = await createClient();
-  const [{ data: entryData, error: entryError }, { data: accountData, error: accountError }] = await Promise.all([
-    supabase
-      .from("journal_entries")
-      .select("id,entry_number,entry_date,description,source_type,source_id,status,posted_at,reversal_of")
-      .eq("company_id", workspace.company.id)
-      .order("entry_number", { ascending: false })
-      .limit(100),
-    supabase
-      .from("company_accounts")
-      .select("id,code,label,account_type")
-      .eq("company_id", workspace.company.id),
-  ]);
-
-  if (entryError) throw new Error(`Could not load journal entries: ${entryError.message}`);
-  if (accountError) throw new Error(`Could not load chart of accounts: ${accountError.message}`);
-
-  const entries = entryData ?? [];
-  const entryIds = entries.map((entry) => entry.id);
-  let lineRows: JournalLine[] = [];
-  if (entryIds.length > 0) {
-    const { data: lineData, error: lineError } = await supabase
-      .from("journal_lines")
-      .select("id,journal_entry_id,company_account_id,description,debit,credit,currency")
-      .in("journal_entry_id", entryIds)
-      .order("created_at", { ascending: true });
-    if (lineError) throw new Error(`Could not load journal lines: ${lineError.message}`);
-    lineRows = (lineData ?? []) as JournalLine[];
-  }
-
-  const manualSourceIds = entries.filter((entry) => entry.source_type === "manual" && entry.source_id).map((entry) => entry.source_id as string);
-  const invoiceSourceIds = entries.filter((entry) => entry.source_type === "invoice" && entry.source_id).map((entry) => entry.source_id as string);
-  const bankEntryIds = entries.filter((entry) => entry.source_type === "bank").map((entry) => entry.id);
-
-  let sourceRows: SourceTransaction[] = [];
-  let invoiceRows: Invoice[] = [];
-  let paymentRows: Payment[] = [];
-
-  if (manualSourceIds.length > 0) {
-    const { data, error } = await supabase.from("source_transactions")
-      .select("id,occurred_on,direction,amount_gross,vat_amount,counterparty_name,description,classification_status,posted_journal_entry_id")
-      .in("id", manualSourceIds);
-    if (error) throw new Error(`Could not load transaction sources: ${error.message}`);
-    sourceRows = (data ?? []) as SourceTransaction[];
-  }
-  if (invoiceSourceIds.length > 0) {
-    const { data, error } = await supabase.from("sales_invoices").select("id,status,payment_status").in("id", invoiceSourceIds);
-    if (error) throw new Error(`Could not load invoice sources: ${error.message}`);
-    invoiceRows = (data ?? []) as Invoice[];
-  }
-  if (bankEntryIds.length > 0) {
-    const { data, error } = await supabase.from("invoice_payments")
-      .select("id,invoice_id,amount,paid_on,reference,bank_transaction_id,journal_entry_id")
-      .in("journal_entry_id", bankEntryIds);
-    if (error) throw new Error(`Could not load payment sources: ${error.message}`);
-    paymentRows = (data ?? []) as Payment[];
-  }
-
-  const accounts = (accountData ?? []) as Account[];
-  const accountMap = new Map(accounts.map((account) => [account.id, account]));
-  const sourceMap = new Map(sourceRows.map((row) => [row.id, row]));
-  const invoiceMap = new Map(invoiceRows.map((row) => [row.id, row]));
-  const paymentByEntry = new Map(paymentRows.map((row) => [row.journal_entry_id, row]));
-  const linesByEntry = new Map<string, JournalLine[]>();
-  for (const line of lineRows) {
-    const group = linesByEntry.get(line.journal_entry_id) ?? [];
-    group.push(line);
-    linesByEntry.set(line.journal_entry_id, group);
-  }
-
-  return (
-    <div className={styles.liveWrap}>
-      <div className={styles.liveIntro}>
-        <div><p className={styles.eyebrow}>Double-entry ledger</p><h1>Accounting</h1><p>The journal stays auditable, but you do not have to manage it like an accountant. Use the source controls below each entry and Compta creates the required reversals automatically.</p></div>
-        <span className={styles.liveBadge}><LockKeyhole size={13} />{entries.length} journal entries</span>
-      </div>
-
-      {entries.length === 0 ? (
-        <article className={styles.panel}>
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}><BookOpen size={20} /></div>
-            <h3>No journal entries yet.</h3>
-            <p>Record a transaction, classify it and post it. The balanced entry will appear here automatically.</p>
-            <Link href="/app/transactions" className={styles.actionLink}>Open transactions <ArrowRight size={14} /></Link>
-          </div>
-        </article>
-      ) : (
-        <section className={styles.journalList}>
-          {entries.map((entry) => {
-            const lines = linesByEntry.get(entry.id) ?? [];
-            const totalDebit = lines.reduce((sum, line) => sum + Number(line.debit), 0);
-            const totalCredit = lines.reduce((sum, line) => sum + Number(line.credit), 0);
-            const currency = lines[0]?.currency || workspace.company?.base_currency || "EUR";
-            const source = entry.source_type === "manual" && entry.source_id ? sourceMap.get(entry.source_id) : undefined;
-            const invoice = entry.source_type === "invoice" && entry.source_id ? invoiceMap.get(entry.source_id) : undefined;
-            const payment = paymentByEntry.get(entry.id);
-            const isCurrentTransactionPosting = Boolean(source && source.posted_journal_entry_id === entry.id && source.classification_status === "posted");
-
-            let sourceLabel = "System-generated accounting entry";
-            let sourceActions = <AccountingReadOnlyAction>Audit entry · read only</AccountingReadOnlyAction>;
-
-            if (entry.source_type === "manual") {
-              sourceLabel = source ? "Source transaction" : "Historical transaction source";
-              sourceActions = source && isCurrentTransactionPosting
-                ? <TransactionRowActions row={source} />
-                : <AccountingReadOnlyAction>{source ? "Superseded posting · audit history" : "Source deleted · reversal retained"}</AccountingReadOnlyAction>;
-            } else if (entry.source_type === "invoice") {
-              sourceLabel = "Sales invoice";
-              sourceActions = invoice
-                ? <AccountingInvoiceActions invoiceId={invoice.id} status={invoice.status} paymentStatus={invoice.payment_status} />
-                : <AccountingReadOnlyAction>Historical invoice entry</AccountingReadOnlyAction>;
-            } else if (entry.source_type === "bank" && payment) {
-              sourceLabel = "Invoice payment";
-              sourceActions = <AccountingPaymentActions payment={payment} />;
-            } else if (entry.source_type === "reversal") {
-              sourceLabel = "Reversal entry";
-              sourceActions = <AccountingReadOnlyAction>Reversal · audit history</AccountingReadOnlyAction>;
-            } else if (entry.source_type === "bank") {
-              sourceLabel = "Bank / settlement entry";
-              sourceActions = <AccountingReadOnlyAction>Reversed or reconciliation-managed</AccountingReadOnlyAction>;
-            }
-
-            return (
-              <details className={styles.journalCard} key={entry.id}>
-                <summary className={styles.journalSummary}>
-                  <span className={styles.journalNumber}>J{String(entry.entry_number).padStart(4, "0")}</span>
-                  <span className={styles.journalCopy}><strong>{entry.description}</strong><small>{new Date(`${entry.entry_date}T12:00:00`).toLocaleDateString("en-LU", { day: "2-digit", month: "short", year: "numeric" })} · {entry.source_type}{entry.reversal_of ? " · reversal" : ""}</small></span>
-                  <span className={styles.journalStatus}><CheckCircle2 size={12} />{entry.status}</span>
-                  <span className={styles.journalTotal}>{money(Math.max(totalDebit, totalCredit), currency)}</span>
-                </summary>
-                <div className={styles.journalDetails}>
-                  <div className={styles.journalLineHeader}><span>Account</span><span>Debit</span><span>Credit</span></div>
-                  {lines.map((line) => {
-                    const account = accountMap.get(line.company_account_id);
-                    return (
-                      <div className={styles.journalLine} key={line.id}>
-                        <span className={styles.journalAccount}><b>{account?.code ?? "—"}</b><span>{account?.label ?? line.description ?? "Account"}</span></span>
-                        <span>{Number(line.debit) > 0 ? money(Number(line.debit), line.currency) : "—"}</span>
-                        <span>{Number(line.credit) > 0 ? money(Number(line.credit), line.currency) : "—"}</span>
-                      </div>
-                    );
-                  })}
-                  <div className={styles.journalBalance}><span>Balanced entry</span><strong>Dr {money(totalDebit, currency)} = Cr {money(totalCredit, currency)}</strong></div>
-                  <div className={actionStyles.sourceBar}>
-                    <div className={actionStyles.sourceCopy}><span>Manage source</span><strong>{sourceLabel}</strong></div>
-                    {sourceActions}
-                  </div>
-                </div>
-              </details>
-            );
-          })}
-        </section>
-      )}
-    </div>
-  );
+export default async function AccountingPage({searchParams}:{searchParams:Params}){
+ const params=await searchParams,q=(params.q??"").trim().toLowerCase(),kind=["all","revenue","expense","manual","invoice","payment","reversal"].includes(params.kind??"")?params.kind!:"all",from=validDate(params.from),to=validDate(params.to);
+ const workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");const supabase=await createClient();
+ let entryQuery=supabase.from("journal_entries").select("id,entry_number,entry_date,description,source_type,source_id,status,posted_at,reversal_of").eq("company_id",workspace.company.id).order("entry_number",{ascending:false}).limit(300);if(from)entryQuery=entryQuery.gte("entry_date",from);if(to)entryQuery=entryQuery.lte("entry_date",to);
+ const[{data:entryData,error:entryError},{data:accountData,error:accountError}]=await Promise.all([entryQuery,supabase.from("company_accounts").select("id,code,label,account_type").eq("company_id",workspace.company.id)]);if(entryError)throw new Error(`Could not load journal entries: ${entryError.message}`);if(accountError)throw new Error(`Could not load chart of accounts: ${accountError.message}`);
+ const entries=entryData??[],entryIds=entries.map(entry=>entry.id);let lineRows:JournalLine[]=[];if(entryIds.length){const{data,error}=await supabase.from("journal_lines").select("id,journal_entry_id,company_account_id,description,debit,credit,currency").in("journal_entry_id",entryIds).order("created_at",{ascending:true});if(error)throw new Error(`Could not load journal lines: ${error.message}`);lineRows=(data??[]) as JournalLine[]}
+ const manualSourceIds=entries.filter(entry=>entry.source_type==="manual"&&entry.source_id).map(entry=>entry.source_id as string),invoiceSourceIds=entries.filter(entry=>entry.source_type==="invoice"&&entry.source_id).map(entry=>entry.source_id as string),bankEntryIds=entries.filter(entry=>entry.source_type==="bank").map(entry=>entry.id);let sourceRows:SourceTransaction[]=[],invoiceRows:Invoice[]=[],paymentRows:Payment[]=[];
+ if(manualSourceIds.length){const{data,error}=await supabase.from("source_transactions").select("id,occurred_on,direction,amount_gross,vat_amount,counterparty_name,description,classification_status,posted_journal_entry_id").in("id",manualSourceIds);if(error)throw new Error(error.message);sourceRows=(data??[]) as SourceTransaction[]}
+ if(invoiceSourceIds.length){const{data,error}=await supabase.from("sales_invoices").select("id,status,payment_status").in("id",invoiceSourceIds);if(error)throw new Error(error.message);invoiceRows=(data??[]) as Invoice[]}
+ if(bankEntryIds.length){const{data,error}=await supabase.from("invoice_payments").select("id,invoice_id,amount,paid_on,reference,bank_transaction_id,journal_entry_id").in("journal_entry_id",bankEntryIds);if(error)throw new Error(error.message);paymentRows=(data??[]) as Payment[]}
+ const accounts=(accountData??[]) as Account[],accountMap=new Map(accounts.map(account=>[account.id,account])),sourceMap=new Map(sourceRows.map(row=>[row.id,row])),invoiceMap=new Map(invoiceRows.map(row=>[row.id,row])),paymentByEntry=new Map(paymentRows.map(row=>[row.journal_entry_id,row])),linesByEntry=new Map<string,JournalLine[]>();for(const line of lineRows){const group=linesByEntry.get(line.journal_entry_id)??[];group.push(line);linesByEntry.set(line.journal_entry_id,group)}
+ function hasType(entryId:string,type:string){return(linesByEntry.get(entryId)??[]).some(line=>accountMap.get(line.company_account_id)?.account_type===type)}
+ const revenueCount=entries.filter(entry=>hasType(entry.id,"revenue")).length,expenseCount=entries.filter(entry=>hasType(entry.id,"expense")).length,reversalCount=entries.filter(entry=>entry.source_type==="reversal"||entry.reversal_of).length;
+ const visible=entries.filter(entry=>{if(kind==="revenue"&&!hasType(entry.id,"revenue"))return false;if(kind==="expense"&&!hasType(entry.id,"expense"))return false;if(kind==="manual"&&entry.source_type!=="manual")return false;if(kind==="invoice"&&entry.source_type!=="invoice")return false;if(kind==="payment"&&!(entry.source_type==="bank"&&paymentByEntry.has(entry.id)))return false;if(kind==="reversal"&&!(entry.source_type==="reversal"||entry.reversal_of))return false;if(!q)return true;const lines=linesByEntry.get(entry.id)??[],haystack=[entry.description,entry.source_type,...lines.flatMap(line=>{const account=accountMap.get(line.company_account_id);return[account?.code,account?.label,line.description]})].filter(Boolean).join(" ").toLowerCase();return haystack.includes(q)});
+ return <div className={styles.page}>
+  <div className={styles.intro}><div><p>Double-entry ledger</p><h1>Accounting</h1><h2>A clean, auditable journal with filters for the activity you actually want to inspect. Open an entry only when you need its debit/credit detail or source controls.</h2></div><span className={styles.badge}><LockKeyhole size={13}/>{entries.length} entries in range</span></div>
+  <section className={styles.metrics}><article className={styles.metric}><span>Journal entries</span><strong>{entries.length}</strong><small>{from||to?"Selected date range":"Latest 300 entries"}</small></article><article className={styles.metric}><span>Revenue-related</span><strong>{revenueCount}</strong><small>Entries touching revenue accounts</small></article><article className={styles.metric}><span>Expense-related</span><strong>{expenseCount}</strong><small>Entries touching expense accounts</small></article><article className={styles.metric}><span>Reversals</span><strong>{reversalCount}</strong><small>Audit-history corrections</small></article></section>
+  <form className={styles.filters} method="get"><label><Search size={14}/><input name="q" defaultValue={params.q??""} placeholder="Search description, PCN code or account"/></label><label><select name="kind" defaultValue={kind}><option value="all">All activity</option><option value="revenue">Revenue</option><option value="expense">Expenses</option><option value="manual">Transactions</option><option value="invoice">Invoices</option><option value="payment">Payments</option><option value="reversal">Reversals</option></select></label><label><input name="from" type="date" defaultValue={from} aria-label="From date"/></label><label><input name="to" type="date" defaultValue={to} aria-label="To date"/></label><button type="submit">Apply filters</button></form>
+  {visible.length===0?<div className={styles.empty}><span><BookOpen size={21}/></span><h3>{entries.length?"No journal entries match these filters.":"No journal entries yet."}</h3><p>{entries.length?"Change the date, type or search terms.":"Post a transaction or issue an invoice and the balanced entry will appear here."}</p>{!entries.length?<Link href="/app/transactions">Open transactions <ArrowRight size={14}/></Link>:null}</div>:<section className={styles.journal}>{visible.map(entry=>{const lines=linesByEntry.get(entry.id)??[],totalDebit=lines.reduce((sum,line)=>sum+Number(line.debit),0),totalCredit=lines.reduce((sum,line)=>sum+Number(line.credit),0),currency=lines[0]?.currency||workspace.company?.base_currency||"EUR",source=entry.source_type==="manual"&&entry.source_id?sourceMap.get(entry.source_id):undefined,invoice=entry.source_type==="invoice"&&entry.source_id?invoiceMap.get(entry.source_id):undefined,payment=paymentByEntry.get(entry.id),isCurrent=Boolean(source&&source.posted_journal_entry_id===entry.id&&source.classification_status==="posted");let sourceLabel="System-generated accounting entry",sourceActions=<AccountingReadOnlyAction>Audit entry · read only</AccountingReadOnlyAction>;
+   if(entry.source_type==="manual"){sourceLabel=source?"Source transaction":"Historical transaction source";sourceActions=source&&isCurrent?<TransactionRowActions row={source}/>:<AccountingReadOnlyAction>{source?"Superseded posting · audit history":"Source deleted · reversal retained"}</AccountingReadOnlyAction>}else if(entry.source_type==="invoice"){sourceLabel="Sales invoice";sourceActions=invoice?<AccountingInvoiceActions invoiceId={invoice.id} status={invoice.status} paymentStatus={invoice.payment_status}/>:<AccountingReadOnlyAction>Historical invoice entry</AccountingReadOnlyAction>}else if(entry.source_type==="bank"&&payment){sourceLabel="Invoice payment";sourceActions=<AccountingPaymentActions payment={payment}/>}else if(entry.source_type==="reversal"){sourceLabel="Reversal entry";sourceActions=<AccountingReadOnlyAction>Reversal · audit history</AccountingReadOnlyAction>}else if(entry.source_type==="bank"){sourceLabel="Bank / settlement entry";sourceActions=<AccountingReadOnlyAction>Reconciliation-managed</AccountingReadOnlyAction>}
+   return <details className={styles.entry} key={entry.id}><summary className={styles.summary}><span className={styles.number}>J{String(entry.entry_number).padStart(4,"0")}</span><span className={styles.copy}><strong>{entry.description}</strong><small>{entry.reversal_of?"Reversal · audit history":sourceLabel}</small></span><span className={styles.source}>{entry.source_type}</span><span className={styles.date}>{new Date(`${entry.entry_date}T12:00:00`).toLocaleDateString("en-LU",{day:"2-digit",month:"short",year:"numeric"})}</span><span className={styles.total}>{money(Math.max(totalDebit,totalCredit),currency)}</span><ChevronDown className={styles.chevron} size={16}/></summary><div className={styles.details}><div className={styles.lineHeader}><span>Account</span><span>Debit</span><span>Credit</span></div>{lines.map(line=>{const account=accountMap.get(line.company_account_id);return <div className={styles.line} key={line.id}><span className={styles.account}><b>{account?.code??"—"}</b><span>{account?.label??line.description??"Account"}</span></span><span>{Number(line.debit)>0?money(Number(line.debit),line.currency):"—"}</span><span>{Number(line.credit)>0?money(Number(line.credit),line.currency):"—"}</span></div>})}<div className={styles.balance}><span>Balanced entry</span><strong><CheckCircle2 size={12}/> Dr {money(totalDebit,currency)} = Cr {money(totalCredit,currency)}</strong></div><div className={styles.sourceBar}><div className={styles.sourceCopy}><span>Manage source</span><strong>{sourceLabel}</strong></div>{sourceActions}</div></div></details>})}</section>}
+ </div>;
 }
