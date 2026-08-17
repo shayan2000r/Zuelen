@@ -88,7 +88,7 @@ export default async function LiveOverviewPage(){
       <div>
         <p className={styles.eyebrow}>{now.toLocaleDateString("en-LU",{weekday:"long",day:"2-digit",month:"long"})}</p>
         <h1>{greeting}.</h1>
-        <p>{attention?`${attention} ${attention===1?"item needs":"items need"} attention. `:"Everything important is under control. `}<span>{workspace.company.legal_name}</span></p>
+        <p>{attention?`${attention} ${attention===1?"item needs":"items need"} attention. `:"Everything important is under control. "}<span>{workspace.company.legal_name}</span></p>
       </div>
     </header>
 
