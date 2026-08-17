@@ -47,7 +47,7 @@ export function InvoicePaymentPanel({ invoiceId, total, paid, currency, paymentS
   const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
 
   return (
-    <section className={styles.shell}>
+    <section className={styles.shell} id="payment">
       <div className={styles.summary}>
         <div className={styles.kicker}><WalletCards size={14} />Receivable</div>
         <div className={styles.amount}>{money(outstanding, currency)}</div>
