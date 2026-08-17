@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import "./ui-polish.css";
 import "./ui-2026.css";
+import "./blue-theme.css";
 
 export const dynamic = "force-dynamic";
 
