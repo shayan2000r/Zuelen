@@ -1,7 +1,7 @@
 "use client";
 
-import { FileSpreadsheet, LoaderCircle, UploadCloud } from "lucide-react";
-import { useActionState, useMemo, useRef, useState } from "react";
+import { FileSpreadsheet, LoaderCircle, Plus, UploadCloud, X } from "lucide-react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { importBankRows, type BankImportState } from "@/app/app/banking/actions";
 import styles from "./banking.module.css";
 
@@ -70,15 +70,19 @@ function normalizeCsv(text: string): { rows: NormalizedRow[]; message: string; h
 }
 
 export function BankImporter({ defaultCurrency }: { defaultCurrency: string }) {
-  const [state, action, pending]=useActionState(importBankRows,initial); const fileInput=useRef<HTMLInputElement>(null); const[fileName,setFileName]=useState(""); const[rows,setRows]=useState<NormalizedRow[]>([]); const[parseMessage,setParseMessage]=useState<string|null>(null);
+  const [state, action, pending]=useActionState(importBankRows,initial); const fileInput=useRef<HTMLInputElement>(null); const[fileName,setFileName]=useState(""); const[rows,setRows]=useState<NormalizedRow[]>([]); const[parseMessage,setParseMessage]=useState<string|null>(null); const[open,setOpen]=useState(false);
   const preview=useMemo(()=>rows.slice(0,5),[rows]);
+  useEffect(()=>{if(state.status==="success")setOpen(false)},[state.status]);
   async function choose(file:File|null){if(!file)return;setFileName(file.name);if(file.size>4*1024*1024){setRows([]);return setParseMessage("Keep CSV files under 4 MB per import.");}const result=normalizeCsv(await file.text());setRows(result.rows);setParseMessage(result.message);}
-  return <aside className={styles.importCard}><div className={styles.importHead}><div><p>Statement intake</p><h2>Import bank CSV</h2></div><span><FileSpreadsheet size={14}/>CSV</span></div><p className={styles.lead}>Compta detects common bank exports, including POST Luxembourg's French CSV format. Duplicate rows are skipped automatically.</p><form action={action} className={styles.importForm}>
-    <div className={styles.accountGrid}><label><span>Account name</span><input name="account_name" placeholder="e.g. Business current account" required/></label><label><span>IBAN <em>optional</em></span><input name="iban" placeholder="LU00 0000 0000 0000 0000"/></label><label><span>Currency</span><input name="currency" defaultValue={defaultCurrency||"EUR"} maxLength={3}/></label></div>
-    <button type="button" className={styles.dropzone} onClick={()=>fileInput.current?.click()}><input ref={fileInput} hidden type="file" accept=".csv,text/csv" onChange={event=>choose(event.target.files?.[0]??null)}/><UploadCloud size={22}/><strong>{fileName||"Choose a bank CSV"}</strong><small>{fileName?parseMessage||"Reading file…":"CSV export from your bank · max 4 MB"}</small></button>
-    {preview.length>0?<div className={styles.preview}><div className={styles.previewHead}><span>Preview</span><strong>{rows.length} rows ready</strong></div>{preview.map((row,index)=><div className={styles.previewRow} key={`${row.booking_date}-${index}`}><span>{row.booking_date}</span><span>{row.counterparty_name||row.reference||"Bank movement"}</span><strong className={row.amount>=0?styles.moneyIn:styles.moneyOut}>{row.amount>=0?"+":"−"}{Math.abs(row.amount).toFixed(2)} {row.currency||defaultCurrency}</strong></div>)}</div>:null}
-    <input type="hidden" name="file_name" value={fileName}/><input type="hidden" name="rows_json" value={JSON.stringify(rows)}/>
-    {(state.message||parseMessage)?<div className={`${styles.message} ${state.status==="error"||(!rows.length&&parseMessage)?styles.error:""}`}>{state.message||parseMessage}</div>:null}
-    <button className={styles.importButton} type="submit" disabled={pending||rows.length===0}>{pending?<LoaderCircle className={styles.spin} size={15}/>:<UploadCloud size={15}/>} {pending?"Importing…":"Import & review"}</button>
-  </form></aside>;
+  return <>
+    <button className="compta-fab" type="button" onClick={()=>setOpen(true)}><Plus size={17}/>Import bank CSV</button>
+    {open?<div className="compta-drawer-overlay" role="presentation" onMouseDown={e=>{if(e.currentTarget===e.target)setOpen(false)}}><div className="compta-drawer-shell"><button className="compta-drawer-close" type="button" onClick={()=>setOpen(false)} aria-label="Close bank import"><X size={18}/></button><aside className={`${styles.importCard} compta-drawer-card`}><div className={styles.importHead}><div><p>Statement intake</p><h2>Import bank CSV</h2></div><span><FileSpreadsheet size={14}/>CSV</span></div><p className={styles.lead}>Compta detects common bank exports, including POST Luxembourg's French CSV format. Duplicate rows are skipped automatically.</p><form action={action} className={styles.importForm}>
+      <div className={styles.accountGrid}><label><span>Account name</span><input name="account_name" placeholder="e.g. Business current account" required/></label><label><span>IBAN <em>optional</em></span><input name="iban" placeholder="LU00 0000 0000 0000 0000"/></label><label><span>Currency</span><input name="currency" defaultValue={defaultCurrency||"EUR"} maxLength={3}/></label></div>
+      <button type="button" className={styles.dropzone} onClick={()=>fileInput.current?.click()}><input ref={fileInput} hidden type="file" accept=".csv,text/csv" onChange={event=>choose(event.target.files?.[0]??null)}/><UploadCloud size={22}/><strong>{fileName||"Choose a bank CSV"}</strong><small>{fileName?parseMessage||"Reading file…":"CSV export from your bank · max 4 MB"}</small></button>
+      {preview.length>0?<div className={styles.preview}><div className={styles.previewHead}><span>Preview</span><strong>{rows.length} rows ready</strong></div>{preview.map((row,index)=><div className={styles.previewRow} key={`${row.booking_date}-${index}`}><span>{row.booking_date}</span><span>{row.counterparty_name||row.reference||"Bank movement"}</span><strong className={row.amount>=0?styles.moneyIn:styles.moneyOut}>{row.amount>=0?"+":"−"}{Math.abs(row.amount).toFixed(2)} {row.currency||defaultCurrency}</strong></div>)}</div>:null}
+      <input type="hidden" name="file_name" value={fileName}/><input type="hidden" name="rows_json" value={JSON.stringify(rows)}/>
+      {(state.message||parseMessage)?<div className={`${styles.message} ${state.status==="error"||(!rows.length&&parseMessage)?styles.error:""}`}>{state.message||parseMessage}</div>:null}
+      <button className={styles.importButton} type="submit" disabled={pending||rows.length===0}>{pending?<LoaderCircle className={styles.spin} size={15}/>:<UploadCloud size={15}/>} {pending?"Importing…":"Import & review"}</button>
+    </form></aside></div></div>:null}
+  </>;
 }
