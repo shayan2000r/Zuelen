@@ -27,7 +27,7 @@ export default async function LiveOverviewPage(){
   const supabase=await createClient();
   const [transactionsResult,entriesResult,accountsResult,invoicesResult,obligationsResult]=await Promise.all([
     supabase.from("source_transactions").select("id,occurred_on,direction,amount_gross,amount_net,vat_amount,currency,counterparty_name,description,classification_status").eq("company_id",workspace.company.id).gte("occurred_on",`${year}-01-01`).lte("occurred_on",`${year}-12-31`).order("occurred_on",{ascending:false}),
-    supabase.from("journal_entries").select("id,entry_number").eq("company_id",workspace.company.id).eq("status","posted").gte("entry_date",`${year}-01-01`).lte("entry_date",`${year}-12-31`),
+    supabase.from("journal_entries").select("id,entry_number,entry_date").eq("company_id",workspace.company.id).eq("status","posted").gte("entry_date",`${year}-01-01`).lte("entry_date",`${year}-12-31`),
     supabase.from("company_accounts").select("id,code,account_type").eq("company_id",workspace.company.id),
     supabase.from("sales_invoices").select("id,invoice_number,total,due_date,payment_status,customer_snapshot").eq("company_id",workspace.company.id).eq("status","issued").order("due_date",{ascending:true}),
     supabase.from("compliance_obligations").select("id,authority,obligation_type,due_date,amount,currency,status,period_label").eq("company_id",workspace.company.id).not("status","in",'(paid,filed,not_applicable)').order("due_date",{ascending:true,nullsFirst:false}).limit(5),
@@ -40,6 +40,8 @@ export default async function LiveOverviewPage(){
   const invoices=invoicesResult.data??[];
   const obligations=obligationsResult.data??[];
   const accountMap=new Map(accounts.map(account=>[account.id,account]));
+  const entryDateMap=new Map(entries.map(entry=>[entry.id,entry.entry_date]));
+  const monthly=Array.from({length:12},()=>({income:0,expense:0}));
 
   let lines:LedgerLine[]=[];
   if(entries.length){
@@ -52,8 +54,18 @@ export default async function LiveOverviewPage(){
   for(const line of lines){
     const account=accountMap.get(line.company_account_id); if(!account)continue;
     const debit=Number(line.debit),credit=Number(line.credit);
-    if(account.account_type==="revenue")revenue+=credit-debit;
-    if(account.account_type==="expense")expenses+=debit-credit;
+    const entryDate=entryDateMap.get(line.journal_entry_id);
+    const month=entryDate?Number(entryDate.slice(5,7))-1:-1;
+    if(account.account_type==="revenue"){
+      const value=credit-debit;
+      revenue+=value;
+      if(month>=0&&month<12)monthly[month].income+=value;
+    }
+    if(account.account_type==="expense"){
+      const value=debit-credit;
+      expenses+=value;
+      if(month>=0&&month<12)monthly[month].expense+=value;
+    }
     if(account.code==="461411")outputVat+=credit-debit;
     if(account.code==="421611")inputVat+=debit-credit;
     if(account.code==="5131")bank+=debit-credit;
@@ -63,7 +75,14 @@ export default async function LiveOverviewPage(){
   const pending=rows.filter(row=>row.classification_status!=="posted");
   for(const row of pending){
     const net=Number(row.amount_net??row.amount_gross??0),vatAmount=Number(row.vat_amount??0);
-    if(row.direction==="income"){revenue+=net;outputVat+=vatAmount}else{expenses+=net;inputVat+=vatAmount}
+    const month=Number(row.occurred_on.slice(5,7))-1;
+    if(row.direction==="income"){
+      revenue+=net;outputVat+=vatAmount;
+      if(month>=0&&month<12)monthly[month].income+=net;
+    }else{
+      expenses+=net;inputVat+=vatAmount;
+      if(month>=0&&month<12)monthly[month].expense+=net;
+    }
   }
 
   const profit=revenue-expenses;
@@ -74,21 +93,15 @@ export default async function LiveOverviewPage(){
   const readiness=rows.length?Math.round(((rows.length-pending.length)/rows.length)*100):100;
   const overdue=invoices.filter(invoice=>invoice.payment_status!=="paid"&&invoice.due_date&&new Date(`${invoice.due_date}T23:59:59`)<now);
   const attention=pending.length+overdue.length;
-  const monthly=Array.from({length:12},()=>({income:0,expense:0}));
-  for(const row of rows){
-    const month=Number(row.occurred_on.slice(5,7))-1;
-    if(month>=0&&month<12){const amount=Number(row.amount_gross);row.direction==="income"?monthly[month].income+=amount:monthly[month].expense+=amount}
-  }
-
   const greeting=now.getHours()<12?"Good morning":now.getHours()<18?"Good afternoon":"Good evening";
-  const recentRows=rows.slice(0,7);
+  const recentRows=rows.slice(0,5);
 
   return <div className={styles.page}>
     <header className={styles.welcome}>
       <div>
         <p className={styles.eyebrow}>{now.toLocaleDateString("en-LU",{weekday:"long",day:"2-digit",month:"long"})}</p>
-        <h1>{greeting}.</h1>
-        <p>{attention?`${attention} ${attention===1?"item needs":"items need"} attention. `:"Everything important is under control. "}<span>{workspace.company.legal_name}</span></p>
+        <h1>{greeting} <span>{workspace.company.legal_name}</span>.</h1>
+        <p>{attention?`${attention} ${attention===1?"item needs":"items need"} your attention.`:"Everything important is under control."}</p>
       </div>
     </header>
 
@@ -149,7 +162,7 @@ export default async function LiveOverviewPage(){
 
         <article className={styles.obligationsCard}>
           <div className={styles.obligationsHead}><div><span className={styles.cardLabel}>Compliance calendar</span><h2>Upcoming obligations</h2></div><Link href="/app/compliance">View all</Link></div>
-          {obligations.length===0?<div className={styles.obligationClear}><CheckCircle2 size={16}/>No open obligations loaded.</div>:<div className={styles.obligationList}>{obligations.slice(0,3).map(obligation=><Link href="/app/compliance" className={styles.obligation} key={obligation.id}>
+          {obligations.length===0?<div className={styles.obligationClear}><CheckCircle2 size={16}/>No open obligations loaded.</div>:<div className={styles.obligationList}>{obligations.slice(0,2).map(obligation=><Link href="/app/compliance" className={styles.obligation} key={obligation.id}>
             <span className={styles.obligationIcon}><CalendarDays size={15}/></span>
             <span><strong>{title(obligation.obligation_type)}</strong><small>{obligation.authority} · {obligation.period_label??year}</small></span>
             <b>{obligation.due_date?new Date(`${obligation.due_date}T12:00:00`).toLocaleDateString("en-LU",{day:"2-digit",month:"short"}):"Open"}</b>
