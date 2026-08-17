@@ -3,6 +3,7 @@ import { AppFrame } from "@/components/app-frame";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import "./ui-polish.css";
+import "./ui-2026.css";
 
 export const dynamic = "force-dynamic";
 
