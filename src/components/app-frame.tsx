@@ -78,13 +78,14 @@ function initials(value: string) {
   return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 }
 
-export function AppFrame({ children, companyName, fiscalYear, email, attentionCount = 0, brandImageUrl = null }: { children: ReactNode; companyName: string; fiscalYear: number; email: string | null; attentionCount?: number; brandImageUrl?: string | null }) {
+export function AppFrame({ children, companyName, fiscalYear, fiscalYears, email, attentionCount = 0, brandImageUrl = null }: { children: ReactNode; companyName: string; fiscalYear: number; fiscalYears: number[]; email: string | null; attentionCount?: number; brandImageUrl?: string | null }) {
   const pathname = usePathname();
   const [mobileNav, setMobileNav] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<Theme>("light");
+  const [switchingYear, setSwitchingYear] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<CollapsibleGroup["key"], boolean>>({
     accounting: pathname.startsWith("/app/accounting") || pathname.startsWith("/app/vat") || pathname.startsWith("/app/taxes") || pathname.startsWith("/app/year-end") || pathname.startsWith("/app/ecdf") || pathname.startsWith("/app/compliance"),
     insights: pathname.startsWith("/app/reports") || pathname.startsWith("/app/tax-reserve") || pathname.startsWith("/app/copilot"),
@@ -107,6 +108,13 @@ export function AppFrame({ children, companyName, fiscalYear, email, attentionCo
     setTheme(next);
     window.localStorage.setItem("compta-theme", next);
     document.documentElement.dataset.comptaTheme = next;
+  }
+
+  function changeFiscalYear(next: number) {
+    if (!Number.isInteger(next) || next === fiscalYear) return;
+    setSwitchingYear(true);
+    document.cookie = `compta-fiscal-year=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    window.location.reload();
   }
 
   useEffect(() => {
@@ -139,10 +147,10 @@ export function AppFrame({ children, companyName, fiscalYear, email, attentionCo
           <button className="icon-btn mobile-only" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={18} /></button>
         </div>
 
-        <button className="company-switcher" type="button" onClick={() => setMobileNav(false)}>
+        <div className={`company-switcher ${frame.yearSwitcher}`}>
           {avatar("company-avatar")}
-          <span className="company-copy"><strong>{companyName}</strong><small>Financial year {fiscalYear}</small></span><ChevronDown size={15} />
-        </button>
+          <span className={`company-copy ${frame.yearCopy}`}><strong>{companyName}</strong><span className={frame.yearSelectWrap}><span className={frame.yearHint}>Financial year</span><select className={frame.yearSelect} value={fiscalYear} disabled={switchingYear} onChange={(event) => changeFiscalYear(Number(event.target.value))} aria-label="Financial year">{fiscalYears.map((year) => <option key={year} value={year}>{year}</option>)}</select><ChevronDown size={11}/></span></span>
+        </div>
 
         <nav className="nav-list" aria-label="Primary navigation">
           <div className={frame.primaryNav}>{primaryItems.map((item) => navLink(item))}</div>
@@ -179,7 +187,7 @@ export function AppFrame({ children, companyName, fiscalYear, email, attentionCo
             <button className="search-btn" type="button" onClick={() => setSearchOpen(true)} aria-label="Search Compta" title="Search Compta (⌘K)"><Search size={17} /></button>
             <div className={frame.notificationWrap}>
               <button className="icon-btn" type="button" aria-label="Notifications" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((value) => !value)}><Bell size={17} />{attentionCount > 0 ? <span className="notification-dot" /> : null}</button>
-              {notificationsOpen ? <div className={frame.notificationPanel}><div><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={14} /></button></div>{attentionCount ? <Link href="/app/transactions" onClick={() => setNotificationsOpen(false)}><span className={frame.noticeIcon}><WalletCards size={15} /></span><span><strong>{attentionCount} transaction{attentionCount === 1 ? "" : "s"} need review</strong><small>Open transaction review</small></span></Link> : <p>You’re all caught up.</p>}<Link href="/app/compliance" onClick={() => setNotificationsOpen(false)}><span className={frame.noticeIcon}><CalendarCheck2 size={15} /></span><span><strong>Compliance center</strong><small>Review deadlines</small></span></Link></div> : null}
+              {notificationsOpen ? <div className={frame.notificationPanel}><div><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={14} /></button></div>{attentionCount ? <Link href="/app/transactions" onClick={() => setNotificationsOpen(false)}><span className={frame.noticeIcon}><WalletCards size={15} /></span><span><strong>{attentionCount} transaction{attentionCount === 1 ? "" : "s"} need review</strong><small>Open transaction review for {fiscalYear}</small></span></Link> : <p>You’re all caught up for {fiscalYear}.</p>}<Link href="/app/compliance" onClick={() => setNotificationsOpen(false)}><span className={frame.noticeIcon}><CalendarCheck2 size={15} /></span><span><strong>Compliance center</strong><small>Review {fiscalYear} obligations</small></span></Link></div> : null}
             </div>
             <Link className={`icon-btn ${frame.profileButton}`} href="/app/settings" aria-label={`Profile: ${userLabel}`} title="Profile & settings">{brandImageUrl ? <span className={frame.topAvatar}><img src={brandImageUrl} alt="" /></span> : <UserRound size={17} />}</Link>
           </div>
