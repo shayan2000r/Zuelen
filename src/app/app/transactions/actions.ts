@@ -48,7 +48,7 @@ export async function createSourceTransaction(
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) return { status: "error", message: "Choose a valid transaction date." };
   if (!["income", "expense"].includes(direction)) return { status: "error", message: "Choose income or expense." };
-  if ("error" in vat) return { status: "error", message: vat.error };
+  if ("error" in vat) return { status: "error", message: vat.error ?? "VAT calculation failed." };
   if (!workspace.company.vat_registered && vat.vat > 0) return { status: "error", message: "This company is not marked as VAT registered. Choose 0% VAT or update the company VAT profile." };
 
   const supabase = await createClient();
@@ -117,7 +117,7 @@ export async function editSourceTransactionAction(
   if (!/^[0-9a-f-]{36}$/i.test(id)) return { status: "error", message: "Invalid transaction." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) return { status: "error", message: "Choose a valid transaction date." };
   if (!["income", "expense"].includes(direction)) return { status: "error", message: "Choose income or expense." };
-  if ("error" in vat) return { status: "error", message: vat.error };
+  if ("error" in vat) return { status: "error", message: vat.error ?? "VAT calculation failed." };
   if (!workspace.company.vat_registered && vat.vat > 0) return { status: "error", message: "This company is not marked as VAT registered." };
 
   const supabase = await createClient();
