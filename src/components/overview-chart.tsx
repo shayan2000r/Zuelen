@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import styles from "@/app/app/overview.module.css";
 
 function money(value:number,currency:string){
-  return new Intl.NumberFormat("en-LU",{style:"currency",currency,maximumFractionDigits:0}).format(value);
+  return new Intl.NumberFormat("en-LU",{style:"currency",currency,minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
 }
 
 export function OverviewChart({monthly,currency,year,currentMonth}:{monthly:{income:number;expense:number}[];currency:string;year:number;currentMonth:number}){
