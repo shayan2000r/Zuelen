@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
 export type ClosingState={status:"idle"|"success"|"error";message:string;filingId?:string};
+function refresh(){for(const p of ["/app","/app/year-end","/app/reports","/app/ecdf","/app/accounting","/app/transactions"])revalidatePath(p)}
 
 export async function createClosingSnapshot(_previous:ClosingState):Promise<ClosingState>{
  const w=await getWorkspace();if(!w.authenticated||!w.userId||!w.company||!w.organization)return{status:"error",message:"Your session expired. Please sign in again."};
@@ -30,7 +31,11 @@ export async function createClosingSnapshot(_previous:ClosingState):Promise<Clos
  const checksum=createHash("sha256").update(JSON.stringify(snapshot)).digest("hex"),now=new Date().toISOString();
  const{data:filing,error}=await s.from("filings").insert({organization_id:w.organization.id,company_id:w.company.id,filing_type:"ecdf_accounts",period_label:String(year),status:"draft",schema_version:null,rules_version:"LU-2026.1|PCN2020",payload:{stage:"closing_snapshot",ecdf:{status:"schema_required"}},ledger_snapshot:snapshot,period_start:from,period_end:to,snapshot_at:now,ledger_checksum:checksum,export_status:"schema_required",created_by:w.userId}).select("id").single();
  if(error||!filing)return{status:"error",message:error?.message??"The closing snapshot could not be created."};
- await s.from("accounting_periods").update({status:"soft_closed"}).eq("company_id",w.company.id).eq("starts_on",from).eq("ends_on",to).eq("status","open");
- revalidatePath("/app/year-end");revalidatePath("/app/reports");revalidatePath("/app/ecdf");
+ await s.rpc("set_accounting_period_status",{p_company_id:w.company.id,p_fiscal_year:year,p_status:"soft_closed"});refresh();
  return{status:"success",message:`Closing snapshot created · ${trialBalance.length} trial-balance accounts frozen for review.`,filingId:filing.id};
+}
+
+export async function hardCloseYearAction(_previous:ClosingState,formData:FormData):Promise<ClosingState>{
+ const w=await getWorkspace();if(!w.authenticated||!w.company)return{status:"error",message:"Your session expired."};const year=Number(formData.get("year"));const confirmation=String(formData.get("confirmation")??"").trim();if(!Number.isInteger(year)||confirmation!==`LOCK ${year}`)return{status:"error",message:`Type LOCK ${year} exactly to confirm.`};
+ const s=await createClient();const{error}=await s.rpc("set_accounting_period_status",{p_company_id:w.company.id,p_fiscal_year:year,p_status:"hard_closed"});if(error)return{status:"error",message:error.message};refresh();return{status:"success",message:`${year} is hard-closed. New postings into this period are now blocked.`};
 }
