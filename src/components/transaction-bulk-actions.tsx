@@ -2,16 +2,16 @@
 
 import { CheckCheck, LoaderCircle, Sparkles, XCircle } from "lucide-react";
 import { useActionState } from "react";
-import { bulkIgnorePendingTransactions, bulkPostSuggestedTransactions, type TransactionActionState } from "@/app/app/transactions/actions";
-import { aiReanalyzePendingTransactions } from "@/app/app/transactions/ai-actions";
+import type { TransactionActionState } from "@/app/app/transactions/actions";
+import { aiReanalyzePendingTransactions, approveSuggestedForActiveYear, ignorePendingForActiveYear } from "@/app/app/transactions/ai-actions";
 import styles from "./transaction-bulk-actions.module.css";
 
 const initial: TransactionActionState = { status: "idle", message: "" };
 
 export function TransactionBulkActions({ suggestedCount, unresolvedCount }: { suggestedCount: number; unresolvedCount: number }) {
   const [aiState, aiAction, aiPending] = useActionState(aiReanalyzePendingTransactions, initial);
-  const [approveState, approveAction, approvePending] = useActionState(bulkPostSuggestedTransactions, initial);
-  const [ignoreState, ignoreAction, ignorePending] = useActionState(bulkIgnorePendingTransactions, initial);
+  const [approveState, approveAction, approvePending] = useActionState(approveSuggestedForActiveYear, initial);
+  const [ignoreState, ignoreAction, ignorePending] = useActionState(ignorePendingForActiveYear, initial);
   const state = aiState.message ? aiState : approveState.message ? approveState : ignoreState;
   return (
     <article className={styles.bar}>
@@ -31,7 +31,7 @@ export function TransactionBulkActions({ suggestedCount, unresolvedCount }: { su
             {approvePending ? <LoaderCircle className={styles.spin} size={14}/> : <CheckCheck size={14}/>}Approve suggested
           </button>
         </form>
-        <form action={ignoreAction} onSubmit={(event)=>{if(!window.confirm("Ignore every remaining unposted transaction? They will disappear from the review inbox but the bank evidence remains."))event.preventDefault();}}>
+        <form action={ignoreAction} onSubmit={(event)=>{if(!window.confirm("Ignore every remaining transaction in the selected financial year? They will disappear from the review inbox but the bank evidence remains."))event.preventDefault();}}>
           <button type="submit" className={styles.secondary} disabled={ignorePending || (suggestedCount + unresolvedCount) === 0}>
             {ignorePending ? <LoaderCircle className={styles.spin} size={14}/> : <XCircle size={14}/>}Ignore remaining
           </button>
