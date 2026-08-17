@@ -1,0 +1,6 @@
+"use client";
+import { LockKeyhole, LoaderCircle } from "lucide-react";
+import { useActionState, useState } from "react";
+import { hardCloseYearAction, type ClosingState } from "@/app/app/year-end/actions";
+const initial:ClosingState={status:"idle",message:""};
+export function YearLockButton({year}:{year:number}){const[state,action,pending]=useActionState(hardCloseYearAction,initial),[value,setValue]=useState("");return <form action={action} style={{display:"grid",gap:8,marginTop:12,maxWidth:420}}><input type="hidden" name="year" value={year}/><label style={{display:"grid",gap:5,fontSize:11}}><span>Permanent lock confirmation</span><input name="confirmation" value={value} onChange={e=>setValue(e.target.value)} placeholder={`Type LOCK ${year}`} style={{height:36,border:"1px solid #dce4dc",borderRadius:9,padding:"0 10px"}}/></label><button type="submit" disabled={pending||value!==`LOCK ${year}`} style={{height:36,border:0,borderRadius:9,background:value===`LOCK ${year}`?"#10451d":"#e5e9e5",color:value===`LOCK ${year}`?"#fff":"#808880",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>{pending?<LoaderCircle size={13}/>:<LockKeyhole size={13}/>}Lock {year} permanently</button>{state.message?<span style={{fontSize:10,color:state.status==="error"?"#a65340":"#24713a"}}>{state.message}</span>:null}</form>}
