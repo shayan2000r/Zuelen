@@ -1,5 +1,49 @@
 "use client";
-import{ArrowDownRight,ArrowUpRight}from"lucide-react";import{useMemo,useState}from"react";import styles from"@/app/app/overview.module.css";import ui from"./overview-chart.module.css";
-type Mode="cashflow"|"revenue"|"expenses";const labels:{key:Mode;label:string}[]=[{key:"cashflow",label:"Cash flow"},{key:"revenue",label:"Revenue"},{key:"expenses",label:"Expenses"}];
-function money(v:number,c:string){return new Intl.NumberFormat("en-LU",{style:"currency",currency:c,maximumFractionDigits:0}).format(v)}
-export function OverviewChart({monthly,currency,year,currentMonth}:{monthly:{income:number;expense:number}[];currency:string;year:number;currentMonth:number}){const[mode,setMode]=useState<Mode>("cashflow");const values=useMemo(()=>monthly.map(m=>mode==="revenue"?m.income:mode==="expenses"?m.expense:m.income-m.expense),[monthly,mode]),total=values.reduce((a,b)=>a+b,0),current=values[Math.max(0,currentMonth)]??0,max=Math.max(1,...values.map(Math.abs)),pts=values.map((v,i)=>`${i/11*600},${mode==="cashflow"?92-v/max*70:122-v/max*96}`).join(" "),area=`0,130 ${pts} 600,130`;return <article className={styles.performance}><div className={styles.panelTop}><div><span className={styles.label}>{labels.find(l=>l.key===mode)?.label} · {year}</span><div className={styles.big}>{money(total,currency)}</div><span className={styles.delta}>{current>=0?<ArrowUpRight size={13}/>:<ArrowDownRight size={13}/>} {money(Math.abs(current),currency)} this month</span></div><div className={ui.tabs} role="tablist" aria-label="Chart metric">{labels.map(l=><button key={l.key} type="button" role="tab" aria-selected={mode===l.key} onClick={()=>setMode(l.key)}>{l.label}</button>)}</div></div><div className={styles.chart}><svg viewBox="0 0 600 135" preserveAspectRatio="none" role="img" aria-label={`Monthly ${mode}`}><defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#c9ff57" stopOpacity=".3"/><stop offset="1" stopColor="#c9ff57" stopOpacity="0"/></linearGradient></defs>{[25,60,95,130].map(y=><line key={y} x1="0" x2="600" y1={y} y2={y} className={styles.gridLine}/>) }<polygon points={area} className={styles.area}/><polyline points={pts} className={styles.line}/>{values.map((v,i)=><circle key={i} cx={i/11*600} cy={mode==="cashflow"?92-v/max*70:122-v/max*96} r="4" className={styles.dot}/>)}</svg></div><div className={styles.months}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map(m=><span key={m}>{m}</span>)}</div></article>}
+
+import type { CSSProperties } from "react";
+import styles from "@/app/app/overview.module.css";
+
+function money(value:number,currency:string){
+  return new Intl.NumberFormat("en-LU",{style:"currency",currency,maximumFractionDigits:0}).format(value);
+}
+
+export function OverviewChart({monthly,currency,year,currentMonth}:{monthly:{income:number;expense:number}[];currency:string;year:number;currentMonth:number}){
+  const visible=monthly.slice(0,Math.max(currentMonth+1,8));
+  const max=Math.max(1,...visible.flatMap(month=>[month.income,month.expense]));
+  const totalIncome=monthly.reduce((sum,month)=>sum+month.income,0);
+  const totalExpense=monthly.reduce((sum,month)=>sum+month.expense,0);
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  return <article className={styles.incomeCard}>
+    <div className={styles.incomeHead}>
+      <div>
+        <span className={styles.cardLabel}>Income & spending</span>
+        <h2>Financial activity</h2>
+        <p>{year} year to date</p>
+      </div>
+      <div className={styles.chartLegend}>
+        <span><i className={styles.incomeLegend}/>Income</span>
+        <span><i className={styles.expenseLegend}/>Spending</span>
+      </div>
+    </div>
+
+    <div className={styles.chartTotals}>
+      <div><span>Income</span><strong>{money(totalIncome,currency)}</strong></div>
+      <div><span>Spending</span><strong>{money(totalExpense,currency)}</strong></div>
+    </div>
+
+    <div className={styles.barChart} role="img" aria-label={`Monthly income and spending for ${year}`}>
+      {visible.map((month,index)=>{
+        const incomeHeight=Math.max(month.income>0?8:2,(month.income/max)*100);
+        const expenseHeight=Math.max(month.expense>0?8:2,(month.expense/max)*100);
+        return <div className={styles.barMonth} key={months[index]}>
+          <div className={styles.barTrack}>
+            <span className={styles.incomeBar} style={{height:`${incomeHeight}%`,"--delay":`${index*45}ms`} as CSSProperties}/>
+            <span className={styles.expenseBar} style={{height:`${expenseHeight}%`,"--delay":`${index*45+70}ms`} as CSSProperties}/>
+          </div>
+          <small>{months[index]}</small>
+        </div>;
+      })}
+    </div>
+  </article>;
+}
