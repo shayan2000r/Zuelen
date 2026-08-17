@@ -1,49 +1,36 @@
 "use client";
 
-import { ArrowUp, BookOpen, LoaderCircle, Sparkles } from "lucide-react";
+import { ArrowUp, FolderClock, LoaderCircle, MessageSquarePlus, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { askCopilot, type CopilotState } from "@/app/app/copilot/actions";
 import styles from "./copilot.module.css";
 
-const initial: CopilotState = { status: "idle", message: "" };
-const prompts = ["Explain my shareholder account", "How much VAT do I owe?", "What is blocking year-end?", "How much cash can I safely use?"];
+const initial:CopilotState={status:"idle",message:""};
+const prompts=["How much VAT do I owe?","How much cash can I safely use?","What is blocking year-end?","Explain my shareholder account"];
+type Conversation={id:string;title:string;created_at:string;updated_at:string};
+type Message={id:string;role:string;content:string;created_at:string};
 
-export function CopilotPanel({ initialQuestion = "" }: { initialQuestion?: string }) {
-  const [state, action, pending] = useActionState(askCopilot, initial);
-  const [question, setQuestion] = useState(initialQuestion);
-  const formRef = useRef<HTMLFormElement>(null);
-  const submittedInitial = useRef(false);
-
-  useEffect(() => {
-    if (!submittedInitial.current && initialQuestion.trim().length >= 3) {
-      submittedInitial.current = true;
-      const timer = window.setTimeout(() => formRef.current?.requestSubmit(), 80);
-      return () => window.clearTimeout(timer);
-    }
-  }, [initialQuestion]);
-
-  return (
-    <div className={styles.shell}>
-      <div className={styles.hero}>
-        <span className={styles.spark}><Sparkles /></span>
-        <div><p>Compta Copilot</p><h1>Answers without the accounting jargon.</h1><span>Compta starts with the simple answer, then separates the numbers and next step.</span></div>
-      </div>
-      <div className={styles.prompts}>{prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setQuestion(prompt)}>{prompt}</button>)}</div>
-      {state.answer ? (
-        <article className={styles.answer}>
-          <div className={styles.answerHead}><span><Sparkles /><strong>Simple answer</strong></span><span className={styles.grounded}>Grounded in your books</span></div>
-          <div className={styles.answerText}>{state.answer}</div>
-          <div className={styles.detailHint}><BookOpen size={14} /><span>Need debit, credit or PCN detail? Ask “show the accounting detail”.</span></div>
-        </article>
-      ) : (
-        <article className={styles.empty}><strong>Your financial context is connected.</strong><p>Ask in everyday language. Compta will keep the first answer short and practical.</p></article>
-      )}
-      <form ref={formRef} action={action} className={styles.ask}>
-        <textarea name="question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask Compta about your company…" rows={3} />
-        <button type="submit" disabled={pending || question.trim().length < 3} aria-label="Ask Compta">{pending ? <LoaderCircle className={styles.spin} /> : <ArrowUp />}</button>
-      </form>
-      {state.status === "error" ? <p className={styles.error}>{state.message}</p> : null}
-      <footer>Read-only · Copilot cannot post entries or submit filings.</footer>
-    </div>
-  );
+export function CopilotPanel({initialQuestion="",conversations,activeConversationId,messages}:{initialQuestion?:string;conversations:Conversation[];activeConversationId:string|null;messages:Message[]}){
+ const router=useRouter(),[state,action,pending]=useActionState(askCopilot,initial),[question,setQuestion]=useState(initialQuestion),formRef=useRef<HTMLFormElement>(null),submittedInitial=useRef(false);
+ useEffect(()=>{if(!submittedInitial.current&&initialQuestion.trim().length>=3){submittedInitial.current=true;const timer=window.setTimeout(()=>formRef.current?.requestSubmit(),80);return()=>window.clearTimeout(timer)}},[initialQuestion]);
+ useEffect(()=>{if(state.status==="success"&&state.conversationId){setQuestion("");const href=`/app/copilot?conversation=${state.conversationId}`;if(activeConversationId!==state.conversationId)router.replace(href);else router.refresh()}},[state.status,state.conversationId,activeConversationId,router]);
+ return <div className={styles.shell}>
+  <aside className={styles.history}>
+   <div className={styles.historyHead}><div><FolderClock size={15}/><strong>Conversations</strong></div><Link href="/app/copilot" aria-label="New Copilot conversation"><MessageSquarePlus size={15}/></Link></div>
+   <Link href="/app/copilot" className={styles.newChat}><Sparkles size={14}/>New conversation</Link>
+   <div className={styles.conversationList}>{conversations.length?conversations.map(conversation=><Link href={`/app/copilot?conversation=${conversation.id}`} key={conversation.id} className={activeConversationId===conversation.id?styles.conversationActive:""}><strong>{conversation.title}</strong><small>{new Date(conversation.updated_at).toLocaleDateString("en-LU",{day:"2-digit",month:"short"})}</small></Link>):<p>No conversations yet.</p>}</div>
+  </aside>
+  <main className={styles.chat}>
+   <header className={styles.chatHead}><span className={styles.logo}><Sparkles size={17}/></span><div><p>Compta Copilot</p><h1>{activeConversationId?conversations.find(c=>c.id===activeConversationId)?.title||"Conversation":"Your financial copilot"}</h1><span>Ask your books in everyday language. Compta separates posted facts, evidence and estimates.</span></div></header>
+   <div className={styles.messages}>
+    {messages.length?messages.map(message=><article className={message.role==="user"?styles.userMessage:styles.assistantMessage} key={message.id}><div className={styles.messageMeta}><span>{message.role==="user"?"You":"Compta"}</span><small>{new Date(message.created_at).toLocaleTimeString("en-LU",{hour:"2-digit",minute:"2-digit"})}</small></div><div className={styles.messageBody}>{message.content}</div></article>):<div className={styles.emptyState}>
+      <div className={styles.illustration} aria-hidden="true"><div className={styles.gridDots}/><span className={styles.illTileOne}><i/>€<b>VAT</b></span><span className={styles.illOrb}><Sparkles size={24}/></span><span className={styles.illTileTwo}><i/><i/><i/></span><span className={styles.illTileThree}>J<span>0058</span></span></div>
+      <h2>Ask the business question. Skip the accounting jargon.</h2><p>Copilot can explain VAT, cash, invoices, tax reserve, compliance blockers and posted accounting using the records already inside Compta.</p><div className={styles.prompts}>{prompts.map(prompt=><button key={prompt} type="button" onClick={()=>setQuestion(prompt)}>{prompt}</button>)}</div>
+     </div>}
+   </div>
+   <div className={styles.composerWrap}><form ref={formRef} action={action} className={styles.ask}><input type="hidden" name="conversation_id" value={activeConversationId??""}/><textarea name="question" value={question} onChange={event=>setQuestion(event.target.value)} placeholder="Ask Compta about your company…" rows={2}/><button type="submit" disabled={pending||question.trim().length<3} aria-label="Ask Compta">{pending?<LoaderCircle className={styles.spin}/>:<ArrowUp/>}</button></form>{state.status==="error"?<p className={styles.error}>{state.message}</p>:null}<footer>Read-only · Copilot cannot post entries or submit filings.</footer></div>
+  </main>
+ </div>;
 }
