@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppFrame } from "@/components/app-frame";
+import { availableFiscalYears, fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import "./ui-polish.css";
@@ -14,14 +15,18 @@ export default async function ProtectedAppLayout({ children }: { children: React
   if (!workspace.authenticated) redirect("/sign-in");
   if (!workspace.organization || !workspace.company) redirect("/setup");
 
-  const fiscalYear = new Date().getFullYear();
+  const fiscalYear = await getActiveFiscalYear(workspace.company.fiscal_year_start_month);
+  const bounds = fiscalYearBounds(fiscalYear, workspace.company.fiscal_year_start_month);
+  const fiscalYears = availableFiscalYears(fiscalYear, workspace.company.fiscal_year_start_month);
   const supabase = await createClient();
   const [{ count }, brandResult] = await Promise.all([
     supabase
       .from("source_transactions")
       .select("id", { count: "exact", head: true })
       .eq("company_id", workspace.company.id)
-      .in("classification_status", ["unclassified", "review"]),
+      .in("classification_status", ["unclassified", "review"])
+      .gte("occurred_on", bounds.start)
+      .lte("occurred_on", bounds.end),
     workspace.company.brand_image_path
       ? supabase.storage.from("company-documents").createSignedUrl(workspace.company.brand_image_path, 60 * 60)
       : Promise.resolve({ data: null, error: null }),
@@ -31,6 +36,7 @@ export default async function ProtectedAppLayout({ children }: { children: React
     <AppFrame
       companyName={workspace.company.trading_name || workspace.company.legal_name}
       fiscalYear={fiscalYear}
+      fiscalYears={fiscalYears}
       email={workspace.email}
       attentionCount={count ?? 0}
       brandImageUrl={brandResult.data?.signedUrl ?? null}
