@@ -1,0 +1,6 @@
+"use client";
+import { LoaderCircle } from "lucide-react";
+import { useActionState } from "react";
+import { updateComplianceStatus, type ComplianceState } from "@/app/app/compliance/actions";
+const initial:ComplianceState={status:"idle",message:""};
+export function ComplianceStatusControl({id,status}:{id:string;status:string}){const[state,action,pending]=useActionState(updateComplianceStatus,initial);return <form action={action} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}><input type="hidden" name="obligation_id" value={id}/><select name="status" defaultValue={status} style={{height:28,border:"1px solid #dce5dc",borderRadius:8,background:"#fff",fontSize:10,padding:"0 6px"}}><option value="upcoming">Upcoming</option><option value="preparing">Preparing</option><option value="ready">Ready</option><option value="filed">Filed</option><option value="paid">Paid</option><option value="not_applicable">Not applicable</option></select><button type="submit" disabled={pending} style={{height:28,border:0,borderRadius:8,background:"#1a7431",color:"#fff",fontSize:10,fontWeight:700,padding:"0 8px"}}>{pending?<LoaderCircle size={11}/>:"Save"}</button>{state.status==="error"?<span style={{fontSize:9,color:"#a65340"}}>{state.message}</span>:null}</form>}
