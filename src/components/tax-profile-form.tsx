@@ -1,0 +1,7 @@
+"use client";
+import { LoaderCircle, Save } from "lucide-react";
+import { useActionState } from "react";
+import { saveTaxProfile, type TaxProfileState } from "@/app/app/tax-reserve/actions";
+import styles from "./tax-reserve.module.css";
+const initial:TaxProfileState={status:"idle",message:""};
+export function TaxProfileForm({municipality,multiplier,year,priorBalance}:{municipality:string|null;multiplier:number|null;year:number;priorBalance:number|null}){const[state,action,pending]=useActionState(saveTaxProfile,initial);return <form action={action} className={styles.profileForm}><div><span>Municipality</span><strong>{municipality||"Not set"}</strong></div><label><span>ICC multiplier (%)</span><input name="icc_multiplier_percent" type="number" min="1" max="1000" step="0.01" defaultValue={multiplier!==null?multiplier*100:""} placeholder="e.g. 225" required/></label><label><span>Rate year</span><input name="icc_multiplier_year" type="number" min="2025" max="2100" defaultValue={year}/></label><label><span>Prior closing balance total <em>optional</em></span><input name="prior_balance_total" type="number" min="0" step="0.01" defaultValue={priorBalance??""} placeholder="For minimum IF context"/></label><button type="submit" disabled={pending}>{pending?<LoaderCircle className={styles.spin}/>:<Save/>}{pending?"Saving…":"Update tax profile"}</button>{state.message?<p className={state.status==="error"?styles.error:styles.success}>{state.message}</p>:null}</form>}
