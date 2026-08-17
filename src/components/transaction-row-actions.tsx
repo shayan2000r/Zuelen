@@ -1,69 +1,23 @@
 "use client";
 
-import { LoaderCircle, Pencil, Trash2, X } from "lucide-react";
+import { Calculator, LoaderCircle, Pencil, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { deleteSourceTransactionAction, editSourceTransactionAction, type TransactionActionState } from "@/app/app/transactions/actions";
 import styles from "./record-actions.module.css";
 
-type Row = {
-  id: string;
-  occurred_on: string;
-  direction: string;
-  amount_gross: number | string;
-  vat_amount: number | string | null;
-  counterparty_name: string | null;
-  description: string | null;
-  classification_status: string;
-};
-
+type Row = { id:string; occurred_on:string; direction:string; amount_gross:number|string; vat_amount:number|string|null; counterparty_name:string|null; description:string|null; classification_status:string };
 const initial: TransactionActionState = { status: "idle", message: "" };
+function inferredRate(gross:number,vat:number){const net=gross-vat;if(vat<=0||net<=0)return 0;const actual=vat/net*100;return [17,14,8,3].reduce((best,r)=>Math.abs(r-actual)<Math.abs(best-actual)?r:best,17)}
+function money(v:number){return new Intl.NumberFormat("en-LU",{style:"currency",currency:"EUR",minimumFractionDigits:2}).format(v||0)}
 
 export function TransactionRowActions({ row }: { row: Row }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const router = useRouter();
-  const [editState, editAction, editPending] = useActionState(editSourceTransactionAction, initial);
-  const [deleteState, deleteAction, deletePending] = useActionState(deleteSourceTransactionAction, initial);
-
-  useEffect(() => {
-    if (editState.status === "success") {
-      dialog.current?.close();
-      router.refresh();
-    }
-  }, [editState.status, router]);
-  useEffect(() => {
-    if (deleteState.status === "success") router.refresh();
-  }, [deleteState.status, router]);
-
-  const posted = row.classification_status === "posted";
-
-  return (
-    <div className={styles.actions}>
-      <button type="button" className={styles.iconButton} onClick={() => dialog.current?.showModal()} aria-label="Edit transaction"><Pencil size={13} /></button>
-      <form action={deleteAction} onSubmit={(event) => {
-        if (!window.confirm(posted ? "Delete this posted transaction? Compta will create a reversal so the ledger remains auditable." : "Delete this transaction?")) event.preventDefault();
-      }}>
-        <input type="hidden" name="source_transaction_id" value={row.id} />
-        <button type="submit" className={`${styles.iconButton} ${styles.danger}`} disabled={deletePending} aria-label="Delete transaction">{deletePending ? <LoaderCircle className={styles.spin} size={13} /> : <Trash2 size={13} />}</button>
-      </form>
-      <dialog ref={dialog} className={styles.dialog}>
-        <form action={editAction} className={styles.dialogCard}>
-          <div className={styles.dialogHead}><div><span>{posted ? "Accounting-safe correction" : "Edit transaction"}</span><h3>{posted ? "Correct posted transaction" : "Update transaction"}</h3></div><button type="button" onClick={() => dialog.current?.close()}><X size={16} /></button></div>
-          {posted ? <p className={styles.notice}>The original journal entry stays immutable. Compta will reverse it and repost the corrected values automatically.</p> : null}
-          <input type="hidden" name="source_transaction_id" value={row.id} />
-          <div className={styles.grid}>
-            <label><span>Type</span><select name="direction" defaultValue={row.direction}><option value="expense">Expense</option><option value="income">Income</option></select></label>
-            <label><span>Date</span><input name="occurred_on" type="date" defaultValue={row.occurred_on} required /></label>
-            <label><span>Gross amount</span><input name="amount_gross" type="number" min="0.01" step="0.01" defaultValue={Number(row.amount_gross).toFixed(2)} required /></label>
-            <label><span>VAT included</span><input name="vat_amount" type="number" min="0" step="0.01" defaultValue={Number(row.vat_amount ?? 0).toFixed(2)} /></label>
-            <label className={styles.full}><span>Customer / supplier</span><input name="counterparty_name" defaultValue={row.counterparty_name ?? ""} /></label>
-            <label className={styles.full}><span>Description</span><textarea name="description" defaultValue={row.description ?? ""} /></label>
-          </div>
-          {editState.status === "error" ? <div className={styles.error}>{editState.message}</div> : null}
-          <div className={styles.dialogFooter}><button type="button" className={styles.secondary} onClick={() => dialog.current?.close()}>Cancel</button><button type="submit" className={styles.primary} disabled={editPending}>{editPending ? <LoaderCircle className={styles.spin} size={14} /> : <Pencil size={14} />}{editPending ? "Saving…" : "Save changes"}</button></div>
-        </form>
-      </dialog>
-      {deleteState.status === "error" ? <span className={styles.inlineError}>{deleteState.message}</span> : null}
-    </div>
-  );
+  const dialog=useRef<HTMLDialogElement>(null);const router=useRouter();
+  const [editState,editAction,editPending]=useActionState(editSourceTransactionAction,initial);const [deleteState,deleteAction,deletePending]=useActionState(deleteSourceTransactionAction,initial);
+  const gross=Number(row.amount_gross),existingVat=Number(row.vat_amount??0),defaultRate=inferredRate(gross,existingVat);
+  const [amount,setAmount]=useState(gross);const [rate,setRate]=useState(defaultRate);const [included,setIncluded]=useState(true);
+  const calc=useMemo(()=>{if(!amount||rate===0)return{net:amount||0,vat:0,gross:amount||0};if(included){const net=amount/(1+rate/100);return{net,vat:amount-net,gross:amount}}const vat=amount*rate/100;return{net:amount,vat,gross:amount+vat}},[amount,rate,included]);
+  useEffect(()=>{if(editState.status==="success"){dialog.current?.close();router.refresh()}},[editState.status,router]);useEffect(()=>{if(deleteState.status==="success")router.refresh()},[deleteState.status,router]);
+  const posted=row.classification_status==="posted";
+  return <div className={styles.actions}><button type="button" className={styles.iconButton} onClick={()=>dialog.current?.showModal()} aria-label="Edit transaction"><Pencil size={13}/></button><form action={deleteAction} onSubmit={e=>{if(!window.confirm(posted?"Delete this posted transaction? Compta will reverse it so the ledger remains auditable.":"Delete this transaction?"))e.preventDefault()}}><input type="hidden" name="source_transaction_id" value={row.id}/><button type="submit" className={`${styles.iconButton} ${styles.danger}`} disabled={deletePending}>{deletePending?<LoaderCircle className={styles.spin} size={13}/>:<Trash2 size={13}/>}</button></form><dialog ref={dialog} className={styles.dialog}><form action={editAction} className={styles.dialogCard}><div className={styles.dialogHead}><div><span>{posted?"Accounting-safe correction":"Edit transaction"}</span><h3>{posted?"Correct posted transaction":"Update transaction"}</h3></div><button type="button" onClick={()=>dialog.current?.close()}><X size={16}/></button></div>{posted?<p className={styles.notice}>The original journal entry stays immutable. Compta will reverse it and repost the corrected values.</p>:null}<input type="hidden" name="source_transaction_id" value={row.id}/><div className={styles.grid}><label><span>Type</span><select name="direction" defaultValue={row.direction}><option value="expense">Expense</option><option value="income">Income</option></select></label><label><span>Date</span><input name="occurred_on" type="date" defaultValue={row.occurred_on} required/></label><label><span>Amount</span><input name="amount" type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(Number(e.target.value)||0)} required/></label><label><span>VAT rate</span><select name="vat_rate" value={rate} onChange={e=>setRate(Number(e.target.value))}><option value={17}>17%</option><option value={14}>14%</option><option value={8}>8%</option><option value={3}>3%</option><option value={0}>0%</option></select></label><label className={styles.full}><span>Does the amount include VAT?</span><select name="vat_included" value={included?"yes":"no"} onChange={e=>setIncluded(e.target.value==="yes")}><option value="yes">Yes · TTC / gross</option><option value="no">No · HT / net</option></select></label><div className={`${styles.notice} ${styles.full}`}><Calculator size={13}/> Net {money(calc.net)} · VAT {money(calc.vat)} · Total {money(calc.gross)}</div><label className={styles.full}><span>Customer / supplier</span><input name="counterparty_name" defaultValue={row.counterparty_name??""}/></label><label className={styles.full}><span>Description</span><textarea name="description" defaultValue={row.description??""}/></label></div>{editState.status==="error"?<div className={styles.error}>{editState.message}</div>:null}<div className={styles.dialogFooter}><button type="button" className={styles.secondary} onClick={()=>dialog.current?.close()}>Cancel</button><button type="submit" className={styles.primary} disabled={editPending}>{editPending?<LoaderCircle className={styles.spin} size={14}/>:<Pencil size={14}/>} {editPending?"Saving…":"Save changes"}</button></div></form></dialog>{deleteState.status==="error"?<span className={styles.inlineError}>{deleteState.message}</span>:null}</div>
 }

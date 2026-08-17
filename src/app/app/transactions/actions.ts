@@ -14,6 +14,23 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function calculateVat(formData: FormData) {
+  const entered = Number(formData.get("amount") ?? formData.get("amount_gross"));
+  const rate = Number(formData.get("vat_rate") || 0);
+  const included = String(formData.get("vat_included") ?? "yes") !== "no";
+  if (!Number.isFinite(entered) || entered <= 0) return { error: "Amount must be greater than zero." } as const;
+  if (![0, 3, 8, 14, 17].includes(rate)) return { error: "Choose a supported Luxembourg VAT rate." } as const;
+  if (rate === 0) return { gross: roundMoney(entered), net: roundMoney(entered), vat: 0, rate, included } as const;
+  if (included) {
+    const gross = roundMoney(entered);
+    const net = roundMoney(gross / (1 + rate / 100));
+    return { gross, net, vat: roundMoney(gross - net), rate, included } as const;
+  }
+  const net = roundMoney(entered);
+  const vat = roundMoney(net * rate / 100);
+  return { gross: roundMoney(net + vat), net, vat, rate, included } as const;
+}
+
 export async function createSourceTransaction(
   _previous: TransactionActionState,
   formData: FormData,
@@ -25,28 +42,24 @@ export async function createSourceTransaction(
 
   const occurredOn = String(formData.get("occurred_on") ?? "");
   const direction = String(formData.get("direction") ?? "");
-  const gross = Number(formData.get("amount_gross"));
-  const vat = Number(formData.get("vat_amount") || 0);
   const counterparty = String(formData.get("counterparty_name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const vat = calculateVat(formData);
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) return { status: "error", message: "Choose a valid transaction date." };
   if (!["income", "expense"].includes(direction)) return { status: "error", message: "Choose income or expense." };
-  if (!Number.isFinite(gross) || gross <= 0) return { status: "error", message: "Gross amount must be greater than zero." };
-  if (!Number.isFinite(vat) || vat < 0 || vat > gross) return { status: "error", message: "VAT must be between zero and the gross amount." };
+  if ("error" in vat) return { status: "error", message: vat.error };
+  if (!workspace.company.vat_registered && vat.vat > 0) return { status: "error", message: "This company is not marked as VAT registered. Choose 0% VAT or update the company VAT profile." };
 
-  const amountGross = roundMoney(gross);
-  const vatAmount = roundMoney(vat);
-  const amountNet = roundMoney(amountGross - vatAmount);
   const supabase = await createClient();
   const { error } = await supabase.from("source_transactions").insert({
     organization_id: workspace.organization.id,
     company_id: workspace.company.id,
     occurred_on: occurredOn,
     direction,
-    amount_gross: amountGross,
-    amount_net: amountNet,
-    vat_amount: vatAmount,
+    amount_gross: vat.gross,
+    amount_net: vat.net,
+    vat_amount: vat.vat,
     currency: workspace.company.base_currency || "EUR",
     counterparty_name: counterparty || null,
     description: description || null,
@@ -58,7 +71,7 @@ export async function createSourceTransaction(
   if (error) return { status: "error", message: error.message };
   revalidatePath("/app");
   revalidatePath("/app/transactions");
-  return { status: "success", message: "Transaction recorded. It is ready for accounting review." };
+  return { status: "success", message: `Transaction recorded · net ${vat.net.toFixed(2)} · VAT ${vat.vat.toFixed(2)}.` };
 }
 
 export async function postSourceTransaction(
@@ -83,7 +96,8 @@ export async function postSourceTransaction(
   revalidatePath("/app");
   revalidatePath("/app/transactions");
   revalidatePath("/app/accounting");
-  return { status: "success", message: "Posted successfully. The journal entry is now immutable.", journalEntryId: typeof data === "string" ? data : undefined };
+  revalidatePath("/app/taxes");
+  return { status: "success", message: "Posted successfully. The journal entry is now locked and auditable.", journalEntryId: typeof data === "string" ? data : undefined };
 }
 
 export async function editSourceTransactionAction(
@@ -96,24 +110,23 @@ export async function editSourceTransactionAction(
   const id = String(formData.get("source_transaction_id") ?? "");
   const occurredOn = String(formData.get("occurred_on") ?? "");
   const direction = String(formData.get("direction") ?? "");
-  const gross = Number(formData.get("amount_gross"));
-  const vat = Number(formData.get("vat_amount") || 0);
   const counterparty = String(formData.get("counterparty_name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const vat = calculateVat(formData);
 
   if (!/^[0-9a-f-]{36}$/i.test(id)) return { status: "error", message: "Invalid transaction." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) return { status: "error", message: "Choose a valid transaction date." };
   if (!["income", "expense"].includes(direction)) return { status: "error", message: "Choose income or expense." };
-  if (!Number.isFinite(gross) || gross <= 0) return { status: "error", message: "Gross amount must be greater than zero." };
-  if (!Number.isFinite(vat) || vat < 0 || vat > gross) return { status: "error", message: "VAT must be between zero and gross amount." };
+  if ("error" in vat) return { status: "error", message: vat.error };
+  if (!workspace.company.vat_registered && vat.vat > 0) return { status: "error", message: "This company is not marked as VAT registered." };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_source_transaction_safe", {
     p_source_transaction_id: id,
     p_occurred_on: occurredOn,
     p_direction: direction,
-    p_amount_gross: gross,
-    p_vat_amount: vat,
+    p_amount_gross: vat.gross,
+    p_vat_amount: vat.vat,
     p_counterparty_name: counterparty || null,
     p_description: description || null,
   });
@@ -123,7 +136,7 @@ export async function editSourceTransactionAction(
   revalidatePath("/app/transactions");
   revalidatePath("/app/accounting");
   revalidatePath("/app/taxes");
-  return { status: "success", message: "Transaction updated." };
+  return { status: "success", message: `Transaction updated · net ${vat.net.toFixed(2)} · VAT ${vat.vat.toFixed(2)}.` };
 }
 
 export async function deleteSourceTransactionAction(
