@@ -1,49 +1,70 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import styles from "@/app/app/overview.module.css";
 
-function money(value:number,currency:string){
-  return new Intl.NumberFormat("en-LU",{style:"currency",currency,minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function points(values: number[], max: number, width = 620, height = 200, padX = 10, padY = 18) {
+  const usableWidth = width - padX * 2;
+  const usableHeight = height - padY * 2;
+  return values.map((value, index) => {
+    const x = padX + (values.length === 1 ? 0 : (index / (values.length - 1)) * usableWidth);
+    const normalized = Math.max(0, value) / max;
+    const y = padY + usableHeight - normalized * usableHeight;
+    return { x, y };
+  });
 }
 
-export function OverviewChart({monthly,currency,year,currentMonth}:{monthly:{income:number;expense:number}[];currency:string;year:number;currentMonth:number}){
-  const visible=monthly.slice(0,Math.max(currentMonth+1,8));
-  const max=Math.max(1,...visible.flatMap(month=>[month.income,month.expense]));
-  const totalIncome=monthly.reduce((sum,month)=>sum+month.income,0);
-  const totalExpense=monthly.reduce((sum,month)=>sum+month.expense,0);
-  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+export function OverviewChart({ monthly, year, currentMonth }: { monthly: { income: number; expense: number }[]; currency: string; year: number; currentMonth: number }) {
+  const visibleCount = Math.max(currentMonth + 1, 8);
+  const visible = monthly.slice(0, visibleCount);
+  const incomeValues = visible.map((month) => month.income);
+  const expenseValues = visible.map((month) => month.expense);
+  const max = Math.max(1, ...incomeValues, ...expenseValues);
+  const incomePoints = points(incomeValues, max);
+  const expensePoints = points(expenseValues, max);
+  const incomePolyline = incomePoints.map((point) => `${point.x},${point.y}`).join(" ");
+  const expensePolyline = expensePoints.map((point) => `${point.x},${point.y}`).join(" ");
+  const incomeArea = `10,200 ${incomePolyline} 610,200`;
+  const expenseArea = `10,200 ${expensePolyline} 610,200`;
 
-  return <article className={styles.incomeCard}>
-    <div className={styles.incomeHead}>
-      <div>
-        <span className={styles.cardLabel}>Income & spending</span>
-        <h2>Financial activity</h2>
-        <p>{year} year to date</p>
+  return (
+    <article className={styles.incomeCard}>
+      <div className={styles.incomeHead}>
+        <div>
+          <span className={styles.cardLabel}>Financial activity</span>
+          <h2>Income vs spending</h2>
+          <p>Monthly movement · {year}</p>
+        </div>
+        <div className={styles.chartLegend}>
+          <span><i className={styles.incomeLegend} />Income</span>
+          <span><i className={styles.expenseLegend} />Spending</span>
+        </div>
       </div>
-      <div className={styles.chartLegend}>
-        <span><i className={styles.incomeLegend}/>Income</span>
-        <span><i className={styles.expenseLegend}/>Spending</span>
+
+      <div className={styles.lineChart} role="img" aria-label={`Income and spending trend for ${year}`}>
+        <svg viewBox="0 0 620 210" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="incomeAreaBlue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#2196F3" stopOpacity=".22" />
+              <stop offset="1" stopColor="#2196F3" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="expenseAreaBlue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#0D47A1" stopOpacity=".12" />
+              <stop offset="1" stopColor="#0D47A1" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[38, 88, 138, 188].map((y) => <line key={y} x1="10" x2="610" y1={y} y2={y} className={styles.chartGridLine} />)}
+          <polygon points={expenseArea} className={styles.expenseArea} />
+          <polygon points={incomeArea} className={styles.incomeArea} />
+          <polyline pathLength="1" points={expensePolyline} className={styles.expenseLine} />
+          <polyline pathLength="1" points={incomePolyline} className={styles.incomeLine} />
+          {expensePoints.map((point, index) => <circle key={`e-${index}`} cx={point.x} cy={point.y} r="3.5" className={styles.expenseDot} />)}
+          {incomePoints.map((point, index) => <circle key={`i-${index}`} cx={point.x} cy={point.y} r="3.5" className={styles.incomeDot} />)}
+        </svg>
       </div>
-    </div>
-
-    <div className={styles.chartTotals}>
-      <div><span>Income</span><strong>{money(totalIncome,currency)}</strong></div>
-      <div><span>Spending</span><strong>{money(totalExpense,currency)}</strong></div>
-    </div>
-
-    <div className={styles.barChart} role="img" aria-label={`Monthly income and spending for ${year}`}>
-      {visible.map((month,index)=>{
-        const incomeHeight=Math.max(month.income>0?8:2,(month.income/max)*100);
-        const expenseHeight=Math.max(month.expense>0?8:2,(month.expense/max)*100);
-        return <div className={styles.barMonth} key={months[index]}>
-          <div className={styles.barTrack}>
-            <span className={styles.incomeBar} style={{height:`${incomeHeight}%`,"--delay":`${index*45}ms`} as CSSProperties}/>
-            <span className={styles.expenseBar} style={{height:`${expenseHeight}%`,"--delay":`${index*45+70}ms`} as CSSProperties}/>
-          </div>
-          <small>{months[index]}</small>
-        </div>;
-      })}
-    </div>
-  </article>;
+      <div className={styles.chartMonths}>{visible.map((_, index) => <span key={months[index]}>{months[index]}</span>)}</div>
+      <div className={styles.chartFoot}><span>Trend view only</span><strong>Exact totals are shown in the KPI cards.</strong></div>
+    </article>
+  );
 }
