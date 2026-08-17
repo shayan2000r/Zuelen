@@ -1,74 +1,167 @@
-/* Compta application-wide polish overrides */
-.nav-item{ text-decoration:none !important; }
-.sidebar{ overflow:hidden; }
-.nav-list[aria-label="Primary navigation"]{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; padding-right:3px; scrollbar-width:thin; scrollbar-color:#3b4037 transparent; }
-.nav-list[aria-label="Primary navigation"]::-webkit-scrollbar{ width:5px; }
-.nav-list[aria-label="Primary navigation"]::-webkit-scrollbar-thumb{ background:#3b4037; border-radius:999px; }
-.sidebar-spacer{ display:none; }
-.sidebar-insight{ flex:0 0 auto; margin-top:12px; }
-.nav-list-bottom,.user-row{ flex:0 0 auto; }
-
-/* Global content rhythm */
-.workspace{ background:linear-gradient(180deg,#f5f6f1 0%,#f2f4ee 100%); }
-.workspace :where(h1,h2,h3,strong){ text-wrap:balance; }
-.workspace :where(article,section){ min-width:0; }
-
-/* Floating primary actions */
-.compta-fab{ position:fixed; right:28px; bottom:28px; z-index:45; height:48px; padding:0 18px; border:1px solid #252a21; border-radius:15px; background:#171a16; color:#fff; display:inline-flex; align-items:center; gap:9px; font-weight:750; font-size:11px; box-shadow:0 18px 44px rgba(21,27,18,.2); cursor:pointer; transition:transform .18s ease,box-shadow .18s ease; }
-.compta-fab:hover{ transform:translateY(-2px); box-shadow:0 22px 52px rgba(21,27,18,.24); }
-.compta-fab svg{ color:#c8ff57; }
-.compta-drawer-overlay{ position:fixed; inset:0; z-index:80; background:rgba(13,16,12,.42); backdrop-filter:blur(5px); display:flex; justify-content:flex-end; padding:14px; }
-.compta-drawer-shell{ width:min(520px,calc(100vw - 28px)); height:100%; display:flex; flex-direction:column; gap:9px; }
-.compta-drawer-close{ align-self:flex-end; width:38px; height:38px; border:1px solid rgba(255,255,255,.18); border-radius:12px; background:rgba(20,24,18,.88); color:#fff; display:grid; place-items:center; cursor:pointer; }
-.compta-drawer-card{ position:static !important; top:auto !important; width:100%; max-height:calc(100vh - 70px); overflow:auto; border-radius:22px !important; box-shadow:0 28px 80px rgba(13,17,11,.28) !important; }
-.compta-single-column{ grid-template-columns:1fr !important; }
-
-/* Compact list controls */
-.compta-list-tools{ display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:12px 14px; border-bottom:1px solid #e7eae3; background:#fbfcf9; }
-.compta-list-tools label{ height:34px; min-width:230px; display:flex; align-items:center; gap:8px; border:1px solid #dce1d7; background:#fff; border-radius:10px; padding:0 10px; color:#879087; }
-.compta-list-tools input{ width:100%; min-width:0; border:0; outline:0; background:transparent; font:inherit; font-size:9.5px; color:#1c2119; }
-.compta-list-tools select,.compta-list-tools button{ height:34px; border-radius:10px; font:inherit; font-size:9px; font-weight:700; }
-.compta-list-tools select{ border:1px solid #dce1d7; background:#fff; color:#596158; padding:0 30px 0 10px; }
-.compta-list-tools button{ border:1px solid #1a1d18; background:#1a1d18; color:#fff; padding:0 13px; cursor:pointer; }
-
-/* Scannable ledger/activity surfaces */
-.compta-activity-panel{ border-radius:22px !important; box-shadow:0 18px 48px rgba(25,35,22,.06) !important; }
-.compta-activity-table{ border-collapse:separate !important; border-spacing:0 7px !important; background:#f5f7f2; padding:2px 10px 11px; }
-.compta-activity-table thead th{ background:transparent !important; border:0 !important; padding-top:10px !important; padding-bottom:7px !important; color:#858d82 !important; font-size:8px !important; }
-.compta-activity-table tbody tr{ background:#fff; transition:transform .16s ease,box-shadow .16s ease; }
-.compta-activity-table tbody tr:hover{ transform:translateY(-1px); box-shadow:0 10px 24px rgba(27,38,23,.055); }
-.compta-activity-table tbody td{ border-top:1px solid #e5e9e1 !important; border-bottom:1px solid #e5e9e1 !important; padding-top:13px !important; padding-bottom:13px !important; }
-.compta-activity-table tbody td:first-child{ border-left:1px solid #e5e9e1; border-radius:12px 0 0 12px; color:#7d857a; font-variant-numeric:tabular-nums; }
-.compta-activity-table tbody td:last-child{ border-right:1px solid #e5e9e1; border-radius:0 12px 12px 0; }
-.compta-activity-table [class*="rowStatus"]{ position:relative; gap:6px; padding:0 !important; background:transparent !important; border-radius:0 !important; font-size:8.5px !important; letter-spacing:.035em !important; text-transform:none !important; }
-.compta-activity-table [class*="rowStatus"]:before{ content:''; width:6px; height:6px; border-radius:50%; background:#c79a42; display:inline-block; box-shadow:0 0 0 3px rgba(199,154,66,.09); }
-.compta-activity-table [class*="postedStatus"]:before{ background:#4da276; box-shadow:0 0 0 3px rgba(77,162,118,.09); }
-
-/* Invoice overview: one cohesive KPI band on desktop */
-[class*="invoiceMetrics"]{ grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:10px !important; }
-[class*="invoiceMetrics"] article{ box-shadow:0 10px 28px rgba(27,38,23,.04); }
-[class*="invoiceListPanel"]{ box-shadow:0 18px 48px rgba(25,35,22,.055) !important; }
-[class*="invoiceTable"] th{ background:#f5f7f2 !important; }
-[class*="invoiceTable"] tbody tr{ transition:background .16s ease; }
-[class*="invoiceTable"] tbody tr:hover{ background:#fafcf8; }
-
-/* Banking: lighter status language and compact row hierarchy */
-[class*="tableWrap"] tbody tr{ transition:transform .16s ease,box-shadow .16s ease; }
-[class*="tableWrap"] tbody tr:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(27,38,23,.045); }
-[class*="matched"],[class*="open"]{ position:relative; gap:6px; padding:0 !important; background:transparent !important; text-transform:none !important; letter-spacing:.02em !important; font-weight:700; }
-[class*="matched"]:before,[class*="open"]:before{ content:''; width:6px; height:6px; border-radius:50%; display:inline-block; }
-[class*="matched"]:before{ background:#4da276; box-shadow:0 0 0 3px rgba(77,162,118,.09); }
-[class*="open"]:before{ background:#c79a42; box-shadow:0 0 0 3px rgba(199,154,66,.09); }
-
-@media(max-width:1100px){
-  [class*="invoiceMetrics"]{ grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+/* Compta — premium fintech shell and cross-product design system */
+.app-shell{
+  --surface:#fff;
+  --surface-soft:#f8faf6;
+  --surface-muted:#f2f5ef;
+  --border:#e1e6dc;
+  --border-strong:#d2d9ce;
+  --text:#171a15;
+  --muted:#747c71;
+  --lime:#c8ff57;
+  --green:#26785b;
+  --amber:#a66f25;
+  --danger:#a95743;
+  --shadow-sm:0 1px 2px rgba(20,27,18,.035),0 8px 22px rgba(20,27,18,.035);
+  --shadow-md:0 2px 4px rgba(20,27,18,.035),0 18px 45px rgba(20,27,18,.065);
+  --shadow-lg:0 28px 90px rgba(18,24,16,.13);
+  min-height:100vh;
+  grid-template-columns:270px minmax(0,1fr)!important;
+  background:#f1f3ed;
 }
-@media(max-width:700px){
-  [class*="invoiceMetrics"]{ grid-template-columns:1fr !important; }
-  .compta-fab{ right:16px; bottom:16px; height:46px; padding:0 15px; }
-  .compta-drawer-overlay{ padding:8px; }
-  .compta-drawer-shell{ width:100%; }
-  .compta-list-tools{ align-items:stretch; flex-direction:column; }
-  .compta-list-tools label{ min-width:0; width:100%; }
-  .compta-list-tools select,.compta-list-tools button{ width:100%; }
+
+/* Floating navigation rail */
+.sidebar{
+  inset:12px auto 12px 12px!important;
+  width:246px!important;
+  height:auto!important;
+  padding:14px 11px 12px!important;
+  border:1px solid rgba(255,255,255,.055);
+  border-radius:24px;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 20% -5%,rgba(200,255,87,.08),transparent 27%),
+    linear-gradient(155deg,#181b16 0%,#12140f 72%,#171a14 100%)!important;
+  box-shadow:0 28px 80px rgba(13,16,11,.23),inset 0 1px 0 rgba(255,255,255,.025);
 }
+.brand-row{height:44px!important;padding:0 8px!important;margin-bottom:13px!important}
+.brand-mark{
+  width:32px!important;height:32px!important;border-radius:10px!important;
+  background:linear-gradient(145deg,#d8ff88,#b9f544)!important;
+  box-shadow:0 7px 18px rgba(182,239,68,.16),inset 0 0 0 1px rgba(0,0,0,.07)!important;
+}
+.brand-word{font-size:17px!important;letter-spacing:-.045em!important}
+.company-switcher{
+  min-height:58px;margin-bottom:7px!important;padding:9px!important;
+  border-color:#2b3028!important;border-radius:15px!important;
+  background:rgba(255,255,255,.035)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
+}
+.company-switcher:hover{background:rgba(255,255,255,.06)!important;border-color:#3a4234!important;transform:translateY(-1px)}
+.company-avatar{width:34px!important;height:34px!important;border-radius:10px!important;background:#252c20!important;color:#c8ff57!important}
+.company-copy strong{font-size:10.5px!important;letter-spacing:-.01em}.company-copy small{font-size:8.5px!important;color:#778071!important}
+.nav-list[aria-label="Primary navigation"]{
+  flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 3px 7px 0;
+  scrollbar-width:thin;scrollbar-color:#353a31 transparent;
+}
+.nav-list[aria-label="Primary navigation"]::-webkit-scrollbar{width:4px}.nav-list[aria-label="Primary navigation"]::-webkit-scrollbar-thumb{background:#353a31;border-radius:999px}
+.nav-item{
+  position:relative;height:38px!important;border-radius:11px!important;padding:0 10px!important;
+  color:#929a8e!important;font-size:10.5px!important;font-weight:600!important;text-decoration:none!important;
+  transition:background .18s ease,color .18s ease,transform .18s ease!important;
+}
+.nav-item svg{opacity:.78;transition:transform .18s ease,color .18s ease,opacity .18s ease}
+.nav-item:hover{background:rgba(255,255,255,.045)!important;color:#f5f7f2!important;transform:translateX(2px)}
+.nav-item:hover svg{opacity:1;transform:scale(1.04)}
+.nav-active{
+  background:linear-gradient(90deg,rgba(200,255,87,.13),rgba(200,255,87,.045))!important;
+  color:#fff!important;box-shadow:inset 0 0 0 1px rgba(200,255,87,.08)!important;
+}
+.nav-active:before{content:'';position:absolute;left:-3px;top:9px;bottom:9px;width:3px;border-radius:99px;background:#c8ff57;box-shadow:0 0 16px rgba(200,255,87,.35)}
+.nav-active svg{color:#c8ff57!important;opacity:1}.nav-item em{background:#29301f!important;color:#d4ff7f!important;border:1px solid rgba(200,255,87,.08)}
+.sidebar-spacer{display:none!important}.sidebar-insight{flex:0 0 auto;margin-top:9px!important;margin-bottom:7px!important;padding:9px!important;border-radius:14px!important;background:rgba(255,255,255,.025)!important;border-color:#292e27!important}
+.insight-icon{width:32px!important;height:32px!important;border-radius:10px!important;background:#222a1e!important}.sidebar-insight strong{font-size:9.5px!important}.sidebar-insight p{font-size:8px!important;line-height:1.4!important}.health-dot{width:6px!important;height:6px!important}
+.user-row{flex:0 0 auto;margin-top:5px!important;padding:8px 7px 3px!important;border-top:1px solid #262a24;grid-template-columns:31px minmax(0,1fr) 30px!important}.user-avatar{background:#e9ede4!important}.user-row strong{font-size:9.5px!important}.user-row small{font-size:8px!important}.user-row form{justify-self:end}.user-row button{width:30px;height:30px;display:grid;place-items:center;border-radius:9px!important;color:#7e877b!important}.user-row button:hover{background:#252923!important;color:#fff!important}
+
+/* Workspace and floating glass command bar */
+.workspace{
+  grid-column:2!important;min-width:0;min-height:100vh;
+  background:
+    radial-gradient(circle at 88% 0%,rgba(200,255,87,.055),transparent 24%),
+    radial-gradient(circle at 15% 22%,rgba(148,173,124,.045),transparent 30%),
+    linear-gradient(180deg,#f6f7f3 0%,#f2f4ee 100%)!important;
+}
+.topbar{
+  position:sticky!important;top:12px!important;height:58px!important;margin:12px 18px 0 0!important;padding:0 13px 0 18px!important;
+  border:1px solid rgba(218,224,213,.92)!important;border-radius:17px!important;
+  background:rgba(249,250,247,.82)!important;backdrop-filter:blur(22px) saturate(1.15)!important;
+  box-shadow:0 10px 32px rgba(29,37,25,.055),inset 0 1px 0 rgba(255,255,255,.76);
+}
+.topbar-left{min-width:0}.topbar-actions{gap:7px!important}.search-btn{
+  width:206px!important;height:33px!important;border-color:#dce2d8!important;border-radius:10px!important;
+  background:rgba(255,255,255,.72)!important;color:#7b8378!important;box-shadow:0 1px 2px rgba(20,27,18,.025);
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease!important;
+}
+.search-btn:hover{background:#fff!important;border-color:#cbd4c6!important;box-shadow:0 5px 16px rgba(20,27,18,.055)}
+.icon-btn{width:33px!important;height:33px!important;border-color:#dce2d8!important;border-radius:10px!important;background:rgba(255,255,255,.7)!important;transition:.18s ease!important}.icon-btn:hover{background:#fff!important;transform:translateY(-1px);box-shadow:0 5px 16px rgba(20,27,18,.06)}
+.notification-dot{background:#d96d52!important}
+
+/* Global page rhythm */
+.workspace>div[class*="page"],.workspace>div[class*="liveWrap"],.workspace>div[class*="invoicePage"],.workspace>div[class*="invoiceDetailWrap"]{
+  width:100%;max-width:1560px!important;margin:0 auto!important;padding-top:30px!important;
+  animation:comptaPageIn .38s cubic-bezier(.2,.8,.2,1) both;
+}
+.workspace :where(h1,h2,h3,p){text-wrap:pretty}.workspace :where(article,section,div){min-width:0}
+.workspace [class*="intro"],.workspace [class*="liveIntro"],.workspace [class*="welcome"]{margin-bottom:24px}
+.workspace [class*="intro"] h1,.workspace [class*="liveIntro"] h1,.workspace [class*="welcome"] h1{
+  font-size:clamp(34px,3.1vw,45px)!important;line-height:.98!important;letter-spacing:-.055em!important;font-weight:600!important;
+}
+.workspace [class*="intro"]>div>p:last-child,.workspace [class*="intro"]>div>span,.workspace [class*="liveIntro"]>div>p:last-child,.workspace [class*="welcome"]>div>p:last-child{
+  max-width:720px;color:#747c71!important;line-height:1.6!important;
+}
+.workspace [class*="eyebrow"],.workspace [class*="kicker"],.workspace [class*="sectionLabel"]{color:#7f887b!important;letter-spacing:.14em!important}
+.workspace :where(button,a,input,select,textarea){outline-color:#93b96d}.workspace :where(button,a){-webkit-tap-highlight-color:transparent}
+.workspace :where(button,a):focus-visible,.workspace :where(input,select,textarea):focus-visible{outline:2px solid rgba(128,170,87,.38)!important;outline-offset:2px!important}
+
+/* Cohesive surface language */
+.workspace :where([class*="panel"],[class*="card"],[class*="metric"] article,[class*="metrics"] article,[class*="journalCard"],[class*="section"]){border-color:var(--border)!important}
+.workspace :where([class*="panel"],[class*="card"],[class*="journalCard"]){box-shadow:var(--shadow-sm)}
+.workspace [class*="metrics"] article{box-shadow:var(--shadow-sm);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.workspace [class*="metrics"] article:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#d6dfd1!important}
+.workspace :where([class*="panelHead"],[class*="ledgerHead"],[class*="invoiceListHead"],[class*="sectionHead"]){border-bottom-color:#e8ebe5!important}
+.workspace :where([class*="panelHead"],[class*="ledgerHead"],[class*="invoiceListHead"],[class*="sectionHead"]) h2{font-size:17px!important;letter-spacing:-.035em!important}
+
+/* List toolbars */
+.compta-list-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:11px 14px;border-bottom:1px solid #e8ebe5;background:linear-gradient(180deg,#fbfcf9,#f8faf6)}
+.compta-list-tools label{height:35px;min-width:250px;display:flex;align-items:center;gap:8px;border:1px solid #dce2d8;background:#fff;border-radius:11px;padding:0 10px;color:#879087;box-shadow:0 1px 2px rgba(20,27,18,.025)}
+.compta-list-tools input{width:100%;min-width:0;border:0;outline:0!important;background:transparent;font:inherit;font-size:9.5px;color:#1c2119}
+.compta-list-tools select,.compta-list-tools button{height:35px;border-radius:11px;font:inherit;font-size:9px;font-weight:700;transition:.18s ease}
+.compta-list-tools select{border:1px solid #dce2d8;background:#fff;color:#596158;padding:0 31px 0 11px}.compta-list-tools button{border:1px solid #1a1d18;background:#1a1d18;color:#fff;padding:0 14px;cursor:pointer;box-shadow:0 5px 14px rgba(20,24,17,.1)}.compta-list-tools button:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(20,24,17,.14)}
+
+/* Floating primary actions and slide-over forms */
+.compta-fab{position:fixed;right:30px;bottom:28px;z-index:45;height:49px;padding:0 18px;border:1px solid #252a21;border-radius:15px;background:linear-gradient(145deg,#20251d,#12150f);color:#fff;display:inline-flex;align-items:center;gap:9px;font-weight:750;font-size:10.5px;box-shadow:0 18px 44px rgba(21,27,18,.2),inset 0 1px 0 rgba(255,255,255,.05);cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.compta-fab:after{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.08) 48%,transparent 66%);transform:translateX(-130%);transition:transform .55s ease}.compta-fab:hover{transform:translateY(-3px);box-shadow:0 24px 58px rgba(21,27,18,.26)}.compta-fab:hover:after{transform:translateX(130%)}.compta-fab svg{color:#c8ff57}
+.compta-drawer-overlay{position:fixed;inset:0;z-index:80;background:rgba(13,16,12,.42);backdrop-filter:blur(9px);display:flex;justify-content:flex-end;padding:14px;animation:comptaOverlay .18s ease-out}.compta-drawer-shell{width:min(530px,calc(100vw - 28px));height:100%;display:flex;flex-direction:column;gap:9px;animation:comptaDrawer .28s cubic-bezier(.2,.8,.2,1)}.compta-drawer-close{align-self:flex-end;width:38px;height:38px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(20,24,18,.9);color:#fff;display:grid;place-items:center;cursor:pointer}.compta-drawer-card{position:static!important;top:auto!important;width:100%;max-height:calc(100vh - 70px);overflow:auto;border-radius:24px!important;box-shadow:0 32px 100px rgba(13,17,11,.32)!important}.compta-single-column{grid-template-columns:1fr!important}
+
+/* Transactions / activity */
+.compta-activity-panel{border-radius:22px!important;overflow:hidden;box-shadow:var(--shadow-md)!important}
+.compta-activity-table{border-collapse:separate!important;border-spacing:0 6px!important;background:#f5f7f2;padding:2px 10px 11px}
+.compta-activity-table thead th{background:transparent!important;border:0!important;padding-top:10px!important;padding-bottom:7px!important;color:#858d82!important;font-size:7.8px!important;letter-spacing:.1em!important}
+.compta-activity-table tbody tr{background:#fff;transition:transform .16s ease,box-shadow .16s ease}.compta-activity-table tbody tr:hover{transform:translateY(-1px);box-shadow:0 10px 25px rgba(27,38,23,.055)}
+.compta-activity-table tbody td{border-top:1px solid #e5e9e1!important;border-bottom:1px solid #e5e9e1!important;padding-top:13px!important;padding-bottom:13px!important}.compta-activity-table tbody td:first-child{border-left:1px solid #e5e9e1;border-radius:12px 0 0 12px;color:#7d857a;font-variant-numeric:tabular-nums}.compta-activity-table tbody td:last-child{border-right:1px solid #e5e9e1;border-radius:0 12px 12px 0}
+.compta-activity-table [class*="ledgerName"] strong{font-size:10.5px!important;letter-spacing:-.01em}.compta-activity-table [class*="ledgerName"] small{font-size:8.5px!important;color:#858d82!important}
+.compta-activity-table [class*="rowStatus"]{position:relative;display:inline-flex!important;align-items:center;gap:6px;padding:0!important;background:transparent!important;border-radius:0!important;font-size:8.5px!important;letter-spacing:.02em!important;text-transform:none!important}.compta-activity-table [class*="rowStatus"]:before{content:'';width:6px;height:6px;border-radius:50%;background:#c79a42;display:inline-block;box-shadow:0 0 0 3px rgba(199,154,66,.08)}.compta-activity-table [class*="postedStatus"]:before{background:#4da276;box-shadow:0 0 0 3px rgba(77,162,118,.08)}
+.workspace [class*="reviewCard"]{border-radius:22px!important;background:linear-gradient(145deg,#fff,#fbfcf9)!important;box-shadow:var(--shadow-md)!important}.workspace [class*="reviewMetaGrid"]{border-color:#e3e7df!important;background:#e3e7df!important}.workspace [class*="reviewMetaGrid"]>div{background:#fcfdfb!important}
+
+/* Banking */
+.workspace [class*="banking"] [class*="metrics"]{gap:10px!important}.workspace [class*="banking"] [class*="panel"]{border-radius:22px!important}.workspace [class*="tableWrap"]{background:#f5f7f2!important}.workspace [class*="tableWrap"] table{border-spacing:0 6px!important}.workspace [class*="tableWrap"] tbody tr{transition:transform .16s ease,box-shadow .16s ease}.workspace [class*="tableWrap"] tbody tr:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(27,38,23,.045)}
+.workspace [class*="matched"],.workspace [class*="open"]{position:relative;display:inline-flex!important;align-items:center;gap:6px;padding:0!important;background:transparent!important;text-transform:none!important;letter-spacing:.02em!important;font-weight:700}.workspace [class*="matched"]:before,.workspace [class*="open"]:before{content:'';width:6px;height:6px;border-radius:50%;display:inline-block}.workspace [class*="matched"]:before{background:#4da276;box-shadow:0 0 0 3px rgba(77,162,118,.08)}.workspace [class*="open"]:before{background:#c79a42;box-shadow:0 0 0 3px rgba(199,154,66,.08)}
+.workspace [class*="importHistory"]{border-radius:22px!important;background:linear-gradient(180deg,#fff,#fafbf8)!important}.workspace [class*="batchList"]>div{background:#fff!important;transition:.18s ease}.workspace [class*="batchList"]>div:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(26,35,23,.05)}
+
+/* Invoices */
+.workspace [class*="invoiceMetrics"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important}.workspace [class*="invoiceMetrics"] article{min-height:128px;box-shadow:var(--shadow-sm)!important}.workspace [class*="invoiceMetrics"] strong{font-size:26px!important}.workspace [class*="invoiceListPanel"]{border-radius:22px!important;box-shadow:var(--shadow-md)!important}.workspace [class*="invoiceTable"] th{background:#f5f7f2!important;color:#818981!important}.workspace [class*="invoiceTable"] tbody tr{transition:background .16s ease}.workspace [class*="invoiceTable"] tbody tr:hover{background:#fafcf8}.workspace [class*="newInvoiceButton"]{border-radius:12px!important;box-shadow:0 8px 22px rgba(14,18,12,.12)!important;transition:.18s ease}.workspace [class*="newInvoiceButton"]:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(14,18,12,.16)!important}
+
+/* Accounting journal */
+.workspace [class*="journalList"]{gap:8px!important}.workspace [class*="journalCard"]{border-radius:16px!important;background:#fff!important;box-shadow:0 5px 18px rgba(26,35,23,.035)!important;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}.workspace [class*="journalCard"]:hover{border-color:#d5ddd0!important;box-shadow:0 12px 30px rgba(26,35,23,.055)!important}.workspace [class*="journalSummary"]{min-height:64px;padding-top:14px!important;padding-bottom:14px!important}.workspace [class*="journalNumber"]{color:#667061!important;font-family:'DM Mono',monospace}.workspace [class*="journalStatus"]{background:#edf7ef!important;color:#477453!important;text-transform:none!important;letter-spacing:.01em!important}.workspace [class*="journalDetails"]{background:#fafbf8!important}
+
+/* Compliance / tax / reports / closing workspaces */
+.workspace [class*="compliance"] [class*="nextCard"]{box-shadow:0 24px 65px rgba(18,23,16,.16)!important;background:radial-gradient(circle at 90% 0%,rgba(200,255,87,.12),transparent 34%),linear-gradient(145deg,#20251d,#12150f)!important}.workspace [class*="dep"]{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.workspace [class*="dep"]:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#d5ddd0!important}.workspace [class*="timeline"] [class*="row"]{transition:background .16s ease}.workspace [class*="timeline"] [class*="row"]:hover{background:#fafbf8}
+.workspace [class*="tax-reserve"] [class*="safe"],.workspace [class*="reports"] [class*="good"]{box-shadow:0 24px 60px rgba(21,29,19,.12)}
+.workspace [class*="grid"]>[class*="card"],.workspace [class*="hero"]>article{border-color:#e0e5db!important}
+
+/* Motion */
+@keyframes comptaPageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@keyframes comptaOverlay{from{opacity:0}to{opacity:1}}@keyframes comptaDrawer{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.workspace>div,.workspace *, .sidebar *{animation:none!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+
+/* Responsive shell */
+@media(max-width:1120px){.app-shell{grid-template-columns:238px minmax(0,1fr)!important}.sidebar{width:218px!important}.workspace [class*="invoiceMetrics"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.topbar{margin-right:12px!important}.search-btn{width:180px!important}}
+@media(max-width:880px){.app-shell{display:block!important}.sidebar{inset:8px auto 8px 8px!important;width:252px!important;height:auto!important;border-radius:22px!important;transform:translateX(-110%)}.sidebar-open{transform:translateX(0)!important}.workspace{width:100%!important}.topbar{top:8px!important;margin:8px 8px 0!important}.search-btn{width:36px!important}.search-btn span,.search-btn kbd{display:none!important}.workspace>div[class*="page"],.workspace>div[class*="liveWrap"],.workspace>div[class*="invoicePage"],.workspace>div[class*="invoiceDetailWrap"]{padding-top:24px!important}}
+@media(max-width:700px){.workspace [class*="invoiceMetrics"]{grid-template-columns:1fr!important}.compta-fab{right:16px;bottom:16px;height:46px;padding:0 15px}.compta-drawer-overlay{padding:8px}.compta-drawer-shell{width:100%}.compta-list-tools{align-items:stretch;flex-direction:column}.compta-list-tools label{min-width:0;width:100%}.compta-list-tools select,.compta-list-tools button{width:100%}.workspace [class*="intro"] h1,.workspace [class*="liveIntro"] h1,.workspace [class*="welcome"] h1{font-size:34px!important}.topbar{height:54px!important;border-radius:15px!important}.workspace [class*="metrics"]{gap:8px!important}}
