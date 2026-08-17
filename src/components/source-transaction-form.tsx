@@ -9,8 +9,8 @@ const initialTransactionState: TransactionActionState = { status: "idle", messag
 const rates=[17,14,8,3,0];
 function money(v:number){return new Intl.NumberFormat("en-LU",{style:"currency",currency:"EUR",minimumFractionDigits:2}).format(v||0)}
 
-export function SourceTransactionForm(){
- const[state,formAction,pending]=useActionState(createSourceTransaction,initialTransactionState),[open,setOpen]=useState(false),today=new Date().toISOString().slice(0,10);
+export function SourceTransactionForm({defaultDate}:{defaultDate?:string}){
+ const[state,formAction,pending]=useActionState(createSourceTransaction,initialTransactionState),[open,setOpen]=useState(false),today=defaultDate||new Date().toISOString().slice(0,10);
  const[amount,setAmount]=useState(0),[rate,setRate]=useState(17),[included,setIncluded]=useState(true),[treatment,setTreatment]=useState("domestic");
  const calc=useMemo(()=>{if(!amount)return{net:0,vat:0,gross:0};if(treatment==="eu_b2b_reverse_charge"){const vat=amount*rate/100;return{net:amount,vat,gross:amount}}if(treatment==="non_eu"||treatment==="exempt_or_zero"||rate===0)return{net:amount,vat:0,gross:amount};if(included){const net=amount/(1+rate/100);return{net,vat:amount-net,gross:amount}}const vat=amount*rate/100;return{net:amount,vat,gross:amount+vat}},[amount,rate,included,treatment]);
  useEffect(()=>{if(state.status==="success")setOpen(false)},[state.status]);
