@@ -4,6 +4,7 @@ import { SourceTransactionForm } from "@/components/source-transaction-form";
 import { TransactionReviewCard } from "@/components/transaction-review-card";
 import { TransactionRowActions } from "@/components/transaction-row-actions";
 import { TransactionBulkActions } from "@/components/transaction-bulk-actions";
+import { BookkeepingReset } from "@/components/bookkeeping-reset";
 import styles from "@/components/live.module.css";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
@@ -23,6 +24,7 @@ export default async function TransactionsPage(){
   const pendingRows=rows.filter(row=>["unclassified","review","classified"].includes(row.classification_status)); const nextReview=pendingRows[0]??null; const suggestedCount=pendingRows.filter(row=>row.suggested_account_id&&Number(row.suggestion_confidence??0)>=.7).length; const unresolvedCount=pendingRows.length-suggestedCount;
   return <div className={styles.liveWrap}>
     <div className={styles.liveIntro}><div><p className={styles.eyebrow}>Bookkeeping source</p><h1>Transactions</h1><p>Compta suggests a PCN treatment when the evidence is strong, explains why, and leaves ambiguous movements for review instead of guessing.</p></div><span className={styles.liveBadge}><span>{pendingRows.length}</span> to review · {rows.length} active</span></div>
+    {rows.length>0?<BookkeepingReset companyName={workspace.company.legal_name}/>:null}
     {pendingRows.length>0?<div style={{marginBottom:14}}><TransactionBulkActions suggestedCount={suggestedCount} unresolvedCount={unresolvedCount}/></div>:null}
     <section className={styles.transactionLayout}><SourceTransactionForm/><div className={styles.transactionRight}>
       {nextReview?<TransactionReviewCard transaction={nextReview} accounts={accounts}/>:<article className={styles.reviewCard}><div className={styles.emptyState}><h3>Accounting inbox cleared.</h3><p>Every recorded transaction has been classified and posted. New activity will appear here for review.</p></div></article>}
