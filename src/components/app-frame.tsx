@@ -1,6 +1,250 @@
 "use client";
-import{BarChart3,Bell,BookOpen,CalendarCheck2,ChevronDown,FileCheck2,FileCode2,FileOutput,FileText,Landmark,LayoutDashboard,LogOut,Menu,PiggyBank,ReceiptText,Search,ShieldCheck,Sparkles,UserRound,WalletCards,X,type LucideIcon}from"lucide-react";
-import Link from"next/link";import{usePathname}from"next/navigation";import{useEffect,useMemo,useState,type ReactNode}from"react";import styles from"./live.module.css";import frame from"./app-frame.module.css";import"./topbar-polish.module.css";
-type NavItem={label:string;description:string;icon:LucideIcon;href:string};const groups:{label:string;items:NavItem[]}[]=[{label:"Workspace",items:[{label:"Overview",description:"Company snapshot",icon:LayoutDashboard,href:"/app"},{label:"Transactions",description:"Review and post activity",icon:WalletCards,href:"/app/transactions"},{label:"Banking",description:"Statements and reconciliation",icon:Landmark,href:"/app/banking"},{label:"Invoices",description:"Sales and receivables",icon:ReceiptText,href:"/app/invoices"},{label:"Documents",description:"Smart document inbox",icon:FileText,href:"/app/documents"}]},{label:"Accounting & compliance",items:[{label:"Accounting",description:"Double-entry journal",icon:BookOpen,href:"/app/accounting"},{label:"VAT filing",description:"VAT readiness",icon:FileOutput,href:"/app/vat"},{label:"Taxes",description:"Tax workspace",icon:Landmark,href:"/app/taxes"},{label:"Year-end",description:"Closing checklist",icon:CalendarCheck2,href:"/app/year-end"},{label:"Annual accounts",description:"eCDF preparation",icon:FileCode2,href:"/app/ecdf"},{label:"Compliance",description:"Deadlines and obligations",icon:FileCheck2,href:"/app/compliance"}]},{label:"Insights",items:[{label:"Reports",description:"P&L and balance sheet",icon:BarChart3,href:"/app/reports"},{label:"Tax reserve",description:"Safe-to-use cash",icon:PiggyBank,href:"/app/tax-reserve"},{label:"Copilot",description:"Ask your books",icon:Sparkles,href:"/app/copilot"}]}];const all=groups.flatMap(g=>g.items);
-function initials(v:string){return v.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]?.toUpperCase()).join("")}
-export function AppFrame({children,companyName,fiscalYear,email,attentionCount=0}:{children:ReactNode;companyName:string;fiscalYear:number;email:string|null;attentionCount?:number}){const pathname=usePathname(),[mobileNav,setMobileNav]=useState(false),[searchOpen,setSearchOpen]=useState(false),[notificationsOpen,setNotificationsOpen]=useState(false),[query,setQuery]=useState("");const userLabel=useMemo(()=>email?.split("@")[0]??"Owner",[email]),results=useMemo(()=>{const q=query.trim().toLowerCase();return q?all.filter(i=>(i.label+" "+i.description).toLowerCase().includes(q)):all.slice(0,6)},[query]);useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();setSearchOpen(true)}if(e.key==="Escape"){setSearchOpen(false);setNotificationsOpen(false)}};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[]);return <main className="app-shell"><aside className={`sidebar ${mobileNav?"sidebar-open":""}`}><div className="brand-row"><Link href="/app" className={styles.brandLink}><div className="brand-mark"><span>C</span></div><div className="brand-word">Compta</div><span className={frame.brandBadge}>LU</span></Link><button className="icon-btn mobile-only" onClick={()=>setMobileNav(false)} aria-label="Close navigation"><X size={18}/></button></div><button className="company-switcher" type="button"><span className="company-avatar">{initials(companyName).slice(0,1)||"C"}</span><span className="company-copy"><strong>{companyName}</strong><small>Financial year {fiscalYear}</small></span><ChevronDown size={15}/></button><nav className="nav-list" aria-label="Primary navigation">{groups.map(group=><div key={group.label}><p className={frame.navSection}>{group.label}</p>{group.items.map(item=>{const isActive=item.href==="/app"?pathname==="/app":pathname.startsWith(item.href);return <Link key={item.label} href={item.href} className={`nav-item ${isActive?"nav-active":""}`} onClick={()=>setMobileNav(false)}><item.icon size={16}/><span>{item.label}</span>{item.label==="Transactions"&&attentionCount>0?<em>{attentionCount}</em>:null}</Link>})}</div>)}</nav><div className="sidebar-spacer"/><div className="sidebar-insight"><div className="insight-icon"><ShieldCheck size={17}/></div><div><strong>Audit trail on</strong><p>Posted entries stay traceable.</p></div><span className="health-dot"/></div><div className="user-row"><div className="user-avatar">{initials(userLabel)||"O"}</div><div><strong>{userLabel}</strong><small>Owner</small></div><form action="/auth/signout" method="post" className={styles.signOutForm}><button type="submit" className={styles.signOutButton} aria-label="Sign out" title="Sign out"><LogOut size={15}/></button></form></div></aside>{mobileNav?<button className="scrim" aria-label="Close navigation" onClick={()=>setMobileNav(false)}/>:null}<section className="workspace"><header className="topbar"><div className="topbar-left"><button className="icon-btn mobile-only" onClick={()=>setMobileNav(true)} aria-label="Open navigation"><Menu size={18}/></button></div><div className="topbar-actions"><button className="search-btn" type="button" onClick={()=>setSearchOpen(true)} aria-label="Search Compta" title="Search Compta (⌘K)"><Search size={17}/></button><div className={frame.notificationWrap}><button className="icon-btn" type="button" aria-label="Notifications" aria-expanded={notificationsOpen} onClick={()=>setNotificationsOpen(v=>!v)}><Bell size={17}/>{attentionCount>0?<span className="notification-dot"/>:null}</button>{notificationsOpen?<div className={frame.notificationPanel}><div><strong>Notifications</strong><button onClick={()=>setNotificationsOpen(false)} aria-label="Close notifications"><X size={14}/></button></div>{attentionCount?<Link href="/app/transactions" onClick={()=>setNotificationsOpen(false)}><span className={frame.noticeIcon}><WalletCards size={15}/></span><span><strong>{attentionCount} transaction{attentionCount===1?"":"s"} need review</strong><small>Open your accounting inbox</small></span></Link>:<p>You’re all caught up.</p>}<Link href="/app/compliance" onClick={()=>setNotificationsOpen(false)}><span className={frame.noticeIcon}><CalendarCheck2 size={15}/></span><span><strong>Compliance calendar</strong><small>See upcoming deadlines</small></span></Link></div>:null}</div><button className={`icon-btn ${frame.profileButton}`} type="button" aria-label={`Profile: ${userLabel}`} title={userLabel}><UserRound size={17}/></button></div></header>{children}</section>{searchOpen?<div className={frame.searchOverlay} role="dialog" aria-modal="true" aria-label="Search Compta" onMouseDown={e=>{if(e.currentTarget===e.target)setSearchOpen(false)}}><div className={frame.searchDialog}><div className={frame.searchInput}><Search size={18}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search pages and workspaces…"/><button onClick={()=>setSearchOpen(false)}><kbd>ESC</kbd></button></div><div className={frame.searchResults}><p>{query?"Results":"Quick navigation"}</p>{results.map(item=><Link href={item.href} key={item.href} onClick={()=>setSearchOpen(false)}><span><item.icon size={17}/></span><div><strong>{item.label}</strong><small>{item.description}</small></div></Link>)}{results.length===0?<div className={frame.noResults}>No matching workspace found.</div>:null}</div></div></div>:null}</main>}
+
+import {
+  BarChart3,
+  Bell,
+  BookOpen,
+  CalendarCheck2,
+  ChevronDown,
+  FileCheck2,
+  FileCode2,
+  FileOutput,
+  FileText,
+  Landmark,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  PiggyBank,
+  ReceiptText,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  WalletCards,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import styles from "./live.module.css";
+import frame from "./app-frame.module.css";
+import "./topbar-polish.module.css";
+
+type NavItem = { label: string; description: string; icon: LucideIcon; href: string };
+type CollapsibleGroup = { key: "accounting" | "insights"; label: string; icon: LucideIcon; items: NavItem[] };
+
+const primaryItems: NavItem[] = [
+  { label: "Overview", description: "Company snapshot", icon: LayoutDashboard, href: "/app" },
+  { label: "Transactions", description: "Review and post activity", icon: WalletCards, href: "/app/transactions" },
+  { label: "Banking", description: "Statements and reconciliation", icon: Landmark, href: "/app/banking" },
+  { label: "Invoices", description: "Sales and receivables", icon: ReceiptText, href: "/app/invoices" },
+  { label: "Documents", description: "Smart document inbox", icon: FileText, href: "/app/documents" },
+];
+
+const collapsibleGroups: CollapsibleGroup[] = [
+  {
+    key: "accounting",
+    label: "Accounting & tax",
+    icon: BookOpen,
+    items: [
+      { label: "Accounting", description: "Double-entry journal", icon: BookOpen, href: "/app/accounting" },
+      { label: "VAT filing", description: "VAT readiness", icon: FileOutput, href: "/app/vat" },
+      { label: "Taxes", description: "Tax workspace", icon: Landmark, href: "/app/taxes" },
+      { label: "Year-end", description: "Closing checklist", icon: CalendarCheck2, href: "/app/year-end" },
+      { label: "Annual accounts", description: "eCDF preparation", icon: FileCode2, href: "/app/ecdf" },
+      { label: "Compliance", description: "Deadlines and obligations", icon: FileCheck2, href: "/app/compliance" },
+    ],
+  },
+  {
+    key: "insights",
+    label: "Insights & AI",
+    icon: BarChart3,
+    items: [
+      { label: "Reports", description: "P&L and balance sheet", icon: BarChart3, href: "/app/reports" },
+      { label: "Tax reserve", description: "Safe-to-use cash", icon: PiggyBank, href: "/app/tax-reserve" },
+      { label: "Copilot", description: "Ask your books", icon: Sparkles, href: "/app/copilot" },
+    ],
+  },
+];
+
+const allItems = [...primaryItems, ...collapsibleGroups.flatMap((group) => group.items)];
+
+function initials(value: string) {
+  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+}
+
+export function AppFrame({ children, companyName, fiscalYear, email, attentionCount = 0 }: { children: ReactNode; companyName: string; fiscalYear: number; email: string | null; attentionCount?: number }) {
+  const pathname = usePathname();
+  const [mobileNav, setMobileNav] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [openGroups, setOpenGroups] = useState<Record<CollapsibleGroup["key"], boolean>>({
+    accounting: pathname.startsWith("/app/accounting") || pathname.startsWith("/app/vat") || pathname.startsWith("/app/taxes") || pathname.startsWith("/app/year-end") || pathname.startsWith("/app/ecdf") || pathname.startsWith("/app/compliance"),
+    insights: pathname.startsWith("/app/reports") || pathname.startsWith("/app/tax-reserve") || pathname.startsWith("/app/copilot"),
+  });
+
+  const userLabel = useMemo(() => email?.split("@")[0] ?? "Owner", [email]);
+  const results = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return normalized
+      ? allItems.filter((item) => `${item.label} ${item.description}`.toLowerCase().includes(normalized))
+      : allItems.slice(0, 7);
+  }, [query]);
+
+  useEffect(() => {
+    for (const group of collapsibleGroups) {
+      if (group.items.some((item) => pathname.startsWith(item.href))) {
+        setOpenGroups((current) => ({ ...current, [group.key]: true }));
+      }
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+        setNotificationsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const navLink = (item: NavItem, nested = false) => {
+    const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`nav-item ${active ? "nav-active" : ""} ${nested ? frame.nestedNavItem : ""}`}
+        onClick={() => setMobileNav(false)}
+      >
+        <item.icon size={nested ? 14 : 16} />
+        <span>{item.label}</span>
+        {item.label === "Transactions" && attentionCount > 0 ? <em>{attentionCount}</em> : null}
+      </Link>
+    );
+  };
+
+  return (
+    <main className="app-shell">
+      <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
+        <div className="brand-row">
+          <Link href="/app" className={styles.brandLink}>
+            <div className="brand-mark"><span>C</span></div>
+            <div className="brand-word">Compta</div>
+            <span className={frame.brandBadge}>LU</span>
+          </Link>
+          <button className="icon-btn mobile-only" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={18} /></button>
+        </div>
+
+        <button className="company-switcher" type="button">
+          <span className="company-avatar">{initials(companyName).slice(0, 1) || "C"}</span>
+          <span className="company-copy"><strong>{companyName}</strong><small>Financial year {fiscalYear}</small></span>
+          <ChevronDown size={15} />
+        </button>
+
+        <nav className="nav-list" aria-label="Primary navigation">
+          <div className={frame.primaryNav}>{primaryItems.map((item) => navLink(item))}</div>
+          <div className={frame.groupDivider} />
+          {collapsibleGroups.map((group) => {
+            const isOpen = openGroups[group.key];
+            const hasActiveChild = group.items.some((item) => pathname.startsWith(item.href));
+            return (
+              <div className={frame.navGroup} key={group.key}>
+                <button
+                  type="button"
+                  className={`${frame.groupButton} ${hasActiveChild ? frame.groupButtonActive : ""}`}
+                  onClick={() => setOpenGroups((current) => ({ ...current, [group.key]: !current[group.key] }))}
+                  aria-expanded={isOpen}
+                >
+                  <group.icon size={16} />
+                  <span>{group.label}</span>
+                  <ChevronDown className={isOpen ? frame.chevronOpen : ""} size={14} />
+                </button>
+                <div className={`${frame.groupChildren} ${isOpen ? frame.groupChildrenOpen : ""}`}>
+                  <div>{group.items.map((item) => navLink(item, true))}</div>
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="sidebar-spacer" />
+        <div className="sidebar-insight">
+          <div className="insight-icon"><ShieldCheck size={17} /></div>
+          <div><strong>Audit trail on</strong><p>Posted entries stay traceable.</p></div>
+          <span className="health-dot" />
+        </div>
+        <div className="user-row">
+          <div className="user-avatar">{initials(userLabel) || "O"}</div>
+          <div><strong>{userLabel}</strong><small>Owner</small></div>
+          <form action="/auth/signout" method="post" className={styles.signOutForm}>
+            <button type="submit" className={styles.signOutButton} aria-label="Sign out" title="Sign out"><LogOut size={15} /></button>
+          </form>
+        </div>
+      </aside>
+
+      {mobileNav ? <button className="scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} /> : null}
+
+      <section className="workspace">
+        <header className="topbar">
+          <div className="topbar-left"><button className="icon-btn mobile-only" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={18} /></button></div>
+          <div className="topbar-actions">
+            <button className="search-btn" type="button" onClick={() => setSearchOpen(true)} aria-label="Search Compta" title="Search Compta (⌘K)"><Search size={17} /></button>
+            <div className={frame.notificationWrap}>
+              <button className="icon-btn" type="button" aria-label="Notifications" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((value) => !value)}>
+                <Bell size={17} />{attentionCount > 0 ? <span className="notification-dot" /> : null}
+              </button>
+              {notificationsOpen ? (
+                <div className={frame.notificationPanel}>
+                  <div><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={14} /></button></div>
+                  {attentionCount ? (
+                    <Link href="/app/transactions" onClick={() => setNotificationsOpen(false)}>
+                      <span className={frame.noticeIcon}><WalletCards size={15} /></span>
+                      <span><strong>{attentionCount} transaction{attentionCount === 1 ? "" : "s"} need review</strong><small>Open your accounting inbox</small></span>
+                    </Link>
+                  ) : <p>You’re all caught up.</p>}
+                  <Link href="/app/compliance" onClick={() => setNotificationsOpen(false)}>
+                    <span className={frame.noticeIcon}><CalendarCheck2 size={15} /></span>
+                    <span><strong>Compliance calendar</strong><small>See upcoming deadlines</small></span>
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+            <button className={`icon-btn ${frame.profileButton}`} type="button" aria-label={`Profile: ${userLabel}`} title={userLabel}><UserRound size={17} /></button>
+          </div>
+        </header>
+        {children}
+      </section>
+
+      {searchOpen ? (
+        <div className={frame.searchOverlay} role="dialog" aria-modal="true" aria-label="Search Compta" onMouseDown={(event) => { if (event.currentTarget === event.target) setSearchOpen(false); }}>
+          <div className={frame.searchDialog}>
+            <div className={frame.searchInput}>
+              <Search size={18} />
+              <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search pages and workspaces…" />
+              <button onClick={() => setSearchOpen(false)}><kbd>ESC</kbd></button>
+            </div>
+            <div className={frame.searchResults}>
+              <p>{query ? "Results" : "Quick navigation"}</p>
+              {results.map((item) => (
+                <Link href={item.href} key={item.href} onClick={() => setSearchOpen(false)}>
+                  <span><item.icon size={17} /></span>
+                  <div><strong>{item.label}</strong><small>{item.description}</small></div>
+                </Link>
+              ))}
+              {results.length === 0 ? <div className={frame.noResults}>No matching workspace found.</div> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </main>
+  );
+}
