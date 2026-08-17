@@ -23,6 +23,14 @@
 .compta-drawer-card{ position:static !important; top:auto !important; width:100%; max-height:calc(100vh - 70px); overflow:auto; border-radius:22px !important; box-shadow:0 28px 80px rgba(13,17,11,.28) !important; }
 .compta-single-column{ grid-template-columns:1fr !important; }
 
+/* Compact list controls */
+.compta-list-tools{ display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:12px 14px; border-bottom:1px solid #e7eae3; background:#fbfcf9; }
+.compta-list-tools label{ height:34px; min-width:230px; display:flex; align-items:center; gap:8px; border:1px solid #dce1d7; background:#fff; border-radius:10px; padding:0 10px; color:#879087; }
+.compta-list-tools input{ width:100%; min-width:0; border:0; outline:0; background:transparent; font:inherit; font-size:9.5px; color:#1c2119; }
+.compta-list-tools select,.compta-list-tools button{ height:34px; border-radius:10px; font:inherit; font-size:9px; font-weight:700; }
+.compta-list-tools select{ border:1px solid #dce1d7; background:#fff; color:#596158; padding:0 30px 0 10px; }
+.compta-list-tools button{ border:1px solid #1a1d18; background:#1a1d18; color:#fff; padding:0 13px; cursor:pointer; }
+
 /* Scannable ledger/activity surfaces */
 .compta-activity-panel{ border-radius:22px !important; box-shadow:0 18px 48px rgba(25,35,22,.06) !important; }
 .compta-activity-table{ border-collapse:separate !important; border-spacing:0 7px !important; background:#f5f7f2; padding:2px 10px 11px; }
@@ -60,4 +68,7 @@
   .compta-fab{ right:16px; bottom:16px; height:46px; padding:0 15px; }
   .compta-drawer-overlay{ padding:8px; }
   .compta-drawer-shell{ width:100%; }
+  .compta-list-tools{ align-items:stretch; flex-direction:column; }
+  .compta-list-tools label{ min-width:0; width:100%; }
+  .compta-list-tools select,.compta-list-tools button{ width:100%; }
 }
