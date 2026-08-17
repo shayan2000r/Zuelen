@@ -8,6 +8,12 @@
 .sidebar-insight{ flex:0 0 auto; margin-top:12px; }
 .nav-list-bottom,.user-row{ flex:0 0 auto; }
 
+/* Global content rhythm */
+.workspace{ background:linear-gradient(180deg,#f5f6f1 0%,#f2f4ee 100%); }
+.workspace :where(h1,h2,h3,strong){ text-wrap:balance; }
+.workspace :where(article,section){ min-width:0; }
+
+/* Floating primary actions */
 .compta-fab{ position:fixed; right:28px; bottom:28px; z-index:45; height:48px; padding:0 18px; border:1px solid #252a21; border-radius:15px; background:#171a16; color:#fff; display:inline-flex; align-items:center; gap:9px; font-weight:750; font-size:11px; box-shadow:0 18px 44px rgba(21,27,18,.2); cursor:pointer; transition:transform .18s ease,box-shadow .18s ease; }
 .compta-fab:hover{ transform:translateY(-2px); box-shadow:0 22px 52px rgba(21,27,18,.24); }
 .compta-fab svg{ color:#c8ff57; }
@@ -17,16 +23,34 @@
 .compta-drawer-card{ position:static !important; top:auto !important; width:100%; max-height:calc(100vh - 70px); overflow:auto; border-radius:22px !important; box-shadow:0 28px 80px rgba(13,17,11,.28) !important; }
 .compta-single-column{ grid-template-columns:1fr !important; }
 
-.compta-activity-panel{ box-shadow:0 18px 48px rgba(25,35,22,.06) !important; }
-.compta-activity-table{ border-collapse:separate !important; border-spacing:0 8px !important; background:#f5f7f2; padding:0 10px 10px; }
-.compta-activity-table thead th{ background:transparent !important; border:0 !important; }
+/* Scannable ledger/activity surfaces */
+.compta-activity-panel{ border-radius:22px !important; box-shadow:0 18px 48px rgba(25,35,22,.06) !important; }
+.compta-activity-table{ border-collapse:separate !important; border-spacing:0 7px !important; background:#f5f7f2; padding:2px 10px 11px; }
+.compta-activity-table thead th{ background:transparent !important; border:0 !important; padding-top:10px !important; padding-bottom:7px !important; color:#858d82 !important; font-size:8px !important; }
 .compta-activity-table tbody tr{ background:#fff; transition:transform .16s ease,box-shadow .16s ease; }
 .compta-activity-table tbody tr:hover{ transform:translateY(-1px); box-shadow:0 10px 24px rgba(27,38,23,.055); }
-.compta-activity-table tbody td{ border-top:1px solid #e5e9e1 !important; border-bottom:1px solid #e5e9e1 !important; }
-.compta-activity-table tbody td:first-child{ border-left:1px solid #e5e9e1; border-radius:12px 0 0 12px; }
+.compta-activity-table tbody td{ border-top:1px solid #e5e9e1 !important; border-bottom:1px solid #e5e9e1 !important; padding-top:13px !important; padding-bottom:13px !important; }
+.compta-activity-table tbody td:first-child{ border-left:1px solid #e5e9e1; border-radius:12px 0 0 12px; color:#7d857a; font-variant-numeric:tabular-nums; }
 .compta-activity-table tbody td:last-child{ border-right:1px solid #e5e9e1; border-radius:0 12px 12px 0; }
+.compta-activity-table [class*="rowStatus"]{ position:relative; gap:6px; padding:0 !important; background:transparent !important; border-radius:0 !important; font-size:8.5px !important; letter-spacing:.035em !important; text-transform:none !important; }
+.compta-activity-table [class*="rowStatus"]:before{ content:''; width:6px; height:6px; border-radius:50%; background:#c79a42; display:inline-block; box-shadow:0 0 0 3px rgba(199,154,66,.09); }
+.compta-activity-table [class*="postedStatus"]:before{ background:#4da276; box-shadow:0 0 0 3px rgba(77,162,118,.09); }
 
-[class*="invoiceMetrics"]{ grid-template-columns:repeat(4,minmax(0,1fr)) !important; }
+/* Invoice overview: one cohesive KPI band on desktop */
+[class*="invoiceMetrics"]{ grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:10px !important; }
+[class*="invoiceMetrics"] article{ box-shadow:0 10px 28px rgba(27,38,23,.04); }
+[class*="invoiceListPanel"]{ box-shadow:0 18px 48px rgba(25,35,22,.055) !important; }
+[class*="invoiceTable"] th{ background:#f5f7f2 !important; }
+[class*="invoiceTable"] tbody tr{ transition:background .16s ease; }
+[class*="invoiceTable"] tbody tr:hover{ background:#fafcf8; }
+
+/* Banking: lighter status language and compact row hierarchy */
+[class*="tableWrap"] tbody tr{ transition:transform .16s ease,box-shadow .16s ease; }
+[class*="tableWrap"] tbody tr:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(27,38,23,.045); }
+[class*="matched"],[class*="open"]{ position:relative; gap:6px; padding:0 !important; background:transparent !important; text-transform:none !important; letter-spacing:.02em !important; font-weight:700; }
+[class*="matched"]:before,[class*="open"]:before{ content:''; width:6px; height:6px; border-radius:50%; display:inline-block; }
+[class*="matched"]:before{ background:#4da276; box-shadow:0 0 0 3px rgba(77,162,118,.09); }
+[class*="open"]:before{ background:#c79a42; box-shadow:0 0 0 3px rgba(199,154,66,.09); }
 
 @media(max-width:1100px){
   [class*="invoiceMetrics"]{ grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
