@@ -75,7 +75,7 @@ export async function extractDocumentAction(_previous:DocumentExtractionState,fo
     const base64=bytes.toString("base64");
     const filePart = mime.startsWith("image/")
       ? {type:"input_image",image_url:`data:${mime};base64,${base64}`,detail:"high"}
-      : {type:"input_file",filename:doc.file_name,file_data:base64};
+      : {type:"input_file",filename:doc.file_name,file_data:`data:${mime};base64,${base64}`};
 
     const response=await fetch("https://api.openai.com/v1/responses",{
       method:"POST",
