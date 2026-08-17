@@ -6,106 +6,13 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./documents.module.css";
 
-const ALLOWED = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp", "text/csv"]);
-const MAX_BYTES = 25 * 1024 * 1024;
+const ALLOWED=new Set(["application/pdf","image/jpeg","image/png","image/webp","text/csv"]);const MAX_BYTES=25*1024*1024;
+type DocumentType="receipt"|"purchase_invoice"|"sales_invoice"|"bank_statement"|"tax_notice"|"filing"|"annex"|"other";
+function safeFileName(name:string){const parts=name.split(".");const ext=parts.length>1?`.${parts.pop()?.toLowerCase().replace(/[^a-z0-9]/g,"")}`:"";const base=parts.join(".").normalize("NFKD").replace(/[^a-zA-Z0-9-_]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80)||"document";return`${base}${ext}`}
 
-type DocumentType = "receipt" | "purchase_invoice" | "bank_statement" | "tax_notice" | "filing" | "annex" | "other";
-
-function safeFileName(name: string) {
-  const parts = name.split(".");
-  const ext = parts.length > 1 ? `.${parts.pop()?.toLowerCase().replace(/[^a-z0-9]/g, "")}` : "";
-  const base = parts.join(".").normalize("NFKD").replace(/[^a-zA-Z0-9-_]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "document";
-  return `${base}${ext}`;
-}
-
-export function DocumentUploader({ organizationId, companyId }: { organizationId: string; companyId: string }) {
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [type, setType] = useState<DocumentType>("receipt");
-  const [busy, setBusy] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  function choose(next: File | null) {
-    setMessage(null);
-    if (!next) return setFile(null);
-    if (!ALLOWED.has(next.type)) return setMessage("Use PDF, JPG, PNG, WebP or CSV.");
-    if (next.size > MAX_BYTES) return setMessage("The maximum file size is 25 MB.");
-    setFile(next);
-  }
-
-  async function upload() {
-    if (!file) return setMessage("Choose a document first.");
-    setBusy(true);
-    setMessage(null);
-    const supabase = createClient();
-    let storagePath = "";
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) throw new Error("Your session expired. Please sign in again.");
-
-      const year = new Date().getFullYear();
-      storagePath = `${organizationId}/${companyId}/${year}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-      const { error: storageError } = await supabase.storage.from("company-documents").upload(storagePath, file, {
-        contentType: file.type,
-        upsert: false,
-        cacheControl: "3600",
-      });
-      if (storageError) throw storageError;
-
-      const { error: metadataError } = await supabase.from("documents").insert({
-        organization_id: organizationId,
-        company_id: companyId,
-        type,
-        storage_path: storagePath,
-        file_name: file.name,
-        mime_type: file.type,
-        file_size: file.size,
-        extraction_status: "not_started",
-        created_by: userData.user.id,
-      });
-      if (metadataError) {
-        await supabase.storage.from("company-documents").remove([storagePath]);
-        throw metadataError;
-      }
-
-      setFile(null);
-      if (inputRef.current) inputRef.current.value = "";
-      setMessage("Document secured in Compta.");
-      router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The document could not be uploaded.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <aside className={styles.uploadCard}>
-      <div className={styles.uploadHead}>
-        <div><p>Secure intake</p><h2>Add evidence.</h2></div>
-        <span><ShieldCheck size={14} />Private</span>
-      </div>
-      <p className={styles.uploadLead}>Receipts, supplier invoices, bank statements and authority letters stay private to this company.</p>
-      <label className={styles.typeField}><span>Document type</span><select value={type} onChange={(event) => setType(event.target.value as DocumentType)} disabled={busy}><option value="receipt">Receipt</option><option value="purchase_invoice">Supplier invoice</option><option value="bank_statement">Bank statement</option><option value="tax_notice">Tax notice / authority letter</option><option value="filing">Filed declaration</option><option value="annex">Annual accounts annex</option><option value="other">Other document</option></select></label>
-
-      <button
-        type="button"
-        className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => { event.preventDefault(); setDragging(false); choose(event.dataTransfer.files[0] ?? null); }}
-        disabled={busy}
-      >
-        <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.csv" onChange={(event) => choose(event.target.files?.[0] ?? null)} hidden />
-        {file ? <><span className={styles.fileIcon}><FileText size={21} /></span><strong>{file.name}</strong><small>{(file.size / 1024 / 1024).toFixed(2)} MB</small></> : <><span className={styles.cloudIcon}><UploadCloud size={22} /></span><strong>Drop a document here</strong><small>or click to choose · max 25 MB</small></>}
-      </button>
-
-      {file ? <button className={styles.clearFile} type="button" onClick={() => choose(null)} disabled={busy}><X size={13} />Remove file</button> : null}
-      {message ? <div className={message === "Document secured in Compta." ? styles.successMessage : styles.errorMessage}>{message}</div> : null}
-      <button type="button" className={styles.uploadButton} onClick={upload} disabled={busy || !file}>{busy ? <LoaderCircle className={styles.spin} size={15} /> : <UploadCloud size={15} />}{busy ? "Securing document…" : "Upload to Compta"}</button>
-    </aside>
-  );
+export function DocumentUploader({organizationId,companyId}:{organizationId:string;companyId:string}){
+ const router=useRouter(),inputRef=useRef<HTMLInputElement>(null);const[file,setFile]=useState<File|null>(null),[type,setType]=useState<DocumentType>("receipt"),[busy,setBusy]=useState(false),[dragging,setDragging]=useState(false),[message,setMessage]=useState<string|null>(null);
+ function choose(next:File|null){setMessage(null);if(!next)return setFile(null);if(!ALLOWED.has(next.type))return setMessage("Use PDF, JPG, PNG, WebP or CSV.");if(next.size>MAX_BYTES)return setMessage("The maximum file size is 25 MB.");setFile(next)}
+ async function upload(){if(!file)return setMessage("Choose a document first.");setBusy(true);setMessage(null);const supabase=createClient();let storagePath="";try{const{data:userData,error:userError}=await supabase.auth.getUser();if(userError||!userData.user)throw new Error("Your session expired. Please sign in again.");const year=new Date().getFullYear();storagePath=`${organizationId}/${companyId}/${year}/${crypto.randomUUID()}-${safeFileName(file.name)}`;const{error:storageError}=await supabase.storage.from("company-documents").upload(storagePath,file,{contentType:file.type,upsert:false,cacheControl:"3600"});if(storageError)throw storageError;const{error:metadataError}=await supabase.from("documents").insert({organization_id:organizationId,company_id:companyId,type,storage_path:storagePath,file_name:file.name,mime_type:file.type,file_size:file.size,extraction_status:"not_started",created_by:userData.user.id});if(metadataError){await supabase.storage.from("company-documents").remove([storagePath]);throw metadataError}setFile(null);if(inputRef.current)inputRef.current.value="";setMessage("Document secured in Compta.");router.refresh()}catch(error){setMessage(error instanceof Error?error.message:"The document could not be uploaded.")}finally{setBusy(false)}}
+ return <aside className={styles.uploadCard}><div className={styles.uploadHead}><div><p>Secure intake</p><h2>Add evidence.</h2></div><span><ShieldCheck size={14}/>Private</span></div><p className={styles.uploadLead}>Receipts, supplier invoices, sales invoices, bank statements and authority letters stay private to this company.</p><label className={styles.typeField}><span>Document type</span><select value={type} onChange={e=>setType(e.target.value as DocumentType)} disabled={busy}><option value="receipt">Receipt</option><option value="purchase_invoice">Supplier invoice</option><option value="sales_invoice">Sales invoice sent to a customer</option><option value="bank_statement">Bank statement</option><option value="tax_notice">Tax notice / authority letter</option><option value="filing">Filed declaration</option><option value="annex">Annual accounts annex</option><option value="other">Other document</option></select></label><button type="button" className={`${styles.dropzone} ${dragging?styles.dropzoneActive:""}`} onClick={()=>inputRef.current?.click()} onDragOver={e=>{e.preventDefault();setDragging(true)}} onDragLeave={()=>setDragging(false)} onDrop={e=>{e.preventDefault();setDragging(false);choose(e.dataTransfer.files[0]??null)}} disabled={busy}><input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.csv" onChange={e=>choose(e.target.files?.[0]??null)} hidden/>{file?<><span className={styles.fileIcon}><FileText size={21}/></span><strong>{file.name}</strong><small>{(file.size/1024/1024).toFixed(2)} MB</small></>:<><span className={styles.cloudIcon}><UploadCloud size={22}/></span><strong>Drop a document here</strong><small>or click to choose · max 25 MB</small></>}</button>{file?<button className={styles.clearFile} type="button" onClick={()=>choose(null)} disabled={busy}><X size={13}/>Remove file</button>:null}{message?<div className={message==="Document secured in Compta."?styles.successMessage:styles.errorMessage}>{message}</div>:null}<button type="button" className={styles.uploadButton} onClick={upload} disabled={busy||!file}>{busy?<LoaderCircle className={styles.spin} size={15}/>:<UploadCloud size={15}/>} {busy?"Securing document…":"Upload to Compta"}</button></aside>;
 }

@@ -1,21 +1,13 @@
 import { redirect } from "next/navigation";
-import { InvoiceComposer } from "@/components/invoice-composer";
+import { InvoiceComposer, type InvoiceComposerInitial } from "@/components/invoice-composer";
+import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
-export const dynamic = "force-dynamic";
+export const dynamic="force-dynamic";
+function s(v:unknown){return typeof v==="string"?v:""}function n(v:unknown){return typeof v==="number"&&Number.isFinite(v)?v:0}function today(){return new Date().toISOString().slice(0,10)}function plus(date:string,days:number){const d=new Date(`${date}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
 
-export default async function NewInvoicePage() {
-  const workspace = await getWorkspace();
-  if (!workspace.authenticated) redirect("/sign-in");
-  if (!workspace.company) redirect("/setup");
-
-  return <InvoiceComposer company={{
-    legal_name: workspace.company.legal_name,
-    legal_form: workspace.company.legal_form,
-    rcs_number: workspace.company.rcs_number,
-    vat_number: workspace.company.vat_number,
-    business_permit_number: workspace.company.business_permit_number,
-    registered_address: workspace.company.registered_address,
-    base_currency: workspace.company.base_currency,
-  }} />;
+export default async function NewInvoicePage({searchParams}:{searchParams:Promise<{document?:string}>}){
+ const workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");const params=await searchParams;let initialInvoice:InvoiceComposerInitial|undefined;
+ if(params.document&&/^[0-9a-f-]{36}$/i.test(params.document)){const supabase=await createClient();const{data:doc}=await supabase.from("documents").select("id,type,extraction_status,extracted_data").eq("id",params.document).eq("company_id",workspace.company.id).maybeSingle();if(doc?.extraction_status==="needs_review"&&doc.extracted_data&&typeof doc.extracted_data==="object"){const d=doc.extracted_data as Record<string,unknown>;if(d.document_kind==="sales_invoice"){const issue=s(d.document_date)||today(),service=s(d.service_date)||issue,due=s(d.due_date)||plus(issue,14),rawLines=Array.isArray(d.line_items)?d.line_items:[];const lines=rawLines.map((raw,index)=>{const line=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};return{id:index+1,description:s(line.description)||"Professional services",quantity:n(line.quantity)||1,unit_price:n(line.unit_price_net),vat_rate:n(line.vat_rate)}}).filter(line=>line.unit_price>0||line.description);initialInvoice={customer_name:s(d.customer_name),customer_email:"",customer_country:s(d.customer_country)||"LU",customer_vat_number:s(d.customer_vat_number),customer_street:s(d.customer_street),customer_postal_code:s(d.customer_postal_code),customer_city:s(d.customer_city),issue_date:issue,service_date:service,due_date:due,vat_treatment:d.suggested_vat_treatment==="eu_b2b_reverse_charge"?"eu_b2b_reverse_charge":"domestic",notes:`Imported from analyzed document${s(d.invoice_number)?` · original invoice ${s(d.invoice_number)}`:""}. Review all fields before issuing.`,lines:lines.length?lines:[{id:1,description:"Professional services",quantity:1,unit_price:n(d.subtotal)||n(d.total),vat_rate:n(d.vat_rate)}]}}}}
+ return <InvoiceComposer company={{legal_name:workspace.company.legal_name,legal_form:workspace.company.legal_form,rcs_number:workspace.company.rcs_number,vat_number:workspace.company.vat_number,business_permit_number:workspace.company.business_permit_number,registered_address:workspace.company.registered_address,base_currency:workspace.company.base_currency}} initialInvoice={initialInvoice}/>;
 }
