@@ -1,0 +1,13 @@
+"use client";
+
+import { LoaderCircle, RotateCcw, ShieldAlert } from "lucide-react";
+import { useActionState, useRef } from "react";
+import { resetBookkeepingAction, type AccountingActionState } from "@/app/app/accounting/actions";
+import styles from "./transaction-bulk-actions.module.css";
+
+const initial:AccountingActionState={status:"idle",message:""};
+export function BookkeepingReset({companyName}:{companyName:string}){
+  const dialog=useRef<HTMLDialogElement>(null);const[state,action,pending]=useActionState(resetBookkeepingAction,initial);
+  return <><article className={styles.bar} style={{marginBottom:14}}><div className={styles.copy}><span>Workspace controls</span><strong>Need a clean start?</strong><p>Reset transactions, journal entries, invoices/payments and imported bank rows while keeping your company profile, chart of accounts and documents. Disabled once filings or locked periods exist.</p></div><div className={styles.actions}><button type="button" className={styles.secondary} onClick={()=>dialog.current?.showModal()}><RotateCcw size={14}/>Reset bookkeeping</button></div>{state.message?<div className={`${styles.message} ${state.status==="error"?styles.error:""}`}>{state.message}</div>:null}</article>
+  <dialog ref={dialog} style={{border:0,borderRadius:18,padding:0,maxWidth:520,width:"calc(100% - 32px)",boxShadow:"0 30px 80px rgba(0,0,0,.22)"}}><form action={action} style={{padding:24,display:"grid",gap:14}}><div style={{display:"flex",gap:12,alignItems:"flex-start"}}><span style={{width:38,height:38,borderRadius:12,background:"#fff0eb",color:"#a85743",display:"grid",placeItems:"center",flex:"none"}}><ShieldAlert size={18}/></span><div><h3 style={{margin:"1px 0 6px",fontSize:20}}>Reset bookkeeping data</h3><p style={{margin:0,fontSize:11,lineHeight:1.6,color:"#747d72"}}>This permanently clears active bookkeeping data so you can import and test again from scratch. Audit evidence of the reset remains.</p></div></div><label style={{display:"grid",gap:6,fontSize:10,color:"#687267"}}>Type <strong style={{color:"#171a16"}}>{companyName}</strong> to confirm<input name="confirmation" autoComplete="off" style={{border:"1px solid #d7ddd3",borderRadius:10,padding:"11px 12px",font:"inherit"}} required/></label>{state.status==="error"&&state.message?<div className={`${styles.message} ${styles.error}`}>{state.message}</div>:null}<div style={{display:"flex",justifyContent:"flex-end",gap:8}}><button type="button" className={styles.secondary} onClick={()=>dialog.current?.close()}>Cancel</button><button type="submit" className={styles.primary} disabled={pending}>{pending?<LoaderCircle className={styles.spin} size={14}/>:<RotateCcw size={14}/>}Reset bookkeeping</button></div></form></dialog></>;
+}
