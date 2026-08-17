@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppFrame } from "@/components/app-frame";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import "./ui-polish.css";
 
 export const dynamic = "force-dynamic";
 
