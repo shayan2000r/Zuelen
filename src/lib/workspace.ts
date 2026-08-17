@@ -8,6 +8,7 @@ export type Workspace = {
   company: {
     id: string;
     legal_name: string;
+    trading_name: string | null;
     legal_form: string;
     base_currency: string;
     fiscal_year_start_month: number;
@@ -15,8 +16,11 @@ export type Workspace = {
     vat_filing_frequency: string | null;
     vat_number: string | null;
     rcs_number: string | null;
+    tax_number: string | null;
     business_permit_number: string | null;
     municipality: string | null;
+    activity: string | null;
+    brand_image_path: string | null;
     registered_address: Record<string, unknown>;
   } | null;
 };
@@ -31,6 +35,6 @@ export async function getWorkspace(): Promise<Workspace> {
   const email=typeof claims?.email==="string"?claims.email:null;
   const {data:organization}=await supabase.from("organizations").select("id,name,slug").order("created_at",{ascending:true}).limit(1).maybeSingle();
   if(!organization)return{authenticated:true,userId,email,organization:null,company:null};
-  const {data:company}=await supabase.from("companies").select("id,legal_name,legal_form,base_currency,fiscal_year_start_month,vat_registered,vat_filing_frequency,vat_number,rcs_number,business_permit_number,municipality,registered_address").eq("organization_id",organization.id).order("created_at",{ascending:true}).limit(1).maybeSingle();
+  const {data:company}=await supabase.from("companies").select("id,legal_name,trading_name,legal_form,base_currency,fiscal_year_start_month,vat_registered,vat_filing_frequency,vat_number,rcs_number,tax_number,business_permit_number,municipality,activity,brand_image_path,registered_address").eq("organization_id",organization.id).order("created_at",{ascending:true}).limit(1).maybeSingle();
   return{authenticated:true,userId,email,organization,company:company?{...company,registered_address:(company.registered_address??{}) as Record<string,unknown>}:null};
 }
