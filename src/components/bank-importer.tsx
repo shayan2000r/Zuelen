@@ -26,7 +26,7 @@ const aliases = {
   currency: ["currency","devise","wahrung","währung"],
   counterparty: ["counterparty","counterpartyname","beneficiary","beneficiaire","bénéficiaire","name","nom","partner","nomdelacontrepartie"],
   iban: ["counterpartyiban","ibanbeneficiary","ibanbeneficiaire","iban","comptedelacontrepartie"],
-  reference: ["reference","communication","description","details","libelle","libellé","memo","purpose","remittanceinformation"],
+  referenceFallback: ["reference","details","libelle","libellé","memo","purpose","remittanceinformation","description"],
   external: ["transactionid","externalid","external_id","id","referenceid","referencedoperation","referencedeloperation"],
 };
 
@@ -53,8 +53,8 @@ function repairPostLuxembourgRow(cells:string[], headers:string[]) {
 
 function normalizeCsv(text: string): { rows: NormalizedRow[]; message: string; headers: string[] } {
   const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(line=>line.trim()); if(lines.length<2)return{rows:[],message:"The CSV needs a header row and at least one transaction.",headers:[]};
-  const sep=delimiter(lines[0]); const headers=parseLine(lines[0],sep);
-  const dateI=findIndex(headers,aliases.date), valueDateI=findIndex(headers,aliases.valueDate), amountI=findIndex(headers,aliases.amount), debitI=findIndex(headers,aliases.debit), creditI=findIndex(headers,aliases.credit), currencyI=findIndex(headers,aliases.currency), counterpartyI=findIndex(headers,aliases.counterparty), ibanI=findIndex(headers,aliases.iban), referenceI=findIndex(headers,aliases.reference), externalI=findIndex(headers,aliases.external);
+  const sep=delimiter(lines[0]); const headers=parseLine(lines[0],sep); const normalizedHeaders=headers.map(norm);
+  const dateI=findIndex(headers,aliases.date), valueDateI=findIndex(headers,aliases.valueDate), amountI=findIndex(headers,aliases.amount), debitI=findIndex(headers,aliases.debit), creditI=findIndex(headers,aliases.credit), currencyI=findIndex(headers,aliases.currency), counterpartyI=findIndex(headers,aliases.counterparty), ibanI=findIndex(headers,aliases.iban), communicationI=normalizedHeaders.indexOf("communication"), fallbackReferenceI=findIndex(headers,aliases.referenceFallback), referenceI=communicationI>=0?communicationI:fallbackReferenceI, externalI=findIndex(headers,aliases.external);
   if(dateI<0)return{rows:[],message:"I couldn't detect a booking-date column. Rename it to Date or Booking date and try again.",headers};
   if(amountI<0 && debitI<0 && creditI<0)return{rows:[],message:"I couldn't detect an Amount column (or separate Debit/Credit columns).",headers};
   const rows:NormalizedRow[]=[];
