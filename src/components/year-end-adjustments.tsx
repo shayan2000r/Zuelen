@@ -1,0 +1,47 @@
+"use client";
+
+import { AlertTriangle, ArrowRight, CheckCircle2, Landmark, LoaderCircle, Plus, RefreshCw, TrendingDown } from "lucide-react";
+import Link from "next/link";
+import { useActionState } from "react";
+import { applyPresentationReclassificationsAction, importPreviousClosingAction, postDepreciationAdjustmentAction, type ClosingState } from "@/app/app/year-end/actions";
+import styles from "./year-end.module.css";
+
+type Issue={code:string;label:string;amount:number;automatic:boolean};
+type Asset={id:string;code:string;label:string;balance:number};
+const initial:ClosingState={status:"idle",message:""};
+function money(value:number,currency:string){return new Intl.NumberFormat("en-LU",{style:"currency",currency,minimumFractionDigits:2,maximumFractionDigits:2}).format(value)}
+
+export function YearEndAdjustments({year,currency,openingFound,previousSnapshotYear,presentationIssues,depreciationTotal,assets,disabled}:{year:number;currency:string;openingFound:boolean;previousSnapshotYear:number|null;presentationIssues:Issue[];depreciationTotal:number;assets:Asset[];disabled:boolean}){
+ const[openingState,openingAction,openingPending]=useActionState(importPreviousClosingAction,initial),[presentationState,presentationAction,presentationPending]=useActionState(applyPresentationReclassificationsAction,initial),[depreciationState,depreciationAction,depreciationPending]=useActionState(postDepreciationAdjustmentAction,initial);const automaticIssues=presentationIssues.filter(i=>i.automatic),manualIssues=presentationIssues.filter(i=>!i.automatic);
+ return <section className={styles.adjustmentSection}>
+  <div className={styles.adjustmentHead}><div><p>Closing adjustments</p><h2>Finish the accounting, not just the checklist.</h2><span>Compta turns year-end accounting into business-language steps. Every applied adjustment posts a balanced, auditable journal entry.</span></div></div>
+  <div className={styles.adjustmentGrid}>
+   <article className={styles.adjustmentCard}>
+    <div className={styles.adjustmentCardTop}><span className={`${styles.adjustmentIcon} ${openingFound?styles.adjustmentOk:""}`}><Landmark size={17}/></span><span className={openingFound?styles.adjustmentStatusGood:styles.adjustmentStatusWarn}>{openingFound?"Ready":"Needs review"}</span></div>
+    <h3>Opening position</h3>
+    <p>{openingFound?`FY ${year} starts with a posted balance-sheet carry-forward.`:previousSnapshotYear?`A frozen FY ${previousSnapshotYear} snapshot is available. Compta can carry its closing balance sheet into FY ${year} and roll the prior result into retained earnings.`:`No opening position is posted. If ${year} is not the company's first financial year, add the prior closing balances before closing.`}</p>
+    {openingFound?<div className={styles.adjustmentDone}><CheckCircle2 size={13}/>Opening balances posted</div>:previousSnapshotYear?<form action={openingAction}><button className={styles.adjustmentButton} disabled={disabled||openingPending}>{openingPending?<LoaderCircle className={styles.spin}/>:<RefreshCw/>}Import FY {previousSnapshotYear} closing</button></form>:<Link className={styles.adjustmentLink} href="/app/accounting">Add opening position <ArrowRight size={12}/></Link>}
+    {openingState.message?<small className={openingState.status==="error"?styles.adjustmentError:styles.adjustmentSuccess}>{openingState.message}</small>:null}
+   </article>
+
+   <article className={styles.adjustmentCard}>
+    <div className={styles.adjustmentCardTop}><span className={`${styles.adjustmentIcon} ${presentationIssues.length===0?styles.adjustmentOk:""}`}><RefreshCw size={17}/></span><span className={presentationIssues.length===0?styles.adjustmentStatusGood:styles.adjustmentStatusWarn}>{presentationIssues.length===0?"Clean":`${presentationIssues.length} item${presentationIssues.length===1?"":"s"}`}</span></div>
+    <h3>Balance-sheet presentation</h3>
+    <p>{presentationIssues.length===0?"No debit balances are stranded in liability/equity accounts. The closing balance sheet is presentation-ready.":"Compta found balances that are economically receivables but currently sit on the liability side. These must be presented correctly before the year can freeze."}</p>
+    {presentationIssues.length?<div className={styles.issueList}>{presentationIssues.slice(0,4).map(issue=><div key={issue.code}><span><b>{issue.code}</b>{issue.label}</span><strong>{money(issue.amount,currency)}</strong></div>)}</div>:<div className={styles.adjustmentDone}><CheckCircle2 size={13}/>Presentation checks passed</div>}
+    {automaticIssues.length?<form action={presentationAction}><button className={styles.adjustmentButton} disabled={disabled||presentationPending}>{presentationPending?<LoaderCircle className={styles.spin}/>:<CheckCircle2/>}Apply {automaticIssues.length} safe reclassification{automaticIssues.length===1?"":"s"}</button></form>:null}
+    {manualIssues.length?<Link className={styles.adjustmentLink} href="/app/accounting">Review remaining accounts <ArrowRight size={12}/></Link>:null}
+    {presentationState.message?<small className={presentationState.status==="error"?styles.adjustmentError:styles.adjustmentSuccess}>{presentationState.message}</small>:null}
+   </article>
+
+   <article className={styles.adjustmentCard}>
+    <div className={styles.adjustmentCardTop}><span className={`${styles.adjustmentIcon} ${depreciationTotal>0?styles.adjustmentOk:""}`}><TrendingDown size={17}/></span><span className={depreciationTotal>0?styles.adjustmentStatusGood:styles.adjustmentStatusNeutral}>{depreciationTotal>0?money(depreciationTotal,currency):"Review"}</span></div>
+    <h3>Depreciation</h3>
+    <p>{depreciationTotal>0?`${money(depreciationTotal,currency)} of FY ${year} depreciation is already included in the result.`:"If the company has depreciable fixed assets, record the year's depreciation here. Compta posts the expense and reduces the selected asset carrying value."}</p>
+    {!disabled&&assets.length?<details className={styles.adjustmentDetails}><summary><Plus size={12}/>{depreciationTotal>0?"Add another depreciation adjustment":"Add depreciation"}</summary><form action={depreciationAction} className={styles.adjustmentForm}><label><span>Fixed asset</span><select name="asset_account_id" required defaultValue=""><option value="" disabled>Choose asset…</option>{assets.map(asset=><option value={asset.id} key={asset.id}>{asset.code} · {asset.label} · {money(asset.balance,currency)}</option>)}</select></label><label><span>Depreciation amount</span><input name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required/></label><button className={styles.adjustmentButton} disabled={depreciationPending}>{depreciationPending?<LoaderCircle className={styles.spin}/>:<CheckCircle2/>}Post depreciation</button></form></details>:assets.length===0?<div className={styles.adjustmentDone}><CheckCircle2 size={13}/>No fixed-asset balance detected</div>:null}
+    {depreciationState.message?<small className={depreciationState.status==="error"?styles.adjustmentError:styles.adjustmentSuccess}>{depreciationState.message}</small>:null}
+   </article>
+  </div>
+  {disabled?<div className={styles.adjustmentLocked}><AlertTriangle size={13}/>Closing adjustments are disabled because this financial year already has a frozen snapshot or is locked.</div>:null}
+ </section>;
+}
