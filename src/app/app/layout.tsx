@@ -7,6 +7,7 @@ import "./ui-polish.css";
 import "./ui-2026.css";
 import "./product-theme.css";
 import "./dark-compat.css";
+import "./workflow-upgrades.css";
 
 export const dynamic = "force-dynamic";
 
