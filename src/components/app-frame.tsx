@@ -15,7 +15,6 @@ import {
   LogOut,
   Menu,
   Moon,
-  PiggyBank,
   ReceiptText,
   Search,
   Settings,
@@ -53,7 +52,7 @@ const collapsibleGroups: CollapsibleGroup[] = [
     items: [
       { label: "Accounting", description: "Double-entry journal", icon: BookOpen, href: "/app/accounting" },
       { label: "VAT filing", description: "VAT readiness", icon: FileOutput, href: "/app/vat" },
-      { label: "Taxes", description: "Tax workspace", icon: Landmark, href: "/app/taxes" },
+      { label: "Taxes", description: "Estimates, reserves & notices", icon: Landmark, href: "/app/taxes" },
       { label: "Year-end", description: "Closing checklist", icon: CalendarCheck2, href: "/app/year-end" },
       { label: "Annual accounts", description: "eCDF preparation", icon: FileCode2, href: "/app/ecdf" },
       { label: "Compliance", description: "Deadlines and obligations", icon: FileCheck2, href: "/app/compliance" },
@@ -64,8 +63,7 @@ const collapsibleGroups: CollapsibleGroup[] = [
     label: "Insights & AI",
     icon: BarChart3,
     items: [
-      { label: "Reports", description: "P&L and balance sheet", icon: BarChart3, href: "/app/reports" },
-      { label: "Tax reserve", description: "Safe-to-use cash", icon: PiggyBank, href: "/app/tax-reserve" },
+      { label: "Reports", description: "Financial analytics & statements", icon: BarChart3, href: "/app/reports" },
       { label: "Copilot", description: "Ask your books", icon: Sparkles, href: "/app/copilot" },
     ],
   },
@@ -88,7 +86,7 @@ export function AppFrame({ children, companyName, fiscalYear, fiscalYears, email
   const [switchingYear, setSwitchingYear] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<CollapsibleGroup["key"], boolean>>({
     accounting: pathname.startsWith("/app/accounting") || pathname.startsWith("/app/vat") || pathname.startsWith("/app/taxes") || pathname.startsWith("/app/year-end") || pathname.startsWith("/app/ecdf") || pathname.startsWith("/app/compliance"),
-    insights: pathname.startsWith("/app/reports") || pathname.startsWith("/app/tax-reserve") || pathname.startsWith("/app/copilot"),
+    insights: pathname.startsWith("/app/reports") || pathname.startsWith("/app/copilot"),
   });
 
   const userLabel = useMemo(() => email?.split("@")[0] ?? "Owner", [email]);
