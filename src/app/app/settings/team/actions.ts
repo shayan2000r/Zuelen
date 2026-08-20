@@ -9,7 +9,6 @@ import { getWorkspace } from "@/lib/workspace";
 export type TeamActionState={status:"idle"|"success"|"error";message:string};
 const ROLES=new Set(["admin","accountant","bookkeeper","viewer"]);
 function roleLabel(role:string){return role.charAt(0).toUpperCase()+role.slice(1)}
-function internalPath(value:string|null,fallback:string){return value&&value.startsWith("/")&&!value.startsWith("//")?value:fallback}
 
 export async function inviteTeamMemberAction(_previous:TeamActionState,formData:FormData):Promise<TeamActionState>{
  const workspace=await getWorkspace();
@@ -54,5 +53,3 @@ export async function revokeTeamInvitationAction(formData:FormData){
 export async function acceptTeamInvitationAction(formData:FormData){
  const token=String(formData.get("token")??"");if(!token)redirect("/sign-in");const supabase=await createClient(),{error}=await supabase.rpc("accept_organization_invitation",{p_token:token});if(error)redirect(`/invite/${encodeURIComponent(token)}?error=${encodeURIComponent(error.message)}`);redirect("/app");
 }
-
-export function safeNextPath(value:string|null){return internalPath(value,"/app")}
