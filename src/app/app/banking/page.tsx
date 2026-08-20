@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Search } from "lucide-react";
+import { ArrowRight, CheckCircle2, Eye, Search } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BankImporter } from "@/components/bank-importer";
@@ -8,13 +8,14 @@ import styles from "@/components/banking.module.css";
 import { fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { canBookkeep } from "@/lib/permissions";
 
 export const dynamic="force-dynamic";
 type SearchParams=Promise<{q?:string;status?:string}>;
 
 export default async function BankingPage({searchParams}:{searchParams:SearchParams}){
  const params=await searchParams,q=(params.q??"").trim().toLowerCase(),status=params.status??"all",workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");
- const year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),supabase=await createClient();
+ const editable=canBookkeep(workspace.role),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),supabase=await createClient();
  const[accountsResult,bankResult,batchesResult]=await Promise.all([
   supabase.from("bank_accounts").select("id,name,iban,currency,opening_balance").eq("company_id",workspace.company.id).order("created_at"),
   supabase.from("bank_transactions").select("id,bank_account_id,booking_date,amount,currency,counterparty_name,reference,match_status,matched_journal_entry_id,import_source,import_batch_id").eq("company_id",workspace.company.id).neq("match_status","ignored").gte("booking_date",bounds.start).lte("booking_date",bounds.end).order("booking_date",{ascending:false}).order("created_at",{ascending:false}).limit(1200),
@@ -27,13 +28,13 @@ export default async function BankingPage({searchParams}:{searchParams:SearchPar
  for(const batch of rawBatches){const items=batchRows.filter(r=>r.import_batch_id===batch.id),signature=items.map(r=>`${r.booking_date}|${Number(r.amount).toFixed(2)}|${r.currency}`).sort().join(";");batchMeta.set(batch.id,{signature,activeCount:items.filter(r=>r.match_status!=="ignored").length});if(signature){const list=signatureGroups.get(signature)??[];list.push(batch.id);signatureGroups.set(signature,list)}}
  const batches=rawBatches.map(b=>{const meta=batchMeta.get(b.id);return{...b,activeCount:meta?.activeCount??0,isPotentialDuplicate:Boolean(meta?.signature&&(signatureGroups.get(meta.signature)?.length??0)>1)}});
  return <div className={styles.page}>
-  <div className={styles.intro}><div><p>Cash → books · {year}</p><h1>Banking</h1><span>Import {year} statements, reconcile movements and keep the selected financial year aligned with the ledger.</span></div><div className={styles.health}><CheckCircle2 size={14}/>{coverage}% reconciled{unmatched?` · ${unmatched} to review`:""}</div></div>
-  <section className={styles.layout}><BankImporter defaultCurrency={currency}/><div className={styles.right}>
+  <div className={styles.intro}><div><p>Cash → books · {year}</p><h1>Banking</h1><span>{editable?`Import ${year} statements, reconcile movements and keep the selected financial year aligned with the ledger.`:`Read-only access to ${year} bank statements, movements and reconciliation history.`}</span></div><div className={styles.health}>{editable?<CheckCircle2 size={14}/>:<Eye size={14}/>} {editable?`${coverage}% reconciled${unmatched?` · ${unmatched} to review`:""}`:"Viewer · read only"}</div></div>
+  <section className={styles.layout}>{editable?<BankImporter defaultCurrency={currency}/>:<article className={styles.importHistory}><div><p>Bank statement imports</p><h2>Read-only access</h2></div><span>Only Owners, Admins, Accountants and Bookkeepers can import or remove bank evidence.</span></article>}<div className={styles.right}>
    <article className={styles.panel}><div className={styles.panelHead}><div><p>Reconciliation queue · {year}</p><h2>Bank movements</h2></div><Link href="/app/transactions" className={styles.reviewLink}>Review accounting <ArrowRight size={13}/></Link></div>
     <form className="compta-list-tools" method="get"><label><Search size={15}/><input name="q" defaultValue={params.q??""} placeholder={`Search ${year} bank movements`}/></label><select name="status" defaultValue={status}><option value="all">All statuses</option><option value="review">Needs review</option><option value="matched">Reconciled</option></select><button type="submit">Apply</button></form>
-    {visibleRows.length===0?<div className={styles.empty}><h3>{rows.length?"No matching bank movements.":`No bank activity in ${year} yet.`}</h3><p>{rows.length?"Try a different search or reconciliation filter.":`Import your ${year} bank statement. Compta will create reviewable transactions dated from the statement.`}</p></div>:<BankMovementTable rows={visibleRows} accounts={accounts.map(a=>({id:a.id,name:a.name}))}/>} 
+    {visibleRows.length===0?<div className={styles.empty}><h3>{rows.length?"No matching bank movements.":`No bank activity in ${year} yet.`}</h3><p>{rows.length?"Try a different search or reconciliation filter.":editable?`Import your ${year} bank statement. Compta will create reviewable transactions dated from the statement.`:"No statement activity has been imported for this year."}</p></div>:<BankMovementTable rows={visibleRows} accounts={accounts.map(a=>({id:a.id,name:a.name}))} readOnly={!editable}/>} 
    </article>
-   <BankImportHistory batches={batches}/>
+   <BankImportHistory batches={batches} readOnly={!editable}/>
   </div></section>
  </div>;
 }
