@@ -6,7 +6,7 @@ import { getWorkspace } from "@/lib/workspace";
 
 export type BankRemovalState={status:"idle"|"success"|"error";message:string};
 function validUuid(value:string){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)}
-function refresh(){for(const p of ["/app","/app/banking","/app/transactions","/app/accounting","/app/vat","/app/taxes","/app/reports","/app/year-end"])revalidatePath(p)}
+function refresh(){for(const p of ["/app","/app/banking","/app/transactions","/app/accounting","/app/vat","/app/taxes","/app/reports","/app/year-end","/app/documents"])revalidatePath(p)}
 
 export async function bulkRemoveBankMovements(_previous:BankRemovalState,formData:FormData):Promise<BankRemovalState>{
  const w=await getWorkspace();if(!w.authenticated||!w.company)return{status:"error",message:"Your session expired. Please sign in again."};
@@ -16,5 +16,18 @@ export async function bulkRemoveBankMovements(_previous:BankRemovalState,formDat
 }
 
 export async function removeImportBatch(_previous:BankRemovalState,formData:FormData):Promise<BankRemovalState>{
- const w=await getWorkspace();if(!w.authenticated||!w.company)return{status:"error",message:"Your session expired."};const batchId=String(formData.get("batch_id")??"");if(!validUuid(batchId))return{status:"error",message:"Invalid import batch."};const s=await createClient(),{data:rows,error:loadError}=await s.from("bank_transactions").select("id").eq("company_id",w.company.id).eq("import_batch_id",batchId).neq("match_status","ignored");if(loadError)return{status:"error",message:loadError.message};const ids=(rows??[]).map(r=>r.id);if(!ids.length)return{status:"success",message:"This import batch is already inactive."};let removed=0,blocked=0;for(let i=0;i<ids.length;i+=200){const{data,error}=await s.rpc("bulk_remove_bank_transactions",{p_company_id:w.company.id,p_bank_transaction_ids:ids.slice(i,i+200)});if(error)return{status:"error",message:error.message};const result=data&&typeof data==="object"?data as Record<string,unknown>:{};removed+=Number(result.removed??0);blocked+=Number(result.blocked??0)}refresh();return{status:"success",message:`Import batch removed from active books · ${removed} movement${removed===1?"":"s"}${blocked?` · ${blocked} protected`:""}. The original import history remains auditable.`};
+ const w=await getWorkspace();if(!w.authenticated||!w.company)return{status:"error",message:"Your session expired."};const batchId=String(formData.get("batch_id")??"");if(!validUuid(batchId))return{status:"error",message:"Invalid import batch."};const s=await createClient(),{data:rows,error:loadError}=await s.from("bank_transactions").select("id").eq("company_id",w.company.id).eq("import_batch_id",batchId).neq("match_status","ignored");if(loadError)return{status:"error",message:loadError.message};const ids=(rows??[]).map(r=>r.id);if(!ids.length)return{status:"success",message:"This import batch is already inactive."};let removed=0,blocked=0;for(let i=0;i<ids.length;i+=200){const{data,error}=await s.rpc("bulk_remove_bank_transactions",{p_company_id:w.company.id,p_bank_transaction_ids:ids.slice(i,i+200)});if(error)return{status:"error",message:error.message};const result=data&&typeof data==="object"?data as Record<string,unknown>:{};removed+=Number(result.removed??0);blocked+=Number(result.blocked??0)}refresh();return{status:"success",message:`Import batch removed from active books · ${removed} movement${removed===1?"":"s"}${blocked?` · ${blocked} protected`:""}. The import record remains available.`};
+}
+
+export async function deleteInactiveImportBatch(_previous:BankRemovalState,formData:FormData):Promise<BankRemovalState>{
+ const w=await getWorkspace();if(!w.authenticated||!w.company)return{status:"error",message:"Your session expired."};
+ const batchId=String(formData.get("batch_id")??"");if(!validUuid(batchId))return{status:"error",message:"Invalid import batch."};
+ const s=await createClient();
+ const{count,error:activeError}=await s.from("bank_transactions").select("id",{count:"exact",head:true}).eq("company_id",w.company.id).eq("import_batch_id",batchId).neq("match_status","ignored");
+ if(activeError)return{status:"error",message:activeError.message};
+ if((count??0)>0)return{status:"error",message:"This import still contains active bank movements. Remove those movements first."};
+ const{error}=await s.from("bank_import_batches").delete().eq("company_id",w.company.id).eq("id",batchId);
+ if(error)return{status:"error",message:error.message};
+ refresh();
+ return{status:"success",message:"Inactive duplicate import removed from history. Ignored accounting evidence remains preserved."};
 }
