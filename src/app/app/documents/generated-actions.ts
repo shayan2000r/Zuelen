@@ -8,7 +8,7 @@ import { getWorkspace } from "@/lib/workspace";
 export type GeneratedDocumentState={status:"idle"|"success"|"error";message:string;documentId?:string};
 const REPORTS={profit_loss:"Profit & Loss",balance_sheet:"Balance Sheet",trial_balance:"Trial Balance",pcn:"PCN Closing Balances",annual_accounts:"Annual Accounts",annexe:"Annexe to the Annual Accounts",general_ledger:"General Ledger",general_journal:"General Journal"} as const;
 type ReportType=keyof typeof REPORTS;
-const GENERATOR_VERSION="2026.2";
+const GENERATOR_VERSION="2026.3";
 function validType(value:string):value is ReportType{return Object.prototype.hasOwnProperty.call(REPORTS,value)}
 function asObject(value:unknown){return value&&typeof value==="object"?value as Record<string,unknown>:null}
 function validUuid(value:string){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)}
@@ -28,7 +28,7 @@ export async function generateFinancialDocumentAction(_previous:GeneratedDocumen
  if(!period||!["soft_closed","hard_closed"].includes(period.status))return{status:"error",message:`${fiscalYear} must be closed before generating frozen financial documents.`};
  const snapshot=asObject(filing.ledger_snapshot);if(!snapshot)return{status:"error",message:"The closing snapshot is unreadable."};
  const payload:Record<string,unknown>={
-  company:{legal_name:workspace.company.legal_name,trading_name:workspace.company.trading_name,legal_form:workspace.company.legal_form,rcs_number:workspace.company.rcs_number,vat_number:workspace.company.vat_number,tax_number:workspace.company.tax_number,registered_address:workspace.company.registered_address,base_currency:workspace.company.base_currency||"EUR"},
+  company:{legal_name:workspace.company.legal_name,trading_name:workspace.company.trading_name,legal_form:workspace.company.legal_form,rcs_number:workspace.company.rcs_number,vat_number:workspace.company.vat_number,tax_number:workspace.company.tax_number,registered_address:workspace.company.registered_address,brand_image_path:workspace.company.brand_image_path,base_currency:workspace.company.base_currency||"EUR"},
   fiscal_year:fiscalYear,period_start:filing.period_start||bounds.start,period_end:filing.period_end||bounds.end,snapshot_at:filing.snapshot_at,generated_at:new Date().toISOString(),ledger_checksum:filing.ledger_checksum,rules_version:filing.rules_version,period_status:period.status,ledger_snapshot:snapshot
  };
  if(documentType==="general_ledger"||documentType==="general_journal"){
