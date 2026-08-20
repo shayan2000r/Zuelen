@@ -24,7 +24,7 @@ export async function inviteTeamMemberAction(_previous:TeamActionState,formData:
  const requestHeaders=await headers(),host=requestHeaders.get("x-forwarded-host")||requestHeaders.get("host"),proto=requestHeaders.get("x-forwarded-proto")||"https";
  const origin=host?`${proto}://${host}`:"https://compta-blond.vercel.app";
  const next=`/invite/${invite.token}`;
- const callback=`${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+ const callback=`${origin}/auth/complete?next=${encodeURIComponent(next)}`;
  const{error:mailError}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:callback}});
  if(mailError){
   await supabase.rpc("revoke_organization_invitation",{p_organization_id:workspace.organization.id,p_invitation_id:invite.id});
