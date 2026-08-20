@@ -20,7 +20,7 @@ export default async function ProtectedAppLayout({ children }: { children: React
   const bounds = fiscalYearBounds(fiscalYear, workspace.company.fiscal_year_start_month);
   const fiscalYears = availableFiscalYears(fiscalYear, workspace.company.fiscal_year_start_month);
   const supabase = await createClient();
-  const [{ count }, brandResult] = await Promise.all([
+  const [{ count }, brandResult, avatarResult] = await Promise.all([
     supabase
       .from("source_transactions")
       .select("id", { count: "exact", head: true })
@@ -31,6 +31,9 @@ export default async function ProtectedAppLayout({ children }: { children: React
     workspace.company.brand_image_path
       ? supabase.storage.from("company-documents").createSignedUrl(workspace.company.brand_image_path, 60 * 60)
       : Promise.resolve({ data: null, error: null }),
+    workspace.profile?.avatar_path
+      ? supabase.storage.from("user-avatars").createSignedUrl(workspace.profile.avatar_path, 60 * 60)
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   return (
@@ -39,6 +42,9 @@ export default async function ProtectedAppLayout({ children }: { children: React
       fiscalYear={fiscalYear}
       fiscalYears={fiscalYears}
       email={workspace.email}
+      userName={workspace.profile?.full_name ?? null}
+      userRole={workspace.role}
+      userAvatarUrl={avatarResult.data?.signedUrl ?? null}
       attentionCount={count ?? 0}
       brandImageUrl={brandResult.data?.signedUrl ?? null}
     >
