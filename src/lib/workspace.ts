@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import type { OrganizationRole } from "@/lib/permissions";
+import { normalizeLocale, type Locale } from "@/lib/i18n";
 
 export type Workspace = {
   authenticated: boolean;
   userId: string | null;
   email: string | null;
   role: OrganizationRole | null;
-  profile: { full_name: string | null; avatar_path: string | null } | null;
+  profile: { full_name: string | null; avatar_path: string | null; locale: Locale } | null;
   organization: { id: string; name: string; slug: string } | null;
   company: {
     id: string;
@@ -29,6 +30,7 @@ export type Workspace = {
 };
 
 const EMPTY: Workspace = { authenticated:false,userId:null,email:null,role:null,profile:null,organization:null,company:null };
+function normalizeProfile(profile:{full_name:string|null;avatar_path:string|null;locale:string|null}|null){return profile?{...profile,locale:normalizeLocale(profile.locale)}:null}
 
 export async function getWorkspace(): Promise<Workspace> {
   const supabase = await createClient();
@@ -40,15 +42,15 @@ export async function getWorkspace(): Promise<Workspace> {
   const email=typeof claims?.email==="string"?claims.email:null;
   const {data:organization}=await supabase.from("organizations").select("id,name,slug").order("created_at",{ascending:true}).limit(1).maybeSingle();
   if(!organization){
-    const {data:profile}=await supabase.from("user_profiles").select("full_name,avatar_path").eq("user_id",userId).maybeSingle();
-    return{authenticated:true,userId,email,role:null,profile:profile??null,organization:null,company:null};
+    const {data:profile}=await supabase.from("user_profiles").select("full_name,avatar_path,locale").eq("user_id",userId).maybeSingle();
+    return{authenticated:true,userId,email,role:null,profile:normalizeProfile(profile),organization:null,company:null};
   }
 
   const [{data:membership},{data:profile},{data:company}]=await Promise.all([
     supabase.from("organization_members").select("role").eq("organization_id",organization.id).eq("user_id",userId).maybeSingle(),
-    supabase.from("user_profiles").select("full_name,avatar_path").eq("user_id",userId).maybeSingle(),
+    supabase.from("user_profiles").select("full_name,avatar_path,locale").eq("user_id",userId).maybeSingle(),
     supabase.from("companies").select("id,legal_name,trading_name,legal_form,base_currency,fiscal_year_start_month,vat_registered,vat_filing_frequency,vat_number,rcs_number,tax_number,business_permit_number,municipality,activity,brand_image_path,registered_address").eq("organization_id",organization.id).order("created_at",{ascending:true}).limit(1).maybeSingle()
   ]);
   const role=(membership?.role??null) as OrganizationRole|null;
-  return{authenticated:true,userId,email,role,profile:profile??null,organization,company:company?{...company,registered_address:(company.registered_address??{}) as Record<string,unknown>}:null};
+  return{authenticated:true,userId,email,role,profile:normalizeProfile(profile),organization,company:company?{...company,registered_address:(company.registered_address??{}) as Record<string,unknown>}:null};
 }

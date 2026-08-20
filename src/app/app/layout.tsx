@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppFrame } from "@/components/app-frame";
 import { availableFiscalYears, fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
+import { normalizeLocale, type AccountTranslation } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import "./ui-polish.css";
@@ -20,7 +21,7 @@ export default async function ProtectedAppLayout({ children }: { children: React
   const bounds = fiscalYearBounds(fiscalYear, workspace.company.fiscal_year_start_month);
   const fiscalYears = availableFiscalYears(fiscalYear, workspace.company.fiscal_year_start_month);
   const supabase = await createClient();
-  const [{ count }, brandResult, avatarResult] = await Promise.all([
+  const [{ count }, brandResult, avatarResult, accountsResult] = await Promise.all([
     supabase
       .from("source_transactions")
       .select("id", { count: "exact", head: true })
@@ -34,7 +35,13 @@ export default async function ProtectedAppLayout({ children }: { children: React
     workspace.profile?.avatar_path
       ? supabase.storage.from("user-avatars").createSignedUrl(workspace.profile.avatar_path, 60 * 60)
       : Promise.resolve({ data: null, error: null }),
+    supabase
+      .from("company_accounts")
+      .select("code,label,label_en,label_fr")
+      .eq("company_id", workspace.company.id)
+      .order("code", { ascending: true }),
   ]);
+  if (accountsResult.error) throw new Error(accountsResult.error.message);
 
   return (
     <AppFrame
@@ -47,6 +54,8 @@ export default async function ProtectedAppLayout({ children }: { children: React
       userAvatarUrl={avatarResult.data?.signedUrl ?? null}
       attentionCount={count ?? 0}
       brandImageUrl={brandResult.data?.signedUrl ?? null}
+      locale={normalizeLocale(workspace.profile?.locale)}
+      accountTranslations={(accountsResult.data ?? []) as AccountTranslation[]}
     >
       {children}
     </AppFrame>
