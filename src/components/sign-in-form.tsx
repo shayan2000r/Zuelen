@@ -50,7 +50,7 @@ export function SignInForm({nextPath=null}:{nextPath?:string|null}) {
   return (
     <main className={styles.shell}>
       <section className={styles.storyPanel}>
-        <div className={styles.storyTop}><img className={styles.logoMark} src="/zuelen-icon.png" alt="Zuelen" /><span>Zuelen</span></div>
+        <div className={styles.storyTop}><img className={styles.logoMark} src="/zuelen-icon.png" alt="Zuelen" style={{background:"transparent",display:"block",objectFit:"contain"}} /><span>Zuelen</span></div>
         <div className={styles.storyContent}><p className={styles.overline}>Luxembourg business, under control.</p><h1>Your books, taxes and deadlines — finally in one place.</h1><p className={styles.storyLead}>Built for owner-operated Luxembourg companies that want clarity without becoming accountants.</p><div className={styles.storyProofs}><div><span><Check size={13} /></span><p><strong>One source of truth</strong><small>Bookkeeping feeds VAT, annual accounts and tax preparation.</small></p></div><div><span><ShieldCheck size={13} /></span><p><strong>Luxembourg-first</strong><small>Designed around PCN, eCDF, RCS, AED and ACD workflows.</small></p></div><div><span><Sparkles size={13} /></span><p><strong>Guided, not overwhelming</strong><small>Zuelen tells you what needs attention before it becomes a problem.</small></p></div></div></div>
         <div className={styles.storyFooter}><LockKeyhole size={13} />Financial data is isolated per company with row-level security.</div>
       </section>
