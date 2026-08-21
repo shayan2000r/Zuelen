@@ -39,7 +39,7 @@ export async function generateFinancialDocumentAction(_previous:GeneratedDocumen
     supabase.from("journal_lines").select("journal_entry_id,company_account_id,description,debit,credit,currency,created_at").in("journal_entry_id",entryIds),
     supabase.from("company_accounts").select("id,code,label,account_type").eq("company_id",workspace.company.id)
    ]);
-   if(entriesResult.error||linesResult.error||accountsResult.error)return{status:"error",message:"Compta could not freeze the journal detail required for this report."};
+   if(entriesResult.error||linesResult.error||accountsResult.error)return{status:"error",message:"Zuelen could not freeze the journal detail required for this report."};
    const accountMap=new Map((accountsResult.data??[]).map(account=>[account.id,account])),linesByEntry=new Map<string,Record<string,unknown>[]>();
    for(const line of linesResult.data??[]){const account=accountMap.get(line.company_account_id),lineRows=linesByEntry.get(line.journal_entry_id)??[];lineRows.push({account_code:account?.code??"",account_label:account?.label??line.description??"Account",account_type:account?.account_type??"",description:line.description,debit:Number(line.debit),credit:Number(line.credit),currency:line.currency,created_at:line.created_at});linesByEntry.set(line.journal_entry_id,lineRows)}
    const entries=(entriesResult.data??[]).map(entry=>({id:entry.id,entry_number:entry.entry_number,entry_date:entry.entry_date,description:entry.description,source_type:entry.source_type,lines:linesByEntry.get(entry.id)??[]})).sort((a,b)=>String(a.entry_date).localeCompare(String(b.entry_date))||Number(a.entry_number)-Number(b.entry_number));

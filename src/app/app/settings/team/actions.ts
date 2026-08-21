@@ -22,7 +22,7 @@ export async function inviteTeamMemberAction(_previous:TeamActionState,formData:
  const invite=Array.isArray(data)?data[0]:null;
  if(!invite?.token)return{status:"error",message:"The invitation could not be created."};
  const requestHeaders=await headers(),host=requestHeaders.get("x-forwarded-host")||requestHeaders.get("host"),proto=requestHeaders.get("x-forwarded-proto")||"https";
- const origin=host?`${proto}://${host}`:"https://compta-blond.vercel.app";
+ const origin=host?`${proto}://${host}`:process.env.NEXT_PUBLIC_APP_URL||"http://localhost:3000";
  const next=`/invite/${invite.token}`;
  const callback=`${origin}/auth/complete?next=${encodeURIComponent(next)}`;
  const{error:mailError}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:callback}});

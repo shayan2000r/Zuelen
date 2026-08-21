@@ -46,8 +46,8 @@ export function DashboardShell() {
     <main className="app-shell">
       <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
         <div className="brand-row">
-          <div className="brand-mark"><span>C</span></div>
-          <div className="brand-word">Compta</div>
+          <div className="brand-mark"><span>Z</span></div>
+          <div className="brand-word">Zuelen</div>
           <button className="icon-btn mobile-only" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={18} /></button>
         </div>
 
@@ -99,7 +99,7 @@ export function DashboardShell() {
             <div className="crumb"><Building2 size={15} /><span>TradinGo SARL-S</span><span>/</span><strong>Overview</strong></div>
           </div>
           <div className="topbar-actions">
-            <button className="search-btn"><Search size={16} /><span>Search Compta</span><kbd>⌘ K</kbd></button>
+            <button className="search-btn"><Search size={16} /><span>Search Zuelen</span><kbd>⌘ K</kbd></button>
             <button className="icon-btn"><Bell size={18} /><span className="notification-dot" /></button>
             <button className="primary-btn"><Plus size={17} /><span>New</span></button>
           </div>
@@ -136,7 +136,7 @@ export function DashboardShell() {
                 <div className="divider" />
                 <div><span>Last 30 days</span><strong className="positive"><ArrowUpRight size={15} />€2,310</strong></div>
               </div>
-              <div className="hero-watermark">C</div>
+              <div className="hero-watermark">Z</div>
             </article>
 
             <article className="deadline-panel">
@@ -179,7 +179,7 @@ export function DashboardShell() {
                   </button>
                 ))}
               </div>
-              <div className="inbox-footer"><Sparkles size={15} /><span>Compta grouped 12 similar Adobe transactions automatically.</span><button>Review rule</button></div>
+              <div className="inbox-footer"><Sparkles size={15} /><span>Zuelen grouped 12 similar Adobe transactions automatically.</span><button>Review rule</button></div>
             </article>
 
             <aside className="reserve-panel">
@@ -229,12 +229,12 @@ export function DashboardShell() {
             </article>
             <article className="assistant-panel">
               <div className="assistant-icon"><Sparkles size={21} /></div>
-              <div><span className="assistant-label">Compta intelligence</span><h2>Ask your company anything.</h2><p>“How much can I safely take out this month?”</p></div>
-              <button><MessageCircle size={17} />Ask Compta</button>
+              <div><span className="assistant-label">Zuelen intelligence</span><h2>Ask your company anything.</h2><p>“How much can I safely take out this month?”</p></div>
+              <button><MessageCircle size={17} />Ask Zuelen</button>
             </article>
           </section>
 
-          <footer className="product-footer"><span>Compta preview · Luxembourg-first accounting</span><span><ShieldCheck size={14} />Financial data protected</span><span><Users size={14} />Built for owner-operated companies</span></footer>
+          <footer className="product-footer"><span>Zuelen preview · Luxembourg-first accounting</span><span><ShieldCheck size={14} />Financial data protected</span><span><Users size={14} />Built for owner-operated companies</span></footer>
         </div>
       </section>
     </main>

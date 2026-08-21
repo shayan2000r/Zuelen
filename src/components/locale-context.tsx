@@ -69,7 +69,7 @@ export function LocaleProvider({children,locale,accountTranslations}:{children:R
   const accountMap = useMemo(() => buildAccountTextMap(locale, accountTranslations), [locale, accountTranslations]);
   const value = useMemo<LocaleContextValue>(() => ({locale,intlLocale:intlLocale(locale),t:(key)=>translate(locale,key),accountLabel:(account)=>localizedAccountLabel(locale,account)}),[locale]);
   useEffect(() => {
-    document.documentElement.lang = locale;document.documentElement.dataset.comptaLocale = locale;
+    document.documentElement.lang = locale;document.documentElement.dataset.zuelenLocale = locale;
     if (locale !== "fr") return;
     const shell = document.querySelector(".app-shell");if (!shell) return;
     translateTree(shell, locale, accountMap);

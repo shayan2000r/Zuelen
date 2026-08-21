@@ -44,10 +44,10 @@ export function CompanySetup() {
 
   return (
     <main className={styles.setupShell}>
-      <header className={styles.setupTop}><div className={styles.setupBrand}><div className={styles.logoMark}>C</div><span>Compta</span></div><span className={styles.secureTag}><ShieldCheck size={13} />Secure workspace setup</span></header>
+      <header className={styles.setupTop}><div className={styles.setupBrand}><div className={styles.logoMark}>Z</div><span>Zuelen</span></div><span className={styles.secureTag}><ShieldCheck size={13} />Secure workspace setup</span></header>
       <div className={styles.setupGrid}>
         <aside className={styles.setupAside}>
-          <p className={styles.overline}>Company 01</p><h1>Tell Compta about your company.</h1><p>Enter the official details used on invoices, RCS records and government portals. Compta uses them to configure the right accounting and compliance workflows.</p>
+          <p className={styles.overline}>Company 01</p><h1>Tell Zuelen about your company.</h1><p>Enter the official details used on invoices, RCS records and government portals. Zuelen uses them to configure the right accounting and compliance workflows.</p>
           <div className={styles.setupSteps}><div className={styles.activeStep}><span>01</span><p><strong>Company profile</strong><small>Legal identity and VAT status</small></p></div><div><span>02</span><p><strong>Opening position</strong><small>Bank, accounting year and balances</small></p></div><div><span>03</span><p><strong>Compliance map</strong><small>Your obligations and next deadlines</small></p></div></div>
         </aside>
         <section className={styles.setupCard}>
@@ -61,7 +61,7 @@ export function CompanySetup() {
             <label className={styles.fullField}><span>Registered office</span><input value={street} onChange={(event) => setStreet(event.target.value)} placeholder="12 rue du Commerce" required /></label>
             <label><span>Postal code</span><input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="L-1234" required /></label>
             <label><span>City</span><input value={city} onChange={(event) => setCity(event.target.value)} placeholder="Luxembourg" required /></label>
-            <label className={styles.toggleField}><span><strong>VAT registered</strong><small>Compta will create the relevant VAT workflow.</small></span><input type="checkbox" checked={vatRegistered} onChange={(event) => setVatRegistered(event.target.checked)} /></label>
+            <label className={styles.toggleField}><span><strong>VAT registered</strong><small>Zuelen will create the relevant VAT workflow.</small></span><input type="checkbox" checked={vatRegistered} onChange={(event) => setVatRegistered(event.target.checked)} /></label>
             {message ? <div className={`${styles.message} ${styles.fullField}`}>{message}</div> : null}
             <div className={`${styles.formActions} ${styles.fullField}`}><button type="button" className={styles.backButton} onClick={() => router.push("/sign-in")}><ChevronLeft size={15} />Back</button><button type="submit" className={styles.submit} disabled={loading}>{loading ? <LoaderCircle className={styles.spin} size={17} /> : <Check size={16} />}<span>Create workspace</span>{!loading ? <ArrowRight size={16} /> : null}</button></div>
           </form>

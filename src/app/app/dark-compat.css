@@ -1,6 +1,6 @@
-html[data-compta-theme="dark"] .workspace :where(h1,h2,h3,h4,h5,h6,strong,b){color:#F7F7FB!important}
-html[data-compta-theme="dark"] .workspace :where(p,small,label){color:#646466!important}
-html[data-compta-theme="dark"] .workspace :where(article,details){background:var(--card)!important;border-color:var(--border)!important;color:var(--text)!important}
-html[data-compta-theme="dark"] .workspace :where([class*="notice"],[class*="Notice"],[class*="empty"],[class*="Empty"],[class*="box"],[class*="Box"]){background:var(--card-strong)!important;border-color:var(--border)!important;color:var(--text)!important}
-html[data-compta-theme="dark"] .workspace :where(table,thead,tbody,tr,td,th){border-color:var(--border)!important}
-html[data-compta-theme="dark"] .workspace :where(input,select,textarea){color-scheme:dark}
+html[data-zuelen-theme="dark"] .workspace :where(h1,h2,h3,h4,h5,h6,strong,b){color:#F7F7FB!important}
+html[data-zuelen-theme="dark"] .workspace :where(p,small,label){color:#646466!important}
+html[data-zuelen-theme="dark"] .workspace :where(article,details){background:var(--card)!important;border-color:var(--border)!important;color:var(--text)!important}
+html[data-zuelen-theme="dark"] .workspace :where([class*="notice"],[class*="Notice"],[class*="empty"],[class*="Empty"],[class*="box"],[class*="Box"]){background:var(--card-strong)!important;border-color:var(--border)!important;color:var(--text)!important}
+html[data-zuelen-theme="dark"] .workspace :where(table,thead,tbody,tr,td,th){border-color:var(--border)!important}
+html[data-zuelen-theme="dark"] .workspace :where(input,select,textarea){color-scheme:dark}
