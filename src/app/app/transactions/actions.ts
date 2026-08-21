@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { assertUsageAvailable, billingLimitMessage } from "@/lib/billing";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
@@ -8,7 +9,7 @@ export type TransactionActionState={status:"idle"|"success"|"error";message:stri
 const treatments=["domestic","eu_b2b_reverse_charge","non_eu","exempt_or_zero","unknown"];
 function roundMoney(value:number){return Math.round((value+Number.EPSILON)*100)/100}
 function validUuid(value:string){return /^[0-9a-f-]{36}$/i.test(value)}
-function refreshBooks(){for(const path of ["/app","/app/transactions","/app/accounting","/app/taxes","/app/vat","/app/banking","/app/year-end"])revalidatePath(path)}
+function refreshBooks(){for(const path of ["/app","/app/transactions","/app/accounting","/app/taxes","/app/vat","/app/banking","/app/year-end","/app/settings/usage"])revalidatePath(path)}
 function calculateVat(formData:FormData){
  const entered=Number(formData.get("amount")??formData.get("amount_gross")),rate=Number(formData.get("vat_rate")||0),included=String(formData.get("vat_included")??"yes")!=="no",treatment=String(formData.get("vat_treatment")??"domestic");
  if(!Number.isFinite(entered)||entered<=0)return{error:"Amount must be greater than zero."} as const;
@@ -25,8 +26,9 @@ export async function createSourceTransaction(_previous:TransactionActionState,f
  const occurredOn=String(formData.get("occurred_on")??""),direction=String(formData.get("direction")??""),counterparty=String(formData.get("counterparty_name")??"").trim(),description=String(formData.get("description")??"").trim(),country=String(formData.get("counterparty_country")??"").trim().toUpperCase(),vat=calculateVat(formData);
  if(!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn))return{status:"error",message:"Choose a valid transaction date."};if(!["income","expense"].includes(direction))return{status:"error",message:"Choose income or expense."};if("error" in vat)return{status:"error",message:vat.error??"VAT calculation failed."};
  if(!workspace.company.vat_registered&&vat.vat>0)return{status:"error",message:"This company is not marked as VAT registered. Choose a zero/exempt treatment or update the VAT profile."};
+ try{await assertUsageAvailable(workspace.organization.id,"transactions",1)}catch(error){return{status:"error",message:billingLimitMessage(error,workspace.profile?.locale==="fr"?"fr":"en")??(error instanceof Error?error.message:"Your Basic transaction allowance has been reached.")}}
  const supabase=await createClient();const{data,error}=await supabase.from("source_transactions").insert({organization_id:workspace.organization.id,company_id:workspace.company.id,occurred_on:occurredOn,direction,amount_gross:vat.gross,amount_net:vat.net,vat_amount:vat.vat,vat_rate:vat.rate,vat_treatment:vat.treatment,counterparty_country:country||null,currency:workspace.company.base_currency||"EUR",counterparty_name:counterparty||null,description:description||null,source_type:"manual",classification_status:"review",created_by:workspace.userId}).select("id").single();
- if(error)return{status:"error",message:error.message};if(data?.id)await supabase.rpc("apply_source_transaction_suggestion",{p_source_transaction_id:data.id});refreshBooks();
+ if(error){const friendly=billingLimitMessage(new Error(error.message),workspace.profile?.locale==="fr"?"fr":"en");return{status:"error",message:friendly??error.message}}if(data?.id)await supabase.rpc("apply_source_transaction_suggestion",{p_source_transaction_id:data.id});refreshBooks();
  return{status:"success",message:vat.treatment==="eu_b2b_reverse_charge"?`Transaction recorded · ${vat.net.toFixed(2)} net · ${vat.vat.toFixed(2)} reverse-charge VAT will self-balance when posted.`:`Transaction recorded · net ${vat.net.toFixed(2)} · VAT ${vat.vat.toFixed(2)}.`};
 }
 
@@ -41,6 +43,6 @@ export async function bulkDeleteTransactionsAction(_previous:TransactionActionSt
  const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};
  let ids:unknown;try{ids=JSON.parse(String(formData.get("ids")??"[]"))}catch{return{status:"error",message:"The selected transactions could not be read."}}
  if(!Array.isArray(ids)||ids.length===0||ids.length>200||ids.some(id=>typeof id!=="string"||!validUuid(id)))return{status:"error",message:"Choose between 1 and 200 valid transactions."};
- const supabase=await createClient();let removed=0;for(const id of ids){const{error}=await supabase.rpc("delete_source_transaction_safe",{p_source_transaction_id:id});if(error)return{status:"error",message:`${removed} removed before Compta stopped: ${error.message}`};removed++}
+ const supabase=await createClient();let removed=0;for(const id of ids){const{error}=await supabase.rpc("delete_source_transaction_safe",{p_source_transaction_id:id});if(error)return{status:"error",message:`${removed} removed before Zuelen stopped: ${error.message}`};removed++}
  refreshBooks();return{status:"success",message:`${removed} transaction${removed===1?"":"s"} removed. Posted entries were reversed rather than erased.`};
 }
