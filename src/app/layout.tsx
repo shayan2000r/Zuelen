@@ -3,7 +3,7 @@ import "./globals.css";
 import "./typography-2026.css";
 
 export const metadata: Metadata = {
-  title: "Compta — Luxembourg business, under control",
+  title: "Zuelen — Luxembourg business, under control",
   description: "Accounting and compliance for Luxembourg businesses.",
 };
 
