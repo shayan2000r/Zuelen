@@ -74,7 +74,7 @@ export function AppFrame(props: AppFrameProps) {
 
 function AppFrameInner({children,companyName,fiscalYear,fiscalYears,email,userName,userRole,userAvatarUrl,attentionCount=0,brandImageUrl=null,locale}:AppFrameProps){
  const pathname=usePathname(),[mobileNav,setMobileNav]=useState(false),[searchOpen,setSearchOpen]=useState(false),[notificationsOpen,setNotificationsOpen]=useState(false),[query,setQuery]=useState(""),[theme,setTheme]=useState<Theme>("light"),[switchingYear,setSwitchingYear]=useState(false),[switchingLocale,startLocaleTransition]=useTransition();
- const tx=(key:MessageKey)=>t(locale,key);
+ const tx=(key:MessageKey)=>t(locale,key).replaceAll("Compta","Zuelen");
  const primaryItems=useMemo<NavItem[]>(()=>[
   { label:tx("overview"),description:tx("companySnapshot"),icon:LayoutDashboard,href:"/app" },
   { label:tx("transactions"),description:tx("reviewPostActivity"),icon:WalletCards,href:"/app/transactions" },
