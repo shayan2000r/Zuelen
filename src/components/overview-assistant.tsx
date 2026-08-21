@@ -13,7 +13,7 @@ export function OverviewAssistant() {
       <div className={styles.assistantHead}>
         <div>
           <span className={styles.cardLabel}>AI Assistant</span>
-          <h2>Ask Compta</h2>
+          <h2>Ask Zuelen</h2>
         </div>
         <Link href="/app/copilot" aria-label="Open Copilot"><Maximize2 size={15} /></Link>
       </div>
@@ -33,7 +33,7 @@ export function OverviewAssistant() {
           placeholder="Ask me anything…"
           autoComplete="off"
         />
-        <button type="submit" disabled={question.trim().length < 3} aria-label="Ask Compta"><ArrowUp size={15} /></button>
+        <button type="submit" disabled={question.trim().length < 3} aria-label="Ask Zuelen"><ArrowUp size={15} /></button>
       </form>
     </article>
   );
