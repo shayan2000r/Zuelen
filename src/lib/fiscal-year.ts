@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-export const FISCAL_YEAR_COOKIE = "compta-fiscal-year";
+export const FISCAL_YEAR_COOKIE = "zuelen-fiscal-year";
 
 function iso(date: Date) {
   return date.toISOString().slice(0, 10);
