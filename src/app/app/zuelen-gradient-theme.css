@@ -1,0 +1,305 @@
+/* Zuelen premium gradient layer
+   Uses the existing Zuelen green palette as a restrained brand accent system.
+   Dense finance UI remains flat/readable; gradients are reserved for brand moments,
+   primary actions, AI, highlights, charts, and empty states. */
+
+.app-shell{
+  --z-950:#10451d;
+  --z-900:#155d27;
+  --z-800:#1a7431;
+  --z-700:#208b3a;
+  --z-600:#25a244;
+  --z-500:#2dc653;
+  --z-400:#4ad66d;
+  --z-300:#6ede8a;
+  --z-200:#92e6a7;
+  --z-100:#b7efc5;
+  --z-mint:#eaf8ed;
+
+  --z-gradient-core:
+    radial-gradient(circle at 84% 12%,rgba(183,239,197,.96) 0%,rgba(110,222,138,.72) 15%,transparent 36%),
+    radial-gradient(circle at 12% 88%,rgba(146,230,167,.92) 0%,rgba(45,198,83,.42) 22%,transparent 44%),
+    linear-gradient(135deg,#10451d 0%,#155d27 30%,#208b3a 57%,#2dc653 76%,#b7efc5 100%);
+  --z-gradient-forest:
+    radial-gradient(circle at 88% 8%,rgba(110,222,138,.38),transparent 30%),
+    radial-gradient(circle at 8% 92%,rgba(45,198,83,.26),transparent 32%),
+    linear-gradient(145deg,#07180f 0%,#0d2d1b 44%,#155d27 74%,#208b3a 100%);
+  --z-gradient-accent:linear-gradient(135deg,#155d27 0%,#208b3a 42%,#2dc653 72%,#6ede8a 100%);
+  --z-gradient-soft:
+    radial-gradient(circle at 88% 0%,rgba(183,239,197,.42),transparent 32%),
+    linear-gradient(135deg,rgba(234,248,237,.78),rgba(255,255,255,.92) 58%,rgba(183,239,197,.22));
+  --z-gradient-aura:
+    radial-gradient(circle at 18% 12%,rgba(183,239,197,.24),transparent 28%),
+    radial-gradient(circle at 88% 88%,rgba(45,198,83,.12),transparent 30%);
+
+  --page:#f7faf8;
+  --card:rgba(255,255,255,.92);
+  --card-strong:#ffffff;
+  --text:#102116;
+  --muted:#718078;
+  --border:rgba(16,69,29,.10);
+  --border-strong:rgba(16,69,29,.17);
+  --accent:#2dc653;
+  --button:#155d27;
+  --button-text:#ffffff;
+  --glass:rgba(255,255,255,.72);
+  --shadow-sm:0 8px 26px rgba(16,69,29,.055);
+  --shadow-md:0 24px 64px rgba(16,69,29,.12);
+}
+
+html[data-zuelen-theme="dark"] .app-shell{
+  --page:#06110c;
+  --card:rgba(11,29,19,.90);
+  --card-strong:#0f2418;
+  --text:#f4fbf6;
+  --muted:#8ba095;
+  --border:rgba(183,239,197,.10);
+  --border-strong:rgba(183,239,197,.18);
+  --accent:#4ad66d;
+  --button:#2dc653;
+  --button-text:#07180f;
+  --glass:rgba(7,24,15,.72);
+  --shadow-sm:0 10px 30px rgba(0,0,0,.24);
+  --shadow-md:0 28px 72px rgba(0,0,0,.40);
+}
+
+/* Ambient canvas: premium, but quiet enough for long finance sessions. */
+.workspace{
+  background:
+    radial-gradient(circle at 92% 2%,rgba(183,239,197,.20),transparent 25%),
+    radial-gradient(circle at 38% 100%,rgba(45,198,83,.055),transparent 30%),
+    linear-gradient(180deg,#fafcfb 0%,#f6faf7 100%)!important;
+}
+html[data-zuelen-theme="dark"] .workspace{
+  background:
+    radial-gradient(circle at 90% 0%,rgba(45,198,83,.13),transparent 28%),
+    radial-gradient(circle at 36% 100%,rgba(32,139,58,.08),transparent 34%),
+    linear-gradient(180deg,#07120d 0%,#05100a 100%)!important;
+  color:var(--text)!important;
+}
+
+/* Sidebar and compact utility chrome */
+.sidebar{
+  background:rgba(255,255,255,.76)!important;
+  border-color:rgba(16,69,29,.10)!important;
+  box-shadow:0 22px 70px rgba(16,69,29,.085)!important;
+  backdrop-filter:blur(32px) saturate(1.26)!important;
+  -webkit-backdrop-filter:blur(32px) saturate(1.26)!important;
+}
+html[data-zuelen-theme="dark"] .sidebar{
+  background:rgba(7,24,15,.78)!important;
+  border-color:rgba(183,239,197,.10)!important;
+  box-shadow:0 28px 80px rgba(0,0,0,.46)!important;
+}
+.topbar{
+  background:var(--glass)!important;
+  border-color:var(--border)!important;
+  box-shadow:var(--shadow-sm)!important;
+  backdrop-filter:blur(30px) saturate(1.28)!important;
+  -webkit-backdrop-filter:blur(30px) saturate(1.28)!important;
+}
+html[data-zuelen-theme="dark"] .topbar .search-btn,
+html[data-zuelen-theme="dark"] .topbar .icon-btn{color:#dce9e0!important}
+.topbar .search-btn:hover,.topbar .icon-btn:hover{
+  background:linear-gradient(135deg,rgba(183,239,197,.24),rgba(45,198,83,.10))!important;
+  color:var(--z-900)!important;
+}
+html[data-zuelen-theme="dark"] .topbar .search-btn:hover,
+html[data-zuelen-theme="dark"] .topbar .icon-btn:hover{color:#b7efc5!important}
+
+/* Approved Zuelen gradient icon in the product shell. */
+.brand-mark{
+  position:relative!important;
+  overflow:hidden!important;
+  background:url("/zuelen-icon.png") center/cover no-repeat!important;
+  border:1px solid rgba(255,255,255,.26)!important;
+  box-shadow:0 8px 24px rgba(16,69,29,.20),inset 0 1px 0 rgba(255,255,255,.24)!important;
+}
+.brand-mark span{opacity:0!important}
+.brand-word{color:var(--text)!important;letter-spacing:-.045em!important}
+
+.company-switcher{
+  background:linear-gradient(135deg,rgba(255,255,255,.54),rgba(234,248,237,.58))!important;
+  border-color:var(--border)!important;
+}
+html[data-zuelen-theme="dark"] .company-switcher{
+  background:linear-gradient(135deg,rgba(255,255,255,.045),rgba(45,198,83,.035))!important;
+}
+.company-avatar,.user-avatar{
+  background:linear-gradient(145deg,#eaf8ed,#b7efc5)!important;
+  color:var(--z-900)!important;
+}
+html[data-zuelen-theme="dark"] .company-avatar,
+html[data-zuelen-theme="dark"] .user-avatar{
+  background:linear-gradient(145deg,rgba(110,222,138,.26),rgba(32,139,58,.18))!important;
+  color:#dff7e5!important;
+}
+
+/* Navigation: subtle aura rather than full saturated fills. */
+.nav-item:hover,
+[class*="groupButton"]:hover{
+  background:linear-gradient(135deg,rgba(183,239,197,.24),rgba(45,198,83,.09))!important;
+  color:var(--text)!important;
+}
+.nav-active{
+  background:linear-gradient(135deg,rgba(183,239,197,.52),rgba(45,198,83,.16))!important;
+  color:var(--z-900)!important;
+  box-shadow:inset 0 0 0 1px rgba(45,198,83,.08)!important;
+}
+.nav-active svg{color:var(--z-700)!important}
+html[data-zuelen-theme="dark"] .nav-active{
+  background:linear-gradient(135deg,rgba(74,214,109,.18),rgba(32,139,58,.08))!important;
+  color:#e9faed!important;
+  box-shadow:inset 0 0 0 1px rgba(110,222,138,.10)!important;
+}
+html[data-zuelen-theme="dark"] .nav-active svg{color:#6ede8a!important}
+[class*="themeToggle"] [class*="themeActive"]{
+  background:var(--z-gradient-accent)!important;
+  color:#fff!important;
+  box-shadow:0 5px 14px rgba(32,139,58,.18)!important;
+}
+html[data-zuelen-theme="dark"] [class*="themeToggle"] [class*="themeActive"]{
+  color:#07180f!important;
+}
+
+/* Primary actions carry the brand gradient. Secondary actions remain flat. */
+.workspace button[type="submit"]:not([class*="danger"]):not([class*="Danger"]),
+.workspace [class*="primaryButton"],
+.workspace [class*="PrimaryButton"],
+.workspace [class*="submitButton"],
+.workspace [class*="newInvoiceButton"],
+.workspace [class*="uploadButton"],
+.workspace [class*="importButton"],
+.compta-list-tools button,
+.compta-fab{
+  background:var(--z-gradient-accent)!important;
+  color:#fff!important;
+  border-color:rgba(21,93,39,.72)!important;
+  box-shadow:0 10px 26px rgba(32,139,58,.20),inset 0 1px 0 rgba(255,255,255,.20)!important;
+}
+html[data-zuelen-theme="dark"] .workspace button[type="submit"]:not([class*="danger"]):not([class*="Danger"]),
+html[data-zuelen-theme="dark"] .workspace [class*="primaryButton"],
+html[data-zuelen-theme="dark"] .workspace [class*="PrimaryButton"],
+html[data-zuelen-theme="dark"] .workspace [class*="submitButton"],
+html[data-zuelen-theme="dark"] .workspace [class*="newInvoiceButton"],
+html[data-zuelen-theme="dark"] .workspace [class*="uploadButton"],
+html[data-zuelen-theme="dark"] .workspace [class*="importButton"],
+html[data-zuelen-theme="dark"] .compta-list-tools button,
+html[data-zuelen-theme="dark"] .compta-fab{
+  color:#06110c!important;
+  border-color:rgba(110,222,138,.34)!important;
+  box-shadow:0 12px 30px rgba(45,198,83,.16),inset 0 1px 0 rgba(255,255,255,.22)!important;
+}
+.workspace button[type="submit"]:not([class*="danger"]):not([class*="Danger"]):hover,
+.workspace [class*="primaryButton"]:hover,
+.workspace [class*="submitButton"]:hover,
+.workspace [class*="newInvoiceButton"]:hover,
+.workspace [class*="uploadButton"]:hover,
+.workspace [class*="importButton"]:hover,
+.compta-list-tools button:hover,
+.compta-fab:hover{
+  filter:saturate(1.06) brightness(1.035);
+  transform:translateY(-1px);
+}
+.compta-fab svg{color:currentColor!important}
+
+/* Keep operational surfaces crisp and mostly flat. */
+.workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"]){
+  border-color:var(--border)!important;
+  box-shadow:var(--shadow-sm);
+}
+html[data-zuelen-theme="dark"] .workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"]){
+  background:var(--card)!important;
+}
+
+/* Overview / AI: a deliberate premium brand moment. */
+.workspace [class*="aiCard"]{
+  background:var(--z-gradient-forest)!important;
+  border-color:rgba(110,222,138,.18)!important;
+  box-shadow:0 24px 58px rgba(16,69,29,.20),inset 0 1px 0 rgba(255,255,255,.10)!important;
+}
+.workspace [class*="aiCard"] :where(h1,h2,h3,strong,b){color:#fff!important}
+.workspace [class*="aiCard"] :where(p,small,label){color:rgba(236,251,240,.72)!important}
+.workspace [class*="aiCard"] [class*="aiTop"]>span,
+.workspace [class*="aiCard"] [class*="aiOrb"]{
+  background:
+    radial-gradient(circle at 76% 18%,#dff9e5 0%,#92e6a7 18%,transparent 40%),
+    var(--z-gradient-accent)!important;
+  color:#07180f!important;
+  box-shadow:0 16px 44px rgba(45,198,83,.28),inset 0 1px 0 rgba(255,255,255,.34)!important;
+}
+.workspace [class*="aiCard"] [class*="aiIllustration"]{
+  background:
+    radial-gradient(circle at 50% 45%,rgba(110,222,138,.18),transparent 34%),
+    linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.025))!important;
+  border-color:rgba(183,239,197,.14)!important;
+}
+.workspace [class*="aiCard"] [class*="aiTile"]{
+  background:rgba(7,24,15,.56)!important;
+  border-color:rgba(183,239,197,.14)!important;
+  backdrop-filter:blur(14px);
+}
+.workspace [class*="aiCard"] [class*="aiAction"]{
+  background:linear-gradient(135deg,#ffffff,#eaf8ed 72%,#b7efc5)!important;
+  color:#10451d!important;
+  border:1px solid rgba(255,255,255,.52)!important;
+  box-shadow:0 10px 28px rgba(0,0,0,.14)!important;
+}
+
+/* Metric/chart accents: data stays readable, emphasis gets depth. */
+.workspace [class*="metricIcon"],
+.workspace [class*="incomeIcon"],
+.workspace [class*="noticeIcon"],
+.workspace [class*="insightIcon"]{
+  background:linear-gradient(145deg,rgba(183,239,197,.72),rgba(45,198,83,.20))!important;
+  color:var(--z-900)!important;
+  box-shadow:inset 0 0 0 1px rgba(45,198,83,.08)!important;
+}
+html[data-zuelen-theme="dark"] .workspace [class*="metricIcon"],
+html[data-zuelen-theme="dark"] .workspace [class*="incomeIcon"],
+html[data-zuelen-theme="dark"] .workspace [class*="noticeIcon"],
+html[data-zuelen-theme="dark"] .workspace [class*="insightIcon"]{
+  background:linear-gradient(145deg,rgba(110,222,138,.24),rgba(32,139,58,.10))!important;
+  color:#b7efc5!important;
+}
+.workspace [class*="revenueBar"]{
+  background:linear-gradient(180deg,#92e6a7 0%,#2dc653 42%,#208b3a 100%)!important;
+  box-shadow:0 4px 12px rgba(45,198,83,.14);
+}
+.workspace [class*="positive"]{color:#208b3a!important}
+html[data-zuelen-theme="dark"] .workspace [class*="positive"]{color:#6ede8a!important}
+
+/* Soft aura for true empty states only; avoid painting tables/forms. */
+.workspace :where([class*="emptyState"],[class*="EmptyState"],[class*="emptyPanel"],[class*="EmptyPanel"]){
+  background:
+    radial-gradient(circle at 50% 18%,rgba(183,239,197,.38),transparent 34%),
+    var(--card)!important;
+  border-color:var(--border)!important;
+}
+html[data-zuelen-theme="dark"] .workspace :where([class*="emptyState"],[class*="EmptyState"],[class*="emptyPanel"],[class*="EmptyPanel"]){
+  background:
+    radial-gradient(circle at 50% 14%,rgba(74,214,109,.12),transparent 34%),
+    var(--card)!important;
+}
+
+/* Inputs/tables intentionally remain plain for maximum financial legibility. */
+.workspace :where(input,select,textarea){
+  background:var(--card-strong)!important;
+  color:var(--text)!important;
+  border-color:var(--border-strong)!important;
+}
+.workspace table{color:var(--text)!important}
+.workspace table :where(td,th){border-color:var(--border)!important}
+html[data-zuelen-theme="dark"] .workspace table tbody tr{background:rgba(11,29,19,.84)!important}
+
+/* Dark mode text correction for legacy components using hard-coded values. */
+html[data-zuelen-theme="dark"] .workspace :where(h1,h2,h3,h4,h5,h6,strong,b){color:var(--text)!important}
+html[data-zuelen-theme="dark"] .workspace :where(p,small,label,th,.muted){color:var(--muted)!important}
+html[data-zuelen-theme="dark"] .brand-word,
+html[data-zuelen-theme="dark"] .company-copy strong,
+html[data-zuelen-theme="dark"] .user-row strong{color:var(--text)!important}
+
+/* Reduced motion keeps the polish without forcing motion on users who opt out. */
+@media(prefers-reduced-motion:reduce){
+  .workspace button,.compta-fab,.nav-item{transition:none!important;transform:none!important}
+}
