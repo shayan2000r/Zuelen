@@ -18,7 +18,7 @@ export function SourceTransactionForm({defaultDate}:{defaultDate?:string}){
  return <>
   <FloatingActionPortal><button className="compta-fab" type="button" onClick={()=>setOpen(true)}><Plus size={17}/>New transaction</button></FloatingActionPortal>
   {open?<div className="compta-drawer-overlay" role="presentation" onMouseDown={e=>{if(e.currentTarget===e.target)setOpen(false)}}><div className="compta-drawer-shell"><button className="compta-drawer-close" type="button" onClick={()=>setOpen(false)} aria-label="Close new transaction"><X size={18}/></button><aside className={`${styles.formPanel} compta-drawer-card`}>
-   <p className={styles.eyebrow}>Record activity</p><h2>New transaction</h2><p>Tell Compta what happened. VAT treatment controls how the ledger and filing evidence are created.</p>
+   <p className={styles.eyebrow}>Record activity</p><h2>New transaction</h2><p>Tell Zuelen what happened. VAT treatment determines how the transaction is recorded in the ledger and reflected in filing evidence.</p>
    <form action={formAction} className={styles.transactionForm}>
     <label className={styles.field}><span>Type</span><select name="direction" defaultValue="expense" required><option value="expense">Expense</option><option value="income">Income / refund</option></select></label>
     <label className={styles.field}><span>Date</span><input name="occurred_on" type="date" defaultValue={today} required/></label>
