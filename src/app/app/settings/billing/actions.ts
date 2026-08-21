@@ -11,14 +11,15 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.zuelen.lu";
 async function billingContext() {
   const workspace = await getWorkspace();
   if (!workspace.authenticated) redirect("/sign-in");
-  if (!workspace.organization) redirect("/setup");
+  const organization = workspace.organization;
+  if (!organization) redirect("/setup");
   if (!canManageOrganization(workspace.role)) throw new Error("Only an owner or admin can manage billing.");
-  const snapshot = await getBillingSnapshot(workspace.organization.id);
-  return { workspace, snapshot };
+  const snapshot = await getBillingSnapshot(organization.id);
+  return { workspace, organization, snapshot };
 }
 
 export async function createPremiumCheckoutAction(formData: FormData) {
-  const { workspace, snapshot } = await billingContext();
+  const { workspace, organization, snapshot } = await billingContext();
   if (snapshot.plan === "premium" && snapshot.billing_source === "stripe") return createBillingPortalAction();
 
   const interval = String(formData.get("interval")) === "year" ? "year" : "month";
@@ -29,10 +30,10 @@ export async function createPremiumCheckoutAction(formData: FormData) {
     cancel_url: `${APP_URL}/app/settings/billing?checkout=cancelled`,
     "line_items[0][price]": price,
     "line_items[0][quantity]": 1,
-    client_reference_id: workspace.organization.id,
-    "metadata[organization_id]": workspace.organization.id,
+    client_reference_id: organization.id,
+    "metadata[organization_id]": organization.id,
     "metadata[kind]": "plan",
-    "subscription_data[metadata][organization_id]": workspace.organization.id,
+    "subscription_data[metadata][organization_id]": organization.id,
     "subscription_data[metadata][kind]": "plan",
     allow_promotion_codes: true,
     billing_address_collection: "auto",
@@ -47,7 +48,7 @@ export async function createPremiumCheckoutAction(formData: FormData) {
 }
 
 export async function createSeatCheckoutAction() {
-  const { workspace, snapshot } = await billingContext();
+  const { workspace, organization, snapshot } = await billingContext();
   if (snapshot.stripe_seat_subscription_id) return createBillingPortalAction();
   const params: Record<string, string | number | boolean | null | undefined> = {
     mode: "subscription",
@@ -55,10 +56,10 @@ export async function createSeatCheckoutAction() {
     cancel_url: `${APP_URL}/app/settings/billing?seat=cancelled`,
     "line_items[0][price]": seatPriceId(),
     "line_items[0][quantity]": 1,
-    client_reference_id: workspace.organization.id,
-    "metadata[organization_id]": workspace.organization.id,
+    client_reference_id: organization.id,
+    "metadata[organization_id]": organization.id,
     "metadata[kind]": "seat",
-    "subscription_data[metadata][organization_id]": workspace.organization.id,
+    "subscription_data[metadata][organization_id]": organization.id,
     "subscription_data[metadata][kind]": "seat",
     allow_promotion_codes: true,
     billing_address_collection: "auto",
