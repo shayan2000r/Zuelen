@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Zuelen</title>
+  <defs>
+    <linearGradient id="base" x1="48" y1="28" x2="468" y2="484" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10451d"/>
+      <stop offset="0.42" stop-color="#155d27"/>
+      <stop offset="0.7" stop-color="#208b3a"/>
+      <stop offset="1" stop-color="#2dc653"/>
+    </linearGradient>
+    <radialGradient id="mint" cx="0" cy="0" r="1" gradientTransform="translate(414 94) rotate(136) scale(236)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#dff7e5"/>
+      <stop offset="0.28" stop-color="#b7efc5" stop-opacity="0.96"/>
+      <stop offset="0.64" stop-color="#6ede8a" stop-opacity="0.48"/>
+      <stop offset="1" stop-color="#6ede8a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(86 432) rotate(-32) scale(258)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b7efc5" stop-opacity="0.92"/>
+      <stop offset="0.38" stop-color="#4ad66d" stop-opacity="0.52"/>
+      <stop offset="1" stop-color="#2dc653" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#base)"/>
+  <rect width="512" height="512" rx="112" fill="url(#mint)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+  <path fill="#fff" d="M146 132h229v59c0 42-23 76-70 108l-91 61c-21 14-35 29-42 44h203v58H136v-43c0-53 26-96 78-132l91-62c22-15 36-27 44-36H146v-57Z"/>
+</svg>
