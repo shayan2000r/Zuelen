@@ -25,8 +25,6 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA"]);
 const ATTRIBUTES = ["placeholder", "title", "aria-label"] as const;
 
-function productText(value:string){return value.replaceAll("Compta","Zuelen")}
-
 function bridgeTranslate(locale: Locale, value: string, accountMap: Record<string, string>) {
   if (locale !== "fr") return value;
   const leading=value.match(/^\s*/)?.[0]??"",trailing=value.match(/\s*$/)?.[0]??"",core=value.trim();
@@ -36,7 +34,7 @@ function bridgeTranslate(locale: Locale, value: string, accountMap: Record<strin
     if(match)return `${leading}${financialDocumentName(type,locale)} · ${match[1]}${trailing}`;
   }
   const fy=core.match(/^FY\s+(\d{4})(.*)$/i);if(fy)return `${leading}${fy[1]}${fy[2]}${trailing}`;
-  return productText(translateLegacyText(locale,value,accountMap));
+  return translateLegacyText(locale,value,accountMap);
 }
 
 function translateTextNode(node: Text, locale: Locale, accountMap: Record<string, string>) {
@@ -69,7 +67,7 @@ function translateTree(root: Node, locale: Locale, accountMap: Record<string, st
 
 export function LocaleProvider({children,locale,accountTranslations}:{children:ReactNode;locale:Locale;accountTranslations:AccountTranslation[]}) {
   const accountMap = useMemo(() => buildAccountTextMap(locale, accountTranslations), [locale, accountTranslations]);
-  const value = useMemo<LocaleContextValue>(() => ({locale,intlLocale:intlLocale(locale),t:(key)=>productText(translate(locale,key)),accountLabel:(account)=>localizedAccountLabel(locale,account)}),[locale]);
+  const value = useMemo<LocaleContextValue>(() => ({locale,intlLocale:intlLocale(locale),t:(key)=>translate(locale,key),accountLabel:(account)=>localizedAccountLabel(locale,account)}),[locale]);
   useEffect(() => {
     document.documentElement.lang = locale;document.documentElement.dataset.zuelenLocale = locale;
     if (locale !== "fr") return;
