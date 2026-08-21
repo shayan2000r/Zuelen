@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpRight, CalendarClock, FileText, Landmark, ReceiptText, UsersRound, WalletCards } from "lucide-react";
+import { ArrowUpRight, CalendarClock, FileText, Infinity as InfinityIcon, Landmark, ReceiptText, UsersRound, WalletCards } from "lucide-react";
 import { getWorkspace } from "@/lib/workspace";
 import { getBillingSnapshot, type UsageMetric } from "@/lib/billing";
 import styles from "../commerce.module.css";
@@ -57,18 +57,20 @@ export default async function UsagePage() {
               );
             })}
           </div>
-          <p className={styles.reset}><CalendarClock size={13} />{l("Allowance renews", "Renouvellement des quotas")} <strong>{periodEnd}</strong></p>
+          {snapshot.plan === "basic"
+            ? <p className={styles.reset}><CalendarClock size={13} />{l("Allowance renews", "Renouvellement des quotas")} <strong>{periodEnd}</strong></p>
+            : <p className={styles.reset}><InfinityIcon size={13} />{l("Premium activity allowances are unlimited.", "Les quotas d’activité Premium sont illimités.")}</p>}
           {snapshot.plan === "basic" ? <div className={styles.actions}><Link className={styles.cta} href="/app/settings/billing">{l("Upgrade for unlimited", "Passer à Premium")} <ArrowUpRight size={14} /></Link></div> : null}
         </section>
 
         <section className={styles.card}>
           <h2>{l("Team seats", "Sièges d’équipe")}</h2>
           <p className={styles.cardLead}>{l("One owner/admin and one accountant or bookkeeper seat are included. Additional users are €9.99/month each.", "Un propriétaire/administrateur et un comptable ou aide-comptable sont inclus. Chaque utilisateur supplémentaire coûte 9,99 € / mois.")}</p>
-          <div className={styles.seatNumber}><UsersRound size={20} style={{ verticalAlign: "-2px", marginRight: 8 }} />{snapshot.additional_seats} <small>{l("paid additional seats", "sièges supplémentaires payants")}</small></div>
+          <div className={styles.seatNumber}><UsersRound size={20} style={{ verticalAlign: "-2px", marginRight: 8 }} />{snapshot.billing_source === "internal" ? snapshot.billable_seats : snapshot.additional_seats} <small>{snapshot.billing_source === "internal" ? l("pre-launch additional seats", "sièges supplémentaires pré-lancement") : l("paid additional seats", "sièges supplémentaires payants")}</small></div>
           <div className={styles.summary}>
             <div className={styles.summaryRow}><span>{l("Included professional seat", "Siège professionnel inclus")}</span><strong>1</strong></div>
-            <div className={styles.summaryRow}><span>{l("Paid seats currently required", "Sièges payants actuellement requis")}</span><strong>{snapshot.billable_seats}</strong></div>
-            <div className={styles.summaryRow}><span>{l("Paid seats purchased", "Sièges payants achetés")}</span><strong>{snapshot.additional_seats}</strong></div>
+            <div className={styles.summaryRow}><span>{l("Additional seats currently required", "Sièges supplémentaires actuellement requis")}</span><strong>{snapshot.billable_seats}</strong></div>
+            <div className={styles.summaryRow}><span>{snapshot.billing_source === "internal" ? l("Pre-launch access", "Accès pré-lancement") : l("Paid seats purchased", "Sièges payants achetés")}</span><strong>{snapshot.billing_source === "internal" ? l("Included", "Inclus") : snapshot.additional_seats}</strong></div>
           </div>
           <div className={styles.actions}><Link className={styles.secondary} href="/app/settings/team">{l("Manage team", "Gérer l’équipe")}</Link><Link className={styles.secondary} href="/app/settings/billing">{l("Manage seats", "Gérer les sièges")}</Link></div>
         </section>
