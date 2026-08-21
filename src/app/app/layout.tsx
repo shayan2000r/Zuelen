@@ -10,6 +10,7 @@ import "./product-theme.css";
 import "./dark-compat.css";
 import "./workflow-upgrades.css";
 import "./zuelen-gradient-theme.css";
+import "./qa-polish.css";
 
 export const dynamic = "force-dynamic";
 
