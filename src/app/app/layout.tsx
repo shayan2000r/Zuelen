@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppFrame } from "@/components/app-frame";
+import { getBillingSnapshot } from "@/lib/billing";
 import { availableFiscalYears, fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { normalizeLocale, type AccountTranslation } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
@@ -23,7 +24,8 @@ export default async function ProtectedAppLayout({ children }: { children: React
   const bounds = fiscalYearBounds(fiscalYear, workspace.company.fiscal_year_start_month);
   const fiscalYears = availableFiscalYears(fiscalYear, workspace.company.fiscal_year_start_month);
   const supabase = await createClient();
-  const [{ count }, brandResult, avatarResult, accountsResult] = await Promise.all([
+  const [billing, { count }, brandResult, avatarResult, accountsResult] = await Promise.all([
+    getBillingSnapshot(workspace.organization.id),
     supabase
       .from("source_transactions")
       .select("id", { count: "exact", head: true })
@@ -58,6 +60,7 @@ export default async function ProtectedAppLayout({ children }: { children: React
       brandImageUrl={brandResult.data?.signedUrl ?? null}
       locale={normalizeLocale(workspace.profile?.locale)}
       accountTranslations={(accountsResult.data ?? []) as AccountTranslation[]}
+      plan={billing.plan}
     >
       {children}
     </AppFrame>

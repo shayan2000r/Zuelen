@@ -4,6 +4,7 @@ import { Calculator, LoaderCircle, Plus, ReceiptText, X } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { createSourceTransaction, type TransactionActionState } from "@/app/app/transactions/actions";
 import { FloatingActionPortal } from "@/components/floating-action-portal";
+import { UpgradeWall } from "@/components/upgrade-wall";
 import styles from "./live.module.css";
 
 const initialTransactionState: TransactionActionState = { status: "idle", message: "" };
@@ -11,10 +12,10 @@ const rates=[17,14,8,3,0];
 function money(v:number){return new Intl.NumberFormat("en-LU",{style:"currency",currency:"EUR",minimumFractionDigits:2}).format(v||0)}
 
 export function SourceTransactionForm({defaultDate}:{defaultDate?:string}){
- const[state,formAction,pending]=useActionState(createSourceTransaction,initialTransactionState),[open,setOpen]=useState(false),today=defaultDate||new Date().toISOString().slice(0,10);
+ const[state,formAction,pending]=useActionState(createSourceTransaction,initialTransactionState),[open,setOpen]=useState(false),[upgradeOpen,setUpgradeOpen]=useState(false),today=defaultDate||new Date().toISOString().slice(0,10);
  const[amount,setAmount]=useState(0),[rate,setRate]=useState(17),[included,setIncluded]=useState(true),[treatment,setTreatment]=useState("domestic");
  const calc=useMemo(()=>{if(!amount)return{net:0,vat:0,gross:0};if(treatment==="eu_b2b_reverse_charge"){const vat=amount*rate/100;return{net:amount,vat,gross:amount}}if(treatment==="non_eu"||treatment==="exempt_or_zero"||rate===0)return{net:amount,vat:0,gross:amount};if(included){const net=amount/(1+rate/100);return{net,vat:amount-net,gross:amount}}const vat=amount*rate/100;return{net:amount,vat,gross:amount+vat}},[amount,rate,included,treatment]);
- useEffect(()=>{if(state.status==="success")setOpen(false)},[state.status]);
+ useEffect(()=>{if(state.status==="success")setOpen(false);if(state.status==="error"&&/premium/i.test(state.message))setUpgradeOpen(true)},[state]);
  return <>
   <FloatingActionPortal><button className="compta-fab" type="button" onClick={()=>setOpen(true)}><Plus size={17}/>New transaction</button></FloatingActionPortal>
   {open?<div className="compta-drawer-overlay" role="presentation" onMouseDown={e=>{if(e.currentTarget===e.target)setOpen(false)}}><div className="compta-drawer-shell"><button className="compta-drawer-close" type="button" onClick={()=>setOpen(false)} aria-label="Close new transaction"><X size={18}/></button><aside className={`${styles.formPanel} compta-drawer-card`}>
@@ -34,5 +35,6 @@ export function SourceTransactionForm({defaultDate}:{defaultDate?:string}){
     <button className={styles.submitButton} type="submit" disabled={pending}>{pending?<LoaderCircle size={15}/>:state.status==="success"?<ReceiptText size={15}/>:<Plus size={15}/>}<span>{pending?"Recording…":"Record transaction"}</span></button>
    </form>
   </aside></div></div>:null}
+  <UpgradeWall open={upgradeOpen} message={state.message} onClose={()=>setUpgradeOpen(false)}/>
  </>;
 }

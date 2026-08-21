@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { hasPremiumAccess } from "@/lib/billing";
 import { fiscalYearBounds } from "@/lib/fiscal-year";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
-export type GeneratedDocumentState={status:"idle"|"success"|"error";message:string;documentId?:string};
+export type GeneratedDocumentState={status:"idle"|"success"|"error";message:string;documentId?:string;upgradeRequired?:boolean};
 const REPORTS={profit_loss:"Profit & Loss",balance_sheet:"Balance Sheet",trial_balance:"Trial Balance",pcn:"PCN Closing Balances",annual_accounts:"Annual Accounts",annexe:"Annexe to the Annual Accounts",general_ledger:"General Ledger",general_journal:"General Journal"} as const;
 type ReportType=keyof typeof REPORTS;
 const GENERATOR_VERSION="2026.3";
@@ -16,6 +17,8 @@ function validUuid(value:string){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{
 export async function generateFinancialDocumentAction(_previous:GeneratedDocumentState,formData:FormData):Promise<GeneratedDocumentState>{
  const workspace=await getWorkspace();
  if(!workspace.authenticated||!workspace.userId||!workspace.company||!workspace.organization)return{status:"error",message:"Your session expired. Please sign in again."};
+ const premium=await hasPremiumAccess(workspace.organization.id);
+ if(!premium)return{status:"error",upgradeRequired:true,message:workspace.profile?.locale==="fr"?"La génération de documents financiers est incluse avec Premium. Passez à Premium pour générer des fichiers PDF/CSV prêts à l’emploi.":"Financial document generation is included with Premium. Upgrade to generate filing-ready PDF/CSV outputs."};
  const fiscalYear=Number(formData.get("fiscal_year")),documentType=String(formData.get("document_type")??"");
  if(!Number.isInteger(fiscalYear)||fiscalYear<2000||fiscalYear>2100)return{status:"error",message:"Choose a valid financial year."};
  if(!validType(documentType))return{status:"error",message:"Choose a supported financial document."};
