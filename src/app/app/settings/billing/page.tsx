@@ -42,7 +42,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <div className={styles.grid}>
         <section className={styles.card}>
           <h2>{l("Current plan", "Formule actuelle")}</h2>
-          <p className={styles.cardLead}>{snapshot.plan === "premium" ? l("Run the company with Zuelen's complete accounting and compliance workflow.", "Gérez l’entreprise avec l’ensemble des flux comptables et de conformité de Zuelen.") : l("A genuine free plan with transparent monthly allowances.", "Une vraie formule gratuite avec des quotas mensuels transparents.")}</p>
+          <p className={styles.cardLead}>{snapshot.plan === "premium" ? l("Run the company with Zuelen's complete accounting and compliance workflow.", "Gérez l’entreprise avec l’ensemble des flux comptables et de conformité de Zuelen.") : l("Basic gives you a genuine €0 plan with transparent monthly allowances.", "Basic est une véritable formule à 0 € avec des quotas mensuels transparents.")}</p>
           <div className={styles.seatNumber}>{currentPrice} <small>{currentPriceSuffix}</small></div>
           <div className={styles.summary}>
             <div className={styles.summaryRow}><span>{l("Status", "Statut")}</span><strong>{snapshot.status}</strong></div>
