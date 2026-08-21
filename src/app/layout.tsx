@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   title: "Zuelen — Luxembourg business, under control",
   description: "Accounting and compliance for Luxembourg businesses.",
   icons: {
-    icon: "/zuelen-icon",
-    shortcut: "/zuelen-icon",
-    apple: "/zuelen-icon",
+    icon: [{ url: "/zuelen-icon.png", type: "image/png" }],
+    shortcut: "/zuelen-icon.png",
+    apple: "/zuelen-icon.png",
   },
 };
 
