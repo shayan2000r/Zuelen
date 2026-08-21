@@ -21,6 +21,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const stripeReady = stripeConfigured();
   const renewal = new Intl.DateTimeFormat(locale === "fr" ? "fr-LU" : "en-LU", { day: "numeric", month: "long", year: "numeric" }).format(new Date(snapshot.period_end));
   const extraSeatCost = snapshot.additional_seats * 9.99;
+  const currentPrice = snapshot.billing_source === "internal" ? "Premium" : snapshot.plan === "premium" && snapshot.billing_interval === "year" ? "€32.50" : snapshot.plan === "premium" ? "€39" : "€0";
+  const currentPriceSuffix = snapshot.billing_source === "internal" ? l("pre-launch access", "accès pré-lancement") : snapshot.plan === "premium" && snapshot.billing_interval === "year" ? l("/ month equivalent · €390/year", "/ mois équivalent · 390 €/an") : l("/ month", "/ mois");
 
   return (
     <div className={styles.page}>
@@ -41,11 +43,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <section className={styles.card}>
           <h2>{l("Current plan", "Formule actuelle")}</h2>
           <p className={styles.cardLead}>{snapshot.plan === "premium" ? l("Run the company with Zuelen's complete accounting and compliance workflow.", "Gérez l’entreprise avec l’ensemble des flux comptables et de conformité de Zuelen.") : l("A genuine free plan with transparent monthly allowances.", "Une vraie formule gratuite avec des quotas mensuels transparents.")}</p>
-          <div className={styles.seatNumber}>{snapshot.plan === "premium" ? "€39" : "€0"} <small>{snapshot.plan === "premium" ? (snapshot.billing_interval === "year" ? l("equiv. monthly, annual plan", "équiv. mensuel, formule annuelle") : l("/ month", "/ mois")) : l("/ month", "/ mois")}</small></div>
+          <div className={styles.seatNumber}>{currentPrice} <small>{currentPriceSuffix}</small></div>
           <div className={styles.summary}>
             <div className={styles.summaryRow}><span>{l("Status", "Statut")}</span><strong>{snapshot.status}</strong></div>
             <div className={styles.summaryRow}><span>{l("Billing interval", "Périodicité")}</span><strong>{snapshot.plan === "basic" ? "—" : snapshot.billing_interval === "year" ? l("Annual", "Annuel") : snapshot.billing_interval === "month" ? l("Monthly", "Mensuel") : l("Internal", "Interne")}</strong></div>
-            <div className={styles.summaryRow}><span>{snapshot.cancel_at_period_end ? l("Access until", "Accès jusqu’au") : l("Next renewal / allowance reset", "Prochain renouvellement / quota")}</span><strong>{renewal}</strong></div>
+            <div className={styles.summaryRow}><span>{snapshot.billing_source === "internal" ? l("Billing", "Facturation") : snapshot.cancel_at_period_end ? l("Access until", "Accès jusqu’au") : snapshot.plan === "basic" ? l("Allowance reset", "Renouvellement du quota") : l("Next renewal", "Prochain renouvellement")}</span><strong>{snapshot.billing_source === "internal" ? l("Not billed during pre-launch", "Non facturé pendant le pré-lancement") : renewal}</strong></div>
           </div>
           {snapshot.stripe_customer_id && canManage ? <form action={createBillingPortalAction} className={styles.actions}><button className={styles.secondary} type="submit">{l("Manage payment & invoices", "Gérer paiement & factures")} <ExternalLink size={13} /></button></form> : null}
         </section>
@@ -53,16 +55,16 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <section className={styles.card}>
           <h2>{l("Team seats", "Sièges d’équipe")}</h2>
           <p className={styles.cardLead}>{l("One accountant/bookkeeper seat is included on both plans. Every additional user is €9.99/month.", "Un siège comptable/aide-comptable est inclus dans les deux formules. Chaque utilisateur supplémentaire coûte 9,99 € / mois.")}</p>
-          <div className={styles.seatNumber}><UsersRound size={20} style={{ verticalAlign: "-2px", marginRight: 8 }} />{snapshot.additional_seats} <small>{l("additional paid seats", "sièges payants supplémentaires")}</small></div>
+          <div className={styles.seatNumber}><UsersRound size={20} style={{ verticalAlign: "-2px", marginRight: 8 }} />{snapshot.billing_source === "internal" ? snapshot.billable_seats : snapshot.additional_seats} <small>{snapshot.billing_source === "internal" ? l("pre-launch additional seats", "sièges supplémentaires pré-lancement") : l("additional paid seats", "sièges payants supplémentaires")}</small></div>
           <div className={styles.summary}>
             <div className={styles.summaryRow}><span>{l("Included professional seat", "Siège professionnel inclus")}</span><strong>€0</strong></div>
-            <div className={styles.summaryRow}><span>{l("Additional seats", "Sièges supplémentaires")}</span><strong>€{extraSeatCost.toFixed(2)}/mo</strong></div>
+            <div className={styles.summaryRow}><span>{snapshot.billing_source === "internal" ? l("Pre-launch additional seats", "Sièges supplémentaires pré-lancement") : l("Additional seats", "Sièges supplémentaires")}</span><strong>{snapshot.billing_source === "internal" ? l("Included", "Inclus") : `€${extraSeatCost.toFixed(2)}/mo`}</strong></div>
           </div>
-          {canManage ? <div className={styles.actions}>
+          {canManage && snapshot.billing_source !== "internal" ? <div className={styles.actions}>
             {snapshot.stripe_seat_subscription_id
               ? <form action={createBillingPortalAction}><button className={`${styles.secondary} ${!stripeReady ? styles.disabled : ""}`} disabled={!stripeReady} type="submit">{l("Manage seat quantity", "Gérer le nombre de sièges")}</button></form>
               : <form action={createSeatCheckoutAction}><button className={`${styles.secondary} ${!stripeReady ? styles.disabled : ""}`} disabled={!stripeReady} type="submit">{l("Add a €9.99 seat", "Ajouter un siège à 9,99 €")}</button></form>}
-          </div> : <p className={styles.muted}>{l("Only an owner or admin can change billing.", "Seul un propriétaire ou administrateur peut modifier la facturation.")}</p>}
+          </div> : !canManage ? <p className={styles.muted}>{l("Only an owner or admin can change billing.", "Seul un propriétaire ou administrateur peut modifier la facturation.")}</p> : null}
         </section>
 
         {snapshot.plan === "basic" ? <section className={`${styles.card} ${styles.full}`}>
