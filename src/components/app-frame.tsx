@@ -6,8 +6,10 @@ import {
   BookOpen,
   CalendarCheck2,
   ChevronDown,
+  CreditCard,
   FileCheck2,
   FileText,
+  Gauge,
   Landmark,
   LayoutDashboard,
   LogOut,
@@ -30,6 +32,7 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from "rea
 import { setLocalePreference } from "@/app/app/locale-actions";
 import { LocaleProvider } from "@/components/locale-context";
 import { RoleProvider } from "@/components/role-context";
+import type { PlanName } from "@/lib/billing";
 import type { OrganizationRole } from "@/lib/permissions";
 import {
   localizedRole,
@@ -42,7 +45,7 @@ import styles from "./live.module.css";
 import frame from "./app-frame.module.css";
 import "./topbar-polish.module.css";
 
-type NavItem = { label: string; description: string; icon: LucideIcon; href: string };
+type NavItem = { label: string; description: string; icon: LucideIcon; href: string; premium?: boolean };
 type GroupKey = "accounting" | "taxes" | "settings";
 type CollapsibleGroup = { key: GroupKey; label: string; icon: LucideIcon; items: NavItem[] };
 type Theme = "light" | "dark";
@@ -60,6 +63,7 @@ type AppFrameProps = {
   brandImageUrl?: string | null;
   locale: Locale;
   accountTranslations: AccountTranslation[];
+  plan: PlanName;
 };
 
 function initials(value: string) {
@@ -86,6 +90,7 @@ function AppFrameInner({
   attentionCount = 0,
   brandImageUrl = null,
   locale,
+  plan,
 }: AppFrameProps) {
   const pathname = usePathname();
   const [mobileNav, setMobileNav] = useState(false);
@@ -125,15 +130,15 @@ function AppFrameInner({
     items: [
       { label: l("Tax overview", "Vue fiscale"), description: l("Tax estimates and reserves", "Estimations et réserves fiscales"), icon: Landmark, href: "/app/taxes" },
       { label: l("VAT", "TVA"), description: tx("vatReadiness"), icon: ReceiptText, href: "/app/vat" },
-      { label: l("Year-end & accounts", "Clôture & comptes annuels"), description: l("Close the year and prepare annual accounts", "Clôturer l’exercice et préparer les comptes annuels"), icon: CalendarCheck2, href: "/app/year-end" },
+      { label: l("Year-end & accounts", "Clôture & comptes annuels"), description: l("Close the year and prepare annual accounts", "Clôturer l’exercice et préparer les comptes annuels"), icon: CalendarCheck2, href: "/app/year-end", premium: true },
       { label: l("Compliance calendar", "Calendrier conformité"), description: tx("deadlinesObligations"), icon: FileCheck2, href: "/app/compliance" },
     ],
   }), [locale]);
 
   const standaloneItems = useMemo<NavItem[]>(() => [
-    { label: tx("reports"), description: tx("financialAnalyticsStatements"), icon: BarChart3, href: "/app/reports" },
+    { label: tx("reports"), description: tx("financialAnalyticsStatements"), icon: BarChart3, href: "/app/reports", premium: true },
     { label: tx("documents"), description: tx("companyDocumentVault"), icon: FileText, href: "/app/documents" },
-    { label: tx("copilot"), description: tx("askYourBooks"), icon: Sparkles, href: "/app/copilot" },
+    { label: tx("copilot"), description: tx("askYourBooks"), icon: Sparkles, href: "/app/copilot", premium: true },
   ], [locale]);
 
   const settingsGroup = useMemo<CollapsibleGroup>(() => ({
@@ -144,6 +149,8 @@ function AppFrameInner({
       { label: l("Company", "Entreprise"), description: tx("companyProfilePreferences"), icon: Settings, href: "/app/settings" },
       { label: tx("myProfile"), description: l("Your profile and preferences", "Votre profil et préférences"), icon: UserRound, href: "/app/settings/profile" },
       { label: l("Team & access", "Équipe & accès"), description: l("Members, roles and invitations", "Membres, rôles et invitations"), icon: UsersRound, href: "/app/settings/team" },
+      { label: l("Usage", "Utilisation"), description: l("Plan limits and current usage", "Limites de la formule et utilisation"), icon: Gauge, href: "/app/settings/usage" },
+      { label: l("Subscription & billing", "Abonnement & facturation"), description: l("Plan, seats and payment settings", "Formule, sièges et paiements"), icon: CreditCard, href: "/app/settings/billing" },
     ],
   }), [locale]);
 
@@ -222,7 +229,7 @@ function AppFrameInner({
       <Link key={item.href} href={item.href} className={`nav-item ${active ? "nav-active" : ""} ${nested ? frame.nestedNavItem : ""}`} onClick={() => setMobileNav(false)}>
         <item.icon size={nested ? 14 : 16} />
         <span>{item.label}</span>
-        {item.href === "/app/transactions" && attentionCount > 0 ? <em>{attentionCount}</em> : null}
+        {plan === "basic" && item.premium ? <span className={frame.premiumNavBadge}>Premium</span> : item.href === "/app/transactions" && attentionCount > 0 ? <em>{attentionCount}</em> : null}
       </Link>
     );
   };
@@ -254,7 +261,7 @@ function AppFrameInner({
 
   return (
     <RoleProvider role={userRole}>
-      <main className="app-shell" data-role={userRole ?? "member"} data-locale={locale}>
+      <main className="app-shell" data-role={userRole ?? "member"} data-locale={locale} data-plan={plan}>
         <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
           <div className="brand-row">
             <Link href="/app" className={styles.brandLink}>
@@ -275,6 +282,7 @@ function AppFrameInner({
                   {fiscalYears.map(year => <option key={year} value={year}>{year}</option>)}
                 </select>
                 <ChevronDown size={11} />
+                <span className={frame.companyPlanBadge}>{plan === "premium" ? "Premium" : "Basic"}</span>
               </span>
             </span>
           </div>
