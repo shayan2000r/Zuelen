@@ -30,15 +30,16 @@ function imageExtension(file: File) {
 
 async function authenticatedProfileContext() {
   const workspace = await getWorkspace();
-  if (!workspace.authenticated || !workspace.userId) redirect("/sign-in?next=/accountants/manage");
+  const userId = workspace.userId;
+  if (!workspace.authenticated || !userId) redirect("/sign-in?next=/accountants/manage");
   const supabase = await createClient();
-  const { data: profile, error } = await supabase.from("accountant_profiles").select("*").eq("user_id", workspace.userId).maybeSingle();
+  const { data: profile, error } = await supabase.from("accountant_profiles").select("*").eq("user_id", userId).maybeSingle();
   if (error) throw new Error(error.message);
-  return { workspace, supabase, profile };
+  return { workspace, userId, supabase, profile };
 }
 
 export async function saveAccountantProfileAction(formData: FormData) {
-  const { workspace, supabase, profile } = await authenticatedProfileContext();
+  const { workspace, userId, supabase, profile } = await authenticatedProfileContext();
   const fullName = text(formData, "full_name");
   const professionalTitle = text(formData, "professional_title");
   const email = text(formData, "email");
@@ -51,7 +52,7 @@ export async function saveAccountantProfileAction(formData: FormData) {
   if (photo instanceof File && photo.size > 0) {
     if (photo.size > 5 * 1024 * 1024) throw new Error("Profile photo must be smaller than 5 MB.");
     if (!["image/jpeg", "image/png", "image/webp"].includes(photo.type)) throw new Error("Use a JPG, PNG or WebP profile photo.");
-    const path = `${workspace.userId}/profile-${Date.now()}.${imageExtension(photo)}`;
+    const path = `${userId}/profile-${Date.now()}.${imageExtension(photo)}`;
     const { error: uploadError } = await supabase.storage.from("accountant-profiles").upload(path, photo, { contentType: photo.type, upsert: false });
     if (uploadError) throw new Error(uploadError.message);
     photoUrl = supabase.storage.from("accountant-profiles").getPublicUrl(path).data.publicUrl;
@@ -61,11 +62,11 @@ export async function saveAccountantProfileAction(formData: FormData) {
   if (!slug) {
     const base = slugify(text(formData, "firm_name") || fullName);
     const { data: collision } = await supabase.from("accountant_profiles").select("id").eq("slug", base).maybeSingle();
-    slug = collision ? `${base}-${workspace.userId.slice(0, 6)}` : base;
+    slug = collision ? `${base}-${userId.slice(0, 6)}` : base;
   }
 
   const payload = {
-    user_id: workspace.userId,
+    user_id: userId,
     slug,
     full_name: fullName,
     firm_name: text(formData, "firm_name") || null,
@@ -85,7 +86,7 @@ export async function saveAccountantProfileAction(formData: FormData) {
   };
 
   const query = profile
-    ? supabase.from("accountant_profiles").update(payload).eq("id", profile.id).eq("user_id", workspace.userId)
+    ? supabase.from("accountant_profiles").update(payload).eq("id", profile.id).eq("user_id", userId)
     : supabase.from("accountant_profiles").insert(payload);
   const { error } = await query;
   if (error) throw new Error(error.message);
