@@ -1,0 +1,1 @@
+export const ACCOUNTANT_TRIAL_DAYS=30;
