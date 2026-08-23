@@ -22,17 +22,56 @@ function subscriptionItems(subscription: JsonObject) {
   return Array.isArray(data) ? data : [];
 }
 
-async function syncSubscription(subscription: JsonObject) {
-  const admin = createAdminClient();
-  const metadata = (subscription.metadata ?? {}) as Record<string, string>;
-  const organizationId = metadata.organization_id;
-  const kind = metadata.kind;
-  if (!organizationId || (kind !== "plan" && kind !== "seat")) return;
+function normalizedSubscriptionStatus(value: unknown) {
+  const status = typeof value === "string" ? value : "incomplete";
+  return ["active", "trialing", "past_due", "unpaid", "incomplete", "canceled"].includes(status) ? status : "incomplete";
+}
 
+async function syncAccountantSubscription(subscription: JsonObject, metadata: Record<string, string>) {
+  const profileId = metadata.accountant_profile_id;
+  if (!profileId) return;
+  const admin = createAdminClient();
   const items = subscriptionItems(subscription);
   const firstItem = items[0] ?? {};
-  const status = typeof subscription.status === "string" ? subscription.status : "incomplete";
-  const normalizedStatus = ["active", "trialing", "past_due", "unpaid", "incomplete", "canceled"].includes(status) ? status : "incomplete";
+  const priceId = idOf(firstItem?.price);
+  const configuredBasic = process.env.STRIPE_ACCOUNTANT_BASIC_MONTHLY_PRICE_ID;
+  const configuredPremium = process.env.STRIPE_ACCOUNTANT_PREMIUM_MONTHLY_PRICE_ID;
+  const tier = metadata.tier === "premium" || priceId === configuredPremium ? "premium" : metadata.tier === "basic" || priceId === configuredBasic ? "basic" : null;
+  if (!tier) return;
+  const status = normalizedSubscriptionStatus(subscription.status);
+  const periodStart = unixDate(subscription.current_period_start ?? firstItem.current_period_start);
+  const periodEnd = unixDate(subscription.current_period_end ?? firstItem.current_period_end);
+  const trialEnd = unixDate(subscription.trial_end);
+  const customerId = idOf(subscription.customer);
+  const { error } = await admin.from("accountant_listing_subscriptions").upsert({
+    profile_id: profileId,
+    tier,
+    status,
+    trial_end: trialEnd,
+    current_period_start: periodStart,
+    current_period_end: periodEnd,
+    cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
+    stripe_customer_id: customerId,
+    stripe_subscription_id: status === "canceled" ? null : String(subscription.id),
+    stripe_price_id: priceId,
+  }, { onConflict: "profile_id" });
+  if (error) throw new Error(error.message);
+}
+
+async function syncSubscription(subscription: JsonObject) {
+  const metadata = (subscription.metadata ?? {}) as Record<string, string>;
+  const kind = metadata.kind;
+  if (kind === "accountant_listing") {
+    await syncAccountantSubscription(subscription, metadata);
+    return;
+  }
+
+  const organizationId = metadata.organization_id;
+  if (!organizationId || (kind !== "plan" && kind !== "seat")) return;
+  const admin = createAdminClient();
+  const items = subscriptionItems(subscription);
+  const firstItem = items[0] ?? {};
+  const normalizedStatus = normalizedSubscriptionStatus(subscription.status);
   const active = ["active", "trialing", "past_due"].includes(normalizedStatus);
   const customerId = idOf(subscription.customer);
 
