@@ -39,7 +39,15 @@ export default async function AccountantManagePage({ searchParams }: { searchPar
   }
   const configured = accountantStripeConfigured();
   const trialDays = daysLeft(subscription?.trial_end ?? null);
+  const trialUsed = Boolean(subscription?.trial_end);
+  const subscriptionOpen = Boolean(subscription && ["active", "trialing", "past_due"].includes(subscription.status));
   const live = profile?.approval_status === "approved" && Boolean(subscription && ["active", "trialing"].includes(subscription.status));
+  const basicLabel = subscriptionOpen
+    ? subscription?.tier === "basic" ? "Current plan" : "Change plan"
+    : trialUsed ? "Subscribe to Basic" : "Start Basic trial";
+  const premiumLabel = subscriptionOpen
+    ? subscription?.tier === "premium" ? "Current plan" : "Change plan"
+    : trialUsed ? "Subscribe to Premium" : "Start Premium trial";
 
   return <main className={styles.shell}>
     <header className={styles.topbar}>
@@ -54,7 +62,7 @@ export default async function AccountantManagePage({ searchParams }: { searchPar
       </section>
 
       {params.saved ? <div className={styles.notice}><Check size={15}/> Profile saved. Material changes are reviewed before they appear publicly.</div> : null}
-      {params.checkout === "success" ? <div className={styles.notice}><Check size={15}/> Subscription received. Stripe may take a few seconds to sync your 30-day trial.</div> : null}
+      {params.checkout === "success" ? <div className={styles.notice}><Check size={15}/> Subscription received. Stripe may take a few seconds to sync your listing.</div> : null}
 
       <section className={styles.grid}>
         <form action={saveAccountantProfileAction} encType="multipart/form-data" className={styles.formCard}>
@@ -86,14 +94,15 @@ export default async function AccountantManagePage({ searchParams }: { searchPar
         <aside className={styles.side}>
           <div className={styles.planCard}>
             <div className={styles.sectionHead}><div><span>Directory subscription</span><h2>{subscription ? `${subscription.tier === "premium" ? "Premium" : "Basic"} listing` : "Choose your plan"}</h2></div>{subscription?.tier === "premium" ? <Sparkles size={20}/> : null}</div>
-            {subscription ? <div className={styles.subscriptionSummary}><div><span>Status</span><strong>{subscription.status}</strong></div>{trialDays !== null ? <div><span>Trial</span><strong>{trialDays} day{trialDays === 1 ? "" : "s"} left</strong></div> : null}{subscription.current_period_end ? <div><span>Next billing date</span><strong>{new Date(subscription.current_period_end).toLocaleDateString("en-GB")}</strong></div> : null}</div> : null}
+            {subscription ? <div className={styles.subscriptionSummary}><div><span>Status</span><strong>{subscription.status}</strong></div>{subscription.status === "trialing" && trialDays !== null ? <div><span>Trial</span><strong>{trialDays} day{trialDays === 1 ? "" : "s"} left</strong></div> : null}{subscription.current_period_end ? <div><span>Next billing date</span><strong>{new Date(subscription.current_period_end).toLocaleDateString("en-GB")}</strong></div> : null}</div> : null}
             {subscription?.stripe_customer_id ? <form action={createAccountantPortalAction}><button className={styles.secondary} type="submit">Manage billing <ExternalLink size={14}/></button></form> : null}
           </div>
 
-          <div className={`${styles.priceCard} ${subscription?.tier === "basic" ? styles.selected : ""}`}><div><span>Basic</span><strong>€19<small>/month</small></strong></div><p>A complete professional listing with direct contact details and standard directory placement.</p><ul><li><Check size={14}/>Full professional profile</li><li><Check size={14}/>Languages & specialties</li><li><Check size={14}/>Direct email, phone & website</li><li><Check size={14}/>30-day free trial</li></ul><form action={startAccountantTrialAction}><input type="hidden" name="tier" value="basic"/><button disabled={!profile || !configured || Boolean(subscription && ["active","trialing","past_due"].includes(subscription.status))} className={styles.secondary} type="submit">{subscription?.tier === "basic" ? "Current plan" : "Start Basic trial"}</button></form></div>
+          <div className={`${styles.priceCard} ${subscription?.tier === "basic" ? styles.selected : ""}`}><div><span>Basic</span><strong>€19<small>/month</small></strong></div><p>A complete professional listing with direct contact details and standard directory placement.</p><ul><li><Check size={14}/>Full professional profile</li><li><Check size={14}/>Languages & specialties</li><li><Check size={14}/>Direct email, phone & website</li><li><Check size={14}/>30-day free trial for new listings</li></ul><form action={startAccountantTrialAction}><input type="hidden" name="tier" value="basic"/><button disabled={!profile || !configured || (subscriptionOpen && subscription?.tier === "basic")} className={styles.secondary} type="submit">{basicLabel}</button></form></div>
 
-          <div className={`${styles.priceCard} ${styles.premiumCard} ${subscription?.tier === "premium" ? styles.selected : ""}`}><div><span><Sparkles size={14}/> Premium</span><strong>€29<small>/month</small></strong></div><p>Maximum visibility plus enhanced presentation and measurable lead analytics.</p><ul><li><Check size={14}/>Everything in Basic</li><li><Check size={14}/>Featured badge</li><li><Check size={14}/>Priority placement</li><li><Check size={14}/>Profile & contact analytics</li><li><Check size={14}/>30-day free trial</li></ul><form action={startAccountantTrialAction}><input type="hidden" name="tier" value="premium"/><button disabled={!profile || !configured || Boolean(subscription && ["active","trialing","past_due"].includes(subscription.status))} className={styles.primary} type="submit">{subscription?.tier === "premium" ? "Current plan" : "Start Premium trial"}</button></form></div>
+          <div className={`${styles.priceCard} ${styles.premiumCard} ${subscription?.tier === "premium" ? styles.selected : ""}`}><div><span><Sparkles size={14}/> Premium</span><strong>€29<small>/month</small></strong></div><p>Maximum visibility plus enhanced presentation and measurable lead analytics.</p><ul><li><Check size={14}/>Everything in Basic</li><li><Check size={14}/>Featured badge</li><li><Check size={14}/>Priority placement</li><li><Check size={14}/>Profile & contact analytics</li><li><Check size={14}/>30-day free trial for new listings</li></ul><form action={startAccountantTrialAction}><input type="hidden" name="tier" value="premium"/><button disabled={!profile || !configured || (subscriptionOpen && subscription?.tier === "premium")} className={styles.primary} type="submit">{premiumLabel}</button></form></div>
           {!configured ? <p className={styles.configNote}>Stripe checkout is intentionally disabled until the two accountant listing prices are created after UI QA.</p> : null}
+          {trialUsed && !subscriptionOpen ? <p className={styles.configNote}>Your 30-day trial has already been used. Resubscribing starts paid billing immediately.</p> : null}
 
           <div className={styles.analyticsCard}><div className={styles.sectionHead}><div><span>Performance</span><h2>Listing analytics</h2></div><BarChart3 size={19}/></div>{subscription?.tier === "premium" && ["active","trialing"].includes(subscription.status) ? <div className={styles.analytics}><div><strong>{analytics.view}</strong><span>Profile views</span></div><div><strong>{analytics.email + analytics.phone}</strong><span>Contact clicks</span></div><div><strong>{analytics.website}</strong><span>Website clicks</span></div></div> : <div className={styles.lockedAnalytics}><Sparkles size={18}/><strong>Premium analytics</strong><p>See profile views and the actions businesses take from your listing.</p></div>}</div>
         </aside>
