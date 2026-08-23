@@ -36,7 +36,17 @@ async function syncAccountantSubscription(subscription: JsonObject, metadata: Re
   const priceId = idOf(firstItem?.price);
   const configuredBasic = process.env.STRIPE_ACCOUNTANT_BASIC_MONTHLY_PRICE_ID;
   const configuredPremium = process.env.STRIPE_ACCOUNTANT_PREMIUM_MONTHLY_PRICE_ID;
-  const tier = metadata.tier === "premium" || priceId === configuredPremium ? "premium" : metadata.tier === "basic" || priceId === configuredBasic ? "basic" : null;
+  // Price is the source of truth after a Customer Portal plan change. Metadata is
+  // retained as a fallback for the original Checkout-created subscription.
+  const tier = priceId === configuredPremium
+    ? "premium"
+    : priceId === configuredBasic
+      ? "basic"
+      : metadata.tier === "premium"
+        ? "premium"
+        : metadata.tier === "basic"
+          ? "basic"
+          : null;
   if (!tier) return;
   const status = normalizedSubscriptionStatus(subscription.status);
   const periodStart = unixDate(subscription.current_period_start ?? firstItem.current_period_start);
