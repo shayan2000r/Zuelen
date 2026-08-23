@@ -1,0 +1,1 @@
+QA: directory empty state, filters, profile detail, accountant auth without company, profile save, image upload, review reset, plan cards, Premium badge/priority, analytics lock, dark mode, responsive layout, Stripe buttons disabled until price IDs exist.
