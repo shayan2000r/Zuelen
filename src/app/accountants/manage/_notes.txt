@@ -1,1 +1,0 @@
-Accountant listing Stripe products are intentionally not created in live mode until directory UI QA passes.

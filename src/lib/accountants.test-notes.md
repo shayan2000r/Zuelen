@@ -1,4 +1,0 @@
-- Business subscription and accountant directory subscription are independent.
-- Accountant directory plans are paid-only: Basic €19/month and Premium €29/month.
-- Both accountant plans use a 30-day Stripe trial and collect a payment method up front.
-- Directory publication requires manual approval and an active/trialing listing subscription.

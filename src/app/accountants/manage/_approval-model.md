@@ -1,1 +1,0 @@
-Manual approval remains independent from subscription status. Approved profiles disappear automatically when subscription is inactive and reappear on reactivation without losing approval, unless material profile edits trigger re-review.

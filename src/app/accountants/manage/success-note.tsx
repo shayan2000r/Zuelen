@@ -1,1 +1,0 @@
-export function AccountantTrialNote(){return <p style={{fontSize:11,lineHeight:1.5,color:"#7b847d",margin:"8px 0 0"}}>Your card is collected at signup. The first listing charge is scheduled after the 30-day trial unless you cancel beforehand.</p>}
