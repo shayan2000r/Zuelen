@@ -1,0 +1,3 @@
+"use client";
+
+export default function Error({error,reset}:{error:Error&{digest?:string};reset:()=>void}){return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:"24px",background:"#f7f7f4",fontFamily:"Inter,system-ui,sans-serif"}}><div style={{maxWidth:520,background:"#fff",border:"1px solid #e0e5e0",borderRadius:18,padding:24}}><h1 style={{marginTop:0,fontSize:22}}>We couldn’t load your professional listing.</h1><p style={{color:"#687269",lineHeight:1.6}}>{error.message||"Please try again."}</p><button onClick={reset} style={{border:0,borderRadius:10,padding:"10px 14px",background:"#184c2c",color:"#fff",fontWeight:700,cursor:"pointer"}}>Try again</button></div></main>}
