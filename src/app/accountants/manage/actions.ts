@@ -19,7 +19,7 @@ function list(formData: FormData, key: string) {
 }
 
 function slugify(value: string) {
-  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64) || "accountant";
+  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 54) || "accountant";
 }
 
 function imageExtension(file: File) {
@@ -61,8 +61,8 @@ export async function saveAccountantProfileAction(formData: FormData) {
   let slug = profile?.slug as string | undefined;
   if (!slug) {
     const base = slugify(text(formData, "firm_name") || fullName);
-    const { data: collision } = await supabase.from("accountant_profiles").select("id").eq("slug", base).maybeSingle();
-    slug = collision ? `${base}-${userId.slice(0, 6)}` : base;
+    // The suffix avoids collisions with pending/private profiles that RLS intentionally hides.
+    slug = `${base}-${userId.replace(/-/g, "").slice(0, 8)}`;
   }
 
   const payload = {
@@ -97,8 +97,8 @@ export async function saveAccountantProfileAction(formData: FormData) {
 
 export async function startAccountantTrialAction(formData: FormData) {
   const { workspace, profile, supabase } = await authenticatedProfileContext();
-  if (!profile) throw new Error("Create your accountant profile before starting a trial.");
-  if (!profile.languages?.length || !profile.specialties?.length) throw new Error("Add at least one language and specialty before starting your trial.");
+  if (!profile) throw new Error("Create your accountant profile before starting a subscription.");
+  if (!profile.languages?.length || !profile.specialties?.length) throw new Error("Add at least one language and specialty before starting your subscription.");
   const tier = normalizeAccountantTier(formData.get("tier"));
   const price = accountantPriceId(tier);
   const { data: subscription, error } = await supabase.from("accountant_listing_subscriptions").select("*").eq("profile_id", profile.id).maybeSingle();
@@ -118,11 +118,13 @@ export async function startAccountantTrialAction(formData: FormData) {
     "subscription_data[metadata][kind]": "accountant_listing",
     "subscription_data[metadata][accountant_profile_id]": profile.id,
     "subscription_data[metadata][tier]": tier,
-    "subscription_data[trial_period_days]": 30,
     payment_method_collection: "always",
     billing_address_collection: "auto",
     "tax_id_collection[enabled]": true,
   };
+  // The free trial is deliberately one-time. A canceled profile can resubscribe,
+  // but it does not receive another 30 free days.
+  if (!subscription?.trial_end) params["subscription_data[trial_period_days]"] = 30;
   if (subscription?.stripe_customer_id) params.customer = subscription.stripe_customer_id;
   else if (workspace.email) params.customer_email = workspace.email;
 
