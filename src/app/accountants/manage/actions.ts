@@ -28,10 +28,14 @@ function imageExtension(file: File) {
   return "jpg";
 }
 
+function safeReturnPath(value: string) {
+  return value.startsWith("/") && !value.startsWith("//") ? value : null;
+}
+
 async function authenticatedProfileContext() {
   const workspace = await getWorkspace();
   const userId = workspace.userId;
-  if (!workspace.authenticated || !userId) redirect("/sign-in?next=/accountants/manage");
+  if (!workspace.authenticated || !userId) redirect("/sign-in?next=/professional");
   const supabase = await createClient();
   const { data: profile, error } = await supabase.from("accountant_profiles").select("*").eq("user_id", userId).maybeSingle();
   if (error) throw new Error(error.message);
@@ -39,12 +43,17 @@ async function authenticatedProfileContext() {
 }
 
 export async function saveAccountantProfileAction(formData: FormData) {
-  const { workspace, userId, supabase, profile } = await authenticatedProfileContext();
+  const { userId, supabase, profile } = await authenticatedProfileContext();
   const fullName = text(formData, "full_name");
   const professionalTitle = text(formData, "professional_title");
   const email = text(formData, "email");
+  const yearsRaw = text(formData, "years_experience");
+  const yearsExperience = yearsRaw ? Number.parseInt(yearsRaw, 10) : null;
   if (fullName.length < 2 || professionalTitle.length < 2 || !email.includes("@")) {
     throw new Error("Name, professional title and a valid contact email are required.");
+  }
+  if (yearsExperience !== null && (!Number.isInteger(yearsExperience) || yearsExperience < 0 || yearsExperience > 80)) {
+    throw new Error("Years of experience must be between 0 and 80.");
   }
 
   let photoUrl = profile?.photo_url ?? null;
@@ -79,6 +88,10 @@ export async function saveAccountantProfileAction(formData: FormData) {
     email,
     phone: text(formData, "phone") || null,
     website: normalizeWebsite(text(formData, "website")),
+    portfolio_url: normalizeWebsite(text(formData, "portfolio_url")),
+    qualifications: text(formData, "qualifications") || null,
+    client_references: text(formData, "client_references") || null,
+    years_experience: yearsExperience,
     photo_url: photoUrl,
     accepting_new_clients: formData.get("accepting_new_clients") === "on",
     works_remotely: formData.get("works_remotely") === "on",
@@ -90,9 +103,12 @@ export async function saveAccountantProfileAction(formData: FormData) {
     : supabase.from("accountant_profiles").insert(payload);
   const { error } = await query;
   if (error) throw new Error(error.message);
+  revalidatePath("/professional");
   revalidatePath("/accountants/manage");
   revalidatePath("/app/accountants");
-  redirect("/accountants/manage?saved=1");
+  revalidatePath("/accountants/directory");
+  const returnTo = safeReturnPath(text(formData, "return_to"));
+  redirect(returnTo || "/accountants/manage?saved=1");
 }
 
 export async function startAccountantTrialAction(formData: FormData) {
@@ -108,7 +124,7 @@ export async function startAccountantTrialAction(formData: FormData) {
   const params: Record<string, string | number | boolean | null | undefined> = {
     mode: "subscription",
     success_url: `${APP_URL}/accountants/manage?checkout=success`,
-    cancel_url: `${APP_URL}/accountants/manage?checkout=cancelled`,
+    cancel_url: `${APP_URL}/professional?step=3&checkout=cancelled`,
     "line_items[0][price]": price,
     "line_items[0][quantity]": 1,
     client_reference_id: profile.id,
