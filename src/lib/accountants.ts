@@ -30,6 +30,10 @@ export type AccountantProfile = {
   email: string | null;
   phone: string | null;
   website: string | null;
+  portfolio_url: string | null;
+  qualifications: string | null;
+  client_references: string | null;
+  years_experience: number | null;
   photo_url: string | null;
   accepting_new_clients: boolean;
   works_remotely: boolean;
@@ -44,6 +48,53 @@ export type AccountantProfile = {
 export const ACCOUNTANT_LANGUAGES = ["Luxembourgish", "French", "English", "German", "Portuguese", "Italian", "Spanish"] as const;
 export const ACCOUNTANT_SPECIALTIES = ["Bookkeeping", "VAT", "Annual accounts", "Corporate tax", "Payroll", "Company formation", "eCDF & RCS filings", "Management reporting"] as const;
 export const ACCOUNTANT_BUSINESS_TYPES = ["Freelancers", "Sole traders", "SARL-S", "SARL", "SA", "Startups", "Retail", "Professional services", "E-commerce"] as const;
+
+const LANGUAGE_META: Record<string, { flag: string; en: string; fr: string }> = {
+  Luxembourgish: { flag: "🇱🇺", en: "Luxembourgish", fr: "Luxembourgeois" },
+  French: { flag: "🇫🇷", en: "French", fr: "Français" },
+  English: { flag: "🇬🇧", en: "English", fr: "Anglais" },
+  German: { flag: "🇩🇪", en: "German", fr: "Allemand" },
+  Portuguese: { flag: "🇵🇹", en: "Portuguese", fr: "Portugais" },
+  Italian: { flag: "🇮🇹", en: "Italian", fr: "Italien" },
+  Spanish: { flag: "🇪🇸", en: "Spanish", fr: "Espagnol" },
+};
+
+const SPECIALTY_FR: Record<string, string> = {
+  Bookkeeping: "Tenue comptable",
+  VAT: "TVA",
+  "Annual accounts": "Comptes annuels",
+  "Corporate tax": "Fiscalité des sociétés",
+  Payroll: "Paie",
+  "Company formation": "Création d’entreprise",
+  "eCDF & RCS filings": "Dépôts eCDF & RCS",
+  "Management reporting": "Reporting de gestion",
+};
+
+const BUSINESS_TYPE_FR: Record<string, string> = {
+  Freelancers: "Freelances",
+  "Sole traders": "Indépendants",
+  "SARL-S": "SARL-S",
+  SARL: "SARL",
+  SA: "SA",
+  Startups: "Startups",
+  Retail: "Commerce de détail",
+  "Professional services": "Services professionnels",
+  "E-commerce": "E-commerce",
+};
+
+export function accountantLanguageLabel(value: string, locale: "en" | "fr" = "en", withFlag = false) {
+  const meta = LANGUAGE_META[value];
+  const label = meta ? meta[locale] : value;
+  return withFlag && meta ? `${meta.flag} ${label}` : label;
+}
+
+export function accountantSpecialtyLabel(value: string, locale: "en" | "fr" = "en") {
+  return locale === "fr" ? SPECIALTY_FR[value] ?? value : value;
+}
+
+export function accountantBusinessTypeLabel(value: string, locale: "en" | "fr" = "en") {
+  return locale === "fr" ? BUSINESS_TYPE_FR[value] ?? value : value;
+}
 
 export function accountantStripeConfigured() {
   return Boolean(
