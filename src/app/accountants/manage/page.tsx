@@ -14,7 +14,7 @@ function daysLeft(value: string | null) {
   return Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 86400000));
 }
 
-export default async function AccountantManagePage({ searchParams }: { searchParams: Promise<{ saved?: string; checkout?: string }> }) {
+export default async function AccountantManagePage({ searchParams }: { searchParams: Promise<{ saved?: string; checkout?: string; plan?: string }> }) {
   const workspace = await getWorkspace();
   if (!workspace.authenticated || !workspace.userId) redirect("/sign-in?next=/accountants/manage");
   const params = await searchParams;
@@ -62,6 +62,7 @@ export default async function AccountantManagePage({ searchParams }: { searchPar
 
       {params.saved ? <div className={styles.notice}><Check size={15}/> Profile saved. Material changes are reviewed before they appear publicly.</div> : null}
       {params.checkout === "success" ? <div className={styles.notice}><Check size={15}/> Subscription received. Stripe may take a few seconds to sync your listing.</div> : null}
+      {params.plan === "basic" || params.plan === "premium" ? <div className={styles.notice}><Check size={15}/> Plan change sent to Stripe. Your {params.plan === "premium" ? "Premium" : "Basic"} listing will update as soon as the subscription webhook is processed.</div> : null}
 
       <section className={styles.grid}>
         <form action={saveAccountantProfileAction} encType="multipart/form-data" className={styles.formCard}>
@@ -82,8 +83,8 @@ export default async function AccountantManagePage({ searchParams }: { searchPar
           <label><span>Qualifications</span><textarea name="qualifications" rows={3} defaultValue={profile.qualifications ?? ""} placeholder="Degrees, certifications and professional memberships."/></label>
           <label><span>Client references</span><textarea name="client_references" rows={3} defaultValue={profile.client_references ?? ""} placeholder="Optional representative clients, references or credibility notes."/></label>
 
-          <fieldset><legend>Languages</legend><div className={styles.chips}>{ACCOUNTANT_LANGUAGES.map(value => <label className={styles.checkChip} key={value}><input type="checkbox" name="languages" value={value} defaultChecked={profile.languages.includes(value)}/><span>{accountantLanguageLabel(value, "en", true)}</span></label>)}</div></fieldset>
-          <fieldset><legend>Specialties</legend><div className={styles.chips}>{ACCOUNTANT_SPECIALTIES.map(value => <label className={styles.checkChip} key={value}><input type="checkbox" name="specialties" value={value} defaultChecked={profile.specialties.includes(value)}/><span>{value}</span></label>)}</div></fieldset>
+          <fieldset><legend>Languages *</legend><div className={styles.chips}>{ACCOUNTANT_LANGUAGES.map(value => <label className={styles.checkChip} key={value}><input type="checkbox" name="languages" value={value} defaultChecked={profile.languages.includes(value)}/><span>{accountantLanguageLabel(value, "en", true)}</span></label>)}</div></fieldset>
+          <fieldset><legend>Specialties *</legend><div className={styles.chips}>{ACCOUNTANT_SPECIALTIES.map(value => <label className={styles.checkChip} key={value}><input type="checkbox" name="specialties" value={value} defaultChecked={profile.specialties.includes(value)}/><span>{value}</span></label>)}</div></fieldset>
           <fieldset><legend>Businesses you work with</legend><div className={styles.chips}>{ACCOUNTANT_BUSINESS_TYPES.map(value => <label className={styles.checkChip} key={value}><input type="checkbox" name="business_types" value={value} defaultChecked={profile.business_types.includes(value)}/><span>{value}</span></label>)}</div></fieldset>
           <div className={styles.toggles}>
             <label><input type="checkbox" name="accepting_new_clients" defaultChecked={profile.accepting_new_clients}/><span><strong>Accepting new clients</strong><small>Show businesses that you are open to enquiries.</small></span></label>
@@ -104,7 +105,7 @@ export default async function AccountantManagePage({ searchParams }: { searchPar
           <div className={`${styles.priceCard} ${subscription?.tier === "basic" ? styles.selected : ""}`}><div><span>Basic</span><strong>€19<small>/month</small></strong></div><p>A complete professional listing with direct contact details and standard directory placement.</p><ul><li><Check size={14}/>Full professional profile</li><li><Check size={14}/>Languages & specialties</li><li><Check size={14}/>Direct email, phone & website</li><li><Check size={14}/>30-day free trial for new listings</li></ul><form action={startAccountantTrialAction}><input type="hidden" name="tier" value="basic"/><button disabled={!configured || (subscriptionOpen && subscription?.tier === "basic")} className={styles.secondary} type="submit">{basicLabel}</button></form></div>
 
           <div className={`${styles.priceCard} ${styles.premiumCard} ${subscription?.tier === "premium" ? styles.selected : ""}`}><div><span><Sparkles size={14}/> Premium</span><strong>€29<small>/month</small></strong></div><p>Maximum visibility plus enhanced presentation and measurable lead analytics.</p><ul><li><Check size={14}/>Everything in Basic</li><li><Check size={14}/>Featured badge</li><li><Check size={14}/>Priority placement</li><li><Check size={14}/>Profile & contact analytics</li><li><Check size={14}/>30-day free trial for new listings</li></ul><form action={startAccountantTrialAction}><input type="hidden" name="tier" value="premium"/><button disabled={!configured || (subscriptionOpen && subscription?.tier === "premium")} className={styles.primary} type="submit">{premiumLabel}</button></form></div>
-          {!configured ? <p className={styles.configNote}>Stripe checkout is intentionally disabled until the two accountant listing prices are created after UI QA.</p> : null}
+          {!configured ? <p className={styles.configNote}>Stripe checkout is temporarily unavailable because the accountant listing billing configuration is incomplete.</p> : null}
           {trialUsed && !subscriptionOpen ? <p className={styles.configNote}>Your 30-day trial has already been used. Resubscribing starts paid billing immediately.</p> : null}
 
           <div className={styles.analyticsCard}><div className={styles.sectionHead}><div><span>Performance</span><h2>Listing analytics</h2></div><BarChart3 size={19}/></div>{subscription?.tier === "premium" && ["active","trialing"].includes(subscription.status) ? <div className={styles.analytics}><div><strong>{analytics.view}</strong><span>Profile views</span></div><div><strong>{analytics.email + analytics.phone}</strong><span>Contact clicks</span></div><div><strong>{analytics.website}</strong><span>Website clicks</span></div></div> : <div className={styles.lockedAnalytics}><Sparkles size={18}/><strong>Premium analytics</strong><p>See profile views and the actions businesses take from your listing.</p></div>}</div>
