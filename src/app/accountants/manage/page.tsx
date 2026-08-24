@@ -7,5 +7,5 @@ export default async function AccountantManagePage({ searchParams }: { searchPar
   if (params.checkout === "success") redirect("/professional?checkout=success");
   if (params.plan === "basic" || params.plan === "premium") redirect(`/professional/billing?plan=${params.plan}`);
   if (params.saved) redirect("/professional/profile?saved=1");
-  redirect("/professional/profile");
+  redirect("/professional");
 }
