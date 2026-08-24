@@ -42,7 +42,7 @@ export function AccountingInvoiceActions({
           event.preventDefault();
           return;
         }
-        if (!window.confirm("Delete this issued invoice? Compta will reverse the receivable, revenue and VAT entry and keep the audit trail.")) event.preventDefault();
+        if (!window.confirm("Delete this issued invoice? Zuelen will reverse the receivable, revenue and VAT entry and keep the audit trail.")) event.preventDefault();
       }}>
         <input type="hidden" name="invoice_id" value={invoiceId} />
         <button className={`${styles.button} ${styles.danger}`} type="submit" disabled={pending || !canVoid} title={canVoid ? "Void invoice" : "Undo its payment first"}>
@@ -84,7 +84,7 @@ export function AccountingPaymentActions({ payment }: {
     <div className={styles.actions}>
       <button className={styles.button} type="button" onClick={() => dialog.current?.showModal()} disabled={matched} title={matched ? "Edit this from bank reconciliation" : "Edit payment"}><Pencil size={13} />Edit payment</button>
       <form action={undoAction} onSubmit={(event) => {
-        if (!window.confirm(matched ? "Undo this matched payment? The bank transaction will become unmatched and Compta will reverse the payment journal entry." : "Undo this payment? Compta will reverse its journal entry and restore the invoice receivable.")) event.preventDefault();
+        if (!window.confirm(matched ? "Undo this matched payment? The bank transaction will become unmatched and Zuelen will reverse the payment journal entry." : "Undo this payment? Zuelen will reverse its journal entry and restore the invoice receivable.")) event.preventDefault();
       }}>
         <input type="hidden" name="payment_id" value={payment.id} />
         <button className={`${styles.button} ${styles.danger}`} type="submit" disabled={undoPending}>{undoPending ? <LoaderCircle className={styles.spin} size={13} /> : <RotateCcw size={13} />}Undo payment</button>
@@ -95,7 +95,7 @@ export function AccountingPaymentActions({ payment }: {
       <dialog ref={dialog} className={styles.dialog}>
         <form action={editAction} className={styles.dialogCard}>
           <div className={styles.dialogHead}><div><span>Accounting-safe correction</span><h3>Edit payment</h3></div><button type="button" onClick={() => dialog.current?.close()}><X size={16} /></button></div>
-          <p className={styles.notice}>The existing payment journal entry will stay in history. Compta reverses it and posts the corrected payment automatically.</p>
+          <p className={styles.notice}>The existing payment journal entry will stay in history. Zuelen reverses it and posts the corrected payment automatically.</p>
           <input type="hidden" name="payment_id" value={payment.id} />
           <div className={styles.grid}>
             <label><span>Amount</span><input name="amount" type="number" min="0.01" step="0.01" defaultValue={Number(payment.amount).toFixed(2)} required /></label>

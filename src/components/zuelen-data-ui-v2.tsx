@@ -11,8 +11,8 @@ type SummaryItem = {
   tone?: "neutral" | "success" | "warning" | "danger" | "info";
 };
 
-export function DataSummary({ items }: { items: SummaryItem[] }) {
-  return <section className={styles.summaryGrid} aria-label="Data summary">
+export function DataSummary({ items, label = "Data summary" }: { items: SummaryItem[]; label?: string }) {
+  return <section className={styles.summaryGrid} aria-label={label}>
     {items.map((item) => {
       const Icon = item.icon;
       return <article key={item.label} className={`${styles.summaryCard} ${styles[item.tone ?? "neutral"]}`}>

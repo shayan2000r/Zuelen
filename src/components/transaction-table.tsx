@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownLeft, ArrowUpRight, CheckSquare2, LoaderCircle, Trash2 } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, LoaderCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { bulkDeleteTransactionsAction, type TransactionActionState } from "@/app/app/transactions/actions";

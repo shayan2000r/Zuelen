@@ -1,0 +1,60 @@
+.syncForm {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+
+.syncForm button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--z-border);
+  border-radius: 10px;
+  background: var(--z-surface-1);
+  color: var(--z-text);
+  box-shadow: var(--z-shadow-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+
+.syncForm button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--z-border-strong);
+  background: var(--z-surface-2);
+}
+
+.syncForm button:focus-visible {
+  outline: 3px solid rgba(179, 222, 1, .28);
+  outline-offset: 2px;
+}
+
+.syncForm button:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
+.syncSuccess,
+.syncError {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 280px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.syncSuccess { color: var(--z-positive); }
+.syncError { color: var(--z-negative); }
+.spin { animation: spin 1s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 700px) {
+  .syncForm { justify-items: start; }
+}

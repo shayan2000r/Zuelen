@@ -16,14 +16,14 @@ export function V2Page({ children, className = "" }: { children: ReactNode; clas
   return <div className={`${styles.page} ${className}`}>{children}</div>;
 }
 
-export function PageHeader({ eyebrow, title, description, actions = [] }: { eyebrow?: string; title: ReactNode; description?: ReactNode; actions?: ActionLike[] }) {
+export function PageHeader({ eyebrow, title, description, meta, actions = [] }: { eyebrow?: string; title: ReactNode; description?: ReactNode; meta?: ReactNode; actions?: ActionLike[] }) {
   return <header className={styles.pageHeader}>
     <div className={styles.pageHeaderCopy}>
       {eyebrow ? <span className={styles.eyebrow}>{eyebrow}</span> : null}
       <h1>{title}</h1>
       {description ? <p>{description}</p> : null}
     </div>
-    {actions.length ? <div className={styles.headerActions}>{actions.map(action => <V2Button key={`${action.label}-${action.href ?? "button"}`} {...action}/>)}</div> : null}
+    {meta || actions.length ? <div className={styles.headerActions}>{meta}{actions.map(action => <V2Button key={`${action.label}-${action.href ?? "button"}`} {...action}/>)}</div> : null}
   </header>;
 }
 

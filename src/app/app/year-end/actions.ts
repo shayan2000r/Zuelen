@@ -70,7 +70,7 @@ export async function createClosingSnapshot(_previous:ClosingState):Promise<Clos
   s.from("journal_entries").select("id,entry_number,entry_date,status,source_type,description").eq("company_id",w.company.id).eq("status","posted").gte("entry_date",from).lte("entry_date",to).order("entry_number"),
   s.from("company_accounts").select("id,code,label,account_type").eq("company_id",w.company.id).eq("is_active",true).order("code")
  ]);
- if([pending,bank,drafts,docResult,vat,entries,accounts].some(r=>r.error))return{status:"error",message:"Compta could not complete the closing checks."};
+ if([pending,bank,drafts,docResult,vat,entries,accounts].some(r=>r.error))return{status:"error",message:"Zuelen could not complete the closing checks."};
  const docs=(docResult.data??[]).filter(doc=>{const date=extractedDate(doc.extracted_data);return date!==null&&date>=from&&date<=to});
  const blockers=(pending.count??0)+(bank.count??0)+(drafts.count??0)+docs.length+(vat.count??0);if(blockers>0)return{status:"error",message:`${blockers} closing blocker${blockers===1?" remains":"s remain"} in FY ${year}. Clear the Year-end checklist first.`};
  const entryIds=(entries.data??[]).map(e=>e.id),lines=entryIds.length?(await s.from("journal_lines").select("journal_entry_id,company_account_id,debit,credit,currency").in("journal_entry_id",entryIds)).data??[]:[];

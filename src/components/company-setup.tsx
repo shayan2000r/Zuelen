@@ -44,7 +44,7 @@ export function CompanySetup() {
 
   return (
     <main className={styles.setupShell}>
-      <header className={styles.setupTop}><div className={styles.setupBrand}><div className={styles.logoMark}>Z</div><span>Zuelen</span></div><span className={styles.secureTag}><ShieldCheck size={13} />Secure workspace setup</span></header>
+      <header className={styles.setupTop}><div className={styles.setupBrand}><img className={styles.logoMark} src="/zuelen-icon.png" alt=""/><span>Zuelen</span></div><span className={styles.secureTag}><ShieldCheck size={13} />Secure workspace setup</span></header>
       <div className={styles.setupGrid}>
         <aside className={styles.setupAside}>
           <p className={styles.overline}>Company 01</p><h1>Tell Zuelen about your company.</h1><p>Enter the official details used on invoices, RCS records and government portals. Zuelen uses them to configure the right accounting and compliance workflows.</p>
