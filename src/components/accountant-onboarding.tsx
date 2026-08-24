@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronLeft, CircleUserRound, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { AlertCircle, ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronLeft, CircleUserRound, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
+import { useState, type FormEvent } from "react";
 import { ACCOUNTANT_BUSINESS_TYPES, ACCOUNTANT_LANGUAGES, ACCOUNTANT_SPECIALTIES, accountantInitials, accountantLanguageLabel, type AccountantListingSubscription, type AccountantProfile } from "@/lib/accountants";
 import { saveAccountantProfileAction, startAccountantTrialAction } from "@/app/accountants/manage/actions";
 import styles from "./accountant-onboarding.module.css";
@@ -13,14 +13,16 @@ type Props = {
   subscription: AccountantListingSubscription | null;
   stripeConfigured: boolean;
   initialStep?: 1 | 2 | 3;
+  checkoutStatus?: string | null;
 };
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"]);
 
-export function AccountantOnboarding({ email, profile, subscription, stripeConfigured, initialStep = 1 }: Props) {
+export function AccountantOnboarding({ email, profile, subscription, stripeConfigured, initialStep = 1, checkoutStatus }: Props) {
   const [step, setStep] = useState<1 | 2 | 3>(initialStep);
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [contactEmail, setContactEmail] = useState(profile?.email ?? email ?? "");
+  const [professionalError, setProfessionalError] = useState<string | null>(null);
   const canContinue = fullName.trim().length >= 2 && contactEmail.includes("@");
   const subscriptionOpen = Boolean(subscription && ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status));
   const trialUsed = Boolean(subscription?.trial_end);
@@ -29,6 +31,17 @@ export function AccountantOnboarding({ email, profile, subscription, stripeConfi
     if (index < step) return styles.completeStep;
     if (index === step) return styles.activeStep;
     return "";
+  }
+
+  function validateProfessionalStep(event: FormEvent<HTMLFormElement>) {
+    if (step !== 2) return;
+    const formData = new FormData(event.currentTarget);
+    if (!formData.getAll("languages").length || !formData.getAll("specialties").length) {
+      event.preventDefault();
+      setProfessionalError("Choose at least one language and one specialty before selecting your plan.");
+      return;
+    }
+    setProfessionalError(null);
   }
 
   return (
@@ -53,7 +66,7 @@ export function AccountantOnboarding({ email, profile, subscription, stripeConfi
 
         <section className={styles.card}>
           {step < 3 ? (
-            <form action={saveAccountantProfileAction} encType="multipart/form-data" className={styles.form}>
+            <form action={saveAccountantProfileAction} onSubmit={validateProfessionalStep} encType="multipart/form-data" className={styles.form}>
               <input type="hidden" name="return_to" value="/professional?step=3"/>
 
               <div hidden={step !== 1} className={styles.stepPanel}>
@@ -85,6 +98,7 @@ export function AccountantOnboarding({ email, profile, subscription, stripeConfi
                 <fieldset><legend>Specialties *</legend><div className={styles.chips}>{ACCOUNTANT_SPECIALTIES.map(value => <label key={value}><input type="checkbox" name="specialties" value={value} defaultChecked={profile?.specialties.includes(value)}/><span>{value}</span></label>)}</div></fieldset>
                 <fieldset><legend>Businesses you work with</legend><div className={styles.chips}>{ACCOUNTANT_BUSINESS_TYPES.map(value => <label key={value}><input type="checkbox" name="business_types" value={value} defaultChecked={profile?.business_types.includes(value)}/><span>{value}</span></label>)}</div></fieldset>
 
+                {professionalError ? <div className={styles.formError}><AlertCircle size={15}/><span>{professionalError}</span></div> : null}
                 <div className={styles.toggles}>
                   <label><input type="checkbox" name="accepting_new_clients" defaultChecked={profile?.accepting_new_clients ?? true}/><span><strong>Accepting new clients</strong><small>Show that you are currently open to enquiries.</small></span></label>
                   <label><input type="checkbox" name="works_remotely" defaultChecked={profile?.works_remotely ?? true}/><span><strong>Remote</strong><small>You can work with businesses remotely.</small></span></label>
@@ -93,13 +107,14 @@ export function AccountantOnboarding({ email, profile, subscription, stripeConfi
               </div>
 
               <div className={styles.actions}>
-                {step === 2 ? <button type="button" className={styles.back} onClick={() => setStep(1)}><ChevronLeft size={15}/> Back</button> : <Link href="/sign-in" className={styles.back}><ChevronLeft size={15}/> Back</Link>}
+                {step === 2 ? <button type="button" className={styles.back} onClick={() => { setProfessionalError(null); setStep(1); }}><ChevronLeft size={15}/> Back</button> : <Link href="/sign-in" className={styles.back}><ChevronLeft size={15}/> Back</Link>}
                 {step === 1 ? <button type="button" className={styles.primary} disabled={!canContinue} onClick={() => setStep(2)}>Continue <ArrowRight size={15}/></button> : <button type="submit" className={styles.primary}>Save & choose plan <ArrowRight size={15}/></button>}
               </div>
             </form>
           ) : (
             <div className={styles.stepPanel}>
               <div className={styles.cardHead}><div className={styles.icon}><Sparkles size={21}/></div><div><span>Step 3 of 3</span><h2>Choose your listing plan</h2><p>Both plans include a 30-day trial. Your listing becomes visible only after approval.</p></div></div>
+              {checkoutStatus === "cancelled" ? <div className={styles.checkoutNote}><AlertCircle size={15}/><div><strong>Checkout cancelled.</strong><p>No subscription was created. You can choose a plan whenever you are ready.</p></div></div> : null}
               <div className={styles.plans}>
                 <article className={`${styles.plan} ${subscription?.tier === "basic" ? styles.current : ""}`}>
                   <div className={styles.planTop}><div><span>Basic</span><strong>€19<small>/month</small></strong></div>{subscription?.tier === "basic" ? <em>Current</em> : null}</div>
@@ -114,8 +129,8 @@ export function AccountantOnboarding({ email, profile, subscription, stripeConfi
                   <form action={startAccountantTrialAction}><input type="hidden" name="tier" value="premium"/><button disabled={!stripeConfigured || (subscriptionOpen && subscription?.tier === "premium")} type="submit">{subscriptionOpen ? subscription?.tier === "premium" ? "Current plan" : "Upgrade to Premium" : trialUsed ? "Subscribe to Premium" : "Start Premium trial"}</button></form>
                 </article>
               </div>
-              {!stripeConfigured ? <div className={styles.qaNote}><ShieldCheck size={16}/><div><strong>Billing is held for UI QA.</strong><p>The live accountant prices are not connected yet, so plan checkout stays disabled until this onboarding experience is approved.</p></div></div> : null}
-              <div className={styles.finish}><Link href="/accountants/manage">Open professional workspace <ExternalLink size={14}/></Link><small>You can review or edit your profile before billing is enabled.</small></div>
+              {!stripeConfigured ? <div className={styles.qaNote}><ShieldCheck size={16}/><div><strong>Billing is temporarily unavailable.</strong><p>The listing plans are not fully configured, so checkout is disabled until billing configuration is restored.</p></div></div> : null}
+              <div className={styles.finish}><Link href="/accountants/manage">Open professional workspace <ExternalLink size={14}/></Link><small>You can review or edit your profile at any time from your professional workspace.</small></div>
             </div>
           )}
         </section>
