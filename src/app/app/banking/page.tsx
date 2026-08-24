@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, CircleHelp, Eye, FileUp, Landmark, Search, WalletCards } from "lucide-react";
+import { ArrowRight, CheckCircle2, CircleHelp, FileUp, Landmark, Search, WalletCards } from "lucide-react";
 import { redirect } from "next/navigation";
 import { BankImporter } from "@/components/bank-importer";
 import { BankMovementTable } from "@/components/bank-movement-table";

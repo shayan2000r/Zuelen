@@ -1,4 +1,4 @@
-import { ArrowRight, CircleCheck, Clock3, Eye, ExternalLink, FileText, Pencil, Plus, ReceiptText } from "lucide-react";
+import { ArrowRight, CircleCheck, Clock3, ExternalLink, FileText, Pencil, Plus, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DataEmptyState, DataPanel, DataPanelHeader, DataSummary } from "@/components/zuelen-data-ui-v2";
