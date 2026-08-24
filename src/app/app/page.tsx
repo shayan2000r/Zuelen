@@ -1,10 +1,11 @@
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Landmark, ReceiptText, Sparkles, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Landmark, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { intlLocale, normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { MetricCard, MetricGrid, PageHeader, Panel, SectionHeader, V2Button, V2Page, V2TwoColumn } from "@/components/zuelen-ui-v2";
 import styles from "./overview.module.css";
 
 export const dynamic = "force-dynamic";
@@ -28,19 +29,48 @@ export default async function OverviewPage(){
  let lines:LedgerLine[]=[];if(entries.length){const r=await supabase.from("journal_lines").select("journal_entry_id,company_account_id,debit,credit").in("journal_entry_id",entries.map(e=>e.id));if(r.error)throw new Error(r.error.message);lines=(r.data??[]) as LedgerLine[]}
  let revenue=0,expenses=0,outputVat=0,inputVat=0;for(const line of lines){const a=accountMap.get(line.company_account_id);if(!a)continue;const d=Number(line.debit),c=Number(line.credit),date=dateMap.get(line.journal_entry_id),index=date?monthIndex.get(date.slice(0,7)):-1;if(a.account_type==="revenue"){const v=c-d;revenue+=v;if(index!==undefined&&index>=0)monthly[index].revenue+=v}if(a.account_type==="expense"&&!['6711','6721','6811'].includes(a.code)){const v=d-c;expenses+=v;if(index!==undefined&&index>=0)monthly[index].expense+=v}if(a.code==="461411")outputVat+=c-d;if(a.code==="421611")inputVat+=d-c}
  const profit=revenue-expenses,vat=outputVat-inputVat,profitForTax=Math.max(0,profit),ircTax=irc(profitForTax),fund=ircTax*.07,profileYear=Number(taxProfileResult.data?.icc_multiplier_year),multiplier=profileYear===year&&taxProfileResult.data?.icc_multiplier!=null?Number(taxProfileResult.data.icc_multiplier):null,icc=multiplier===null?0:Math.max(profitForTax-17500,0)*.03*multiplier,estimatedTaxes=ircTax+fund+icc;
- const hour=now.getHours(),greeting=fr?(hour<12?"Bonjour":hour<18?"Bonjour":"Bonsoir"):(hour<12?"Good morning":hour<18?"Good afternoon":"Good evening"),name=workspace.company.trading_name||workspace.company.legal_name,chartMax=Math.max(1,...monthly.flatMap(m=>[m.revenue,m.expense])),recent=transactionsResult.data??[];
- return <div className={styles.page}>
-  <header className={styles.hero}><div><p>{t(locale,"financialYear")} {year} · {bounds.start} → {bounds.end}</p><h1>{greeting}, <span>{name}</span>.</h1><h2>{fr?"Gardez le contrôle de vos finances, suivez les performances et concentrez-vous sur l’essentiel.":"Stay on top of your finances, monitor performance, and track what matters."}</h2></div><Link href="/app/reports">{t(locale,"viewReports")} <ArrowRight size={14}/></Link></header>
-  <section className={styles.metricGrid}>
-   <Link href="/app/reports" className={styles.metricCard}><span className={styles.metricIcon}><WalletCards size={17}/></span><div><small>{t(locale,"revenue")}</small><strong>{money(revenue,currency,locale)}</strong></div><ArrowUpRight className={styles.metricArrow} size={16}/></Link>
-   <Link href="/app/transactions?status=posted" className={styles.metricCard}><span className={styles.metricIcon}><ReceiptText size={17}/></span><div><small>{t(locale,"expenses")}</small><strong>{money(expenses,currency,locale)}</strong></div><ArrowUpRight className={styles.metricArrow} size={16}/></Link>
-   <Link href="/app/vat" className={styles.metricCard}><span className={styles.metricIcon}><Landmark size={17}/></span><div><small>{t(locale,"vatPosition")}</small><strong>{money(Math.abs(vat),currency,locale)}</strong></div><ArrowUpRight className={styles.metricArrow} size={16}/></Link>
-   <Link href="/app/taxes" className={styles.metricCard}><span className={styles.metricIcon}><Sparkles size={17}/></span><div><small>{t(locale,"estimatedTaxes")}</small><strong>{money(estimatedTaxes,currency,locale)}</strong></div><ArrowUpRight className={styles.metricArrow} size={16}/></Link>
-  </section>
-  <section className={styles.mainGrid}>
-   <article className={styles.overviewCard}><div className={styles.cardHead}><div><p>{t(locale,"overview")}</p><h2>{t(locale,"revenueExpenses")}</h2></div><div className={styles.legend}><span><i className={styles.revenueDot}/>{t(locale,"revenue")}</span><span><i className={styles.expenseDot}/>{t(locale,"expenses")}</span></div></div><div className={styles.chartSummary}><div><span>{t(locale,"netResult")}</span><strong className={profit>=0?styles.positive:styles.negative}>{money(profit,currency,locale)}</strong></div><div><span>{t(locale,"margin")}</span><strong>{revenue?`${Math.round((profit/revenue)*100)}%`:"—"}</strong></div></div><div className={styles.barChart}>{monthly.map((month,index)=><div className={styles.barGroup} key={monthKeys[index].key}><div className={styles.bars}><span className={styles.revenueBar} style={{height:`${Math.max(month.revenue?4:0,(month.revenue/chartMax)*100)}%`}}/><span className={styles.expenseBar} style={{height:`${Math.max(month.expense?4:0,(month.expense/chartMax)*100)}%`}}/></div><small>{monthKeys[index].label}</small></div>)}</div></article>
-   <article className={styles.aiCard}><div className={styles.aiTop}><div><p>Zuelen Copilot</p><h2>{t(locale,"yourBooksExplained")}</h2></div><span><Sparkles size={18}/></span></div><div className={styles.aiIllustration} aria-hidden="true"><div className={styles.aiTileOne}><span>€</span><b>{Math.max(0,Math.round(profit/1000))}k</b></div><div className={styles.aiOrb}><Sparkles size={23}/></div><div className={styles.aiTileTwo}><i/><i/><i/></div><div className={styles.aiGridDots}/></div><p>{fr?"Posez vos questions sur la TVA, la trésorerie, la réserve fiscale, les factures ou les éléments qui bloquent la clôture. Les réponses utilisent l’exercice sélectionné.":"Ask about VAT, cash, tax reserve, invoices or what is blocking year-end. Answers use the selected financial year."}</p><Link href="/app/copilot" className={styles.aiAction}>{t(locale,"openCopilot")} <ArrowRight size={14}/></Link></article>
-  </section>
-  <article className={styles.activityCard}><div className={styles.cardHead}><div><p>{t(locale,"recentActivity")}</p><h2>{t(locale,"latestTransactions")}</h2></div><Link href="/app/transactions">{t(locale,"viewAll")} <ArrowRight size={13}/></Link></div>{recent.length===0?<div className={styles.empty}>{t(locale,"noTransactions")}</div>:<div className={styles.activityList}>{recent.map(row=>{const income=row.direction==="income";return <div className={styles.activityRow} key={row.id}><span className={`${styles.activityIcon} ${income?styles.incomeIcon:""}`}>{income?<ArrowDownLeft size={15}/>:<ArrowUpRight size={15}/>}</span><div><strong>{row.counterparty_name||row.description||(income?t(locale,"income"):t(locale,"expense"))}</strong><small>{new Date(`${row.occurred_on}T12:00:00`).toLocaleDateString(dateLocale,{day:"2-digit",month:"short"})} · {row.classification_status==="posted"?t(locale,"posted"):t(locale,"needsReview")}</small></div><b className={income?styles.incomeAmount:""}>{income?"+":"−"}{money(Number(row.amount_gross),row.currency,locale)}</b></div>})}</div>}</article>
- </div>;
+ const hour=now.getHours(),greeting=fr?(hour<18?"Bonjour":"Bonsoir"):(hour<12?"Good morning":hour<18?"Good afternoon":"Good evening"),name=workspace.company.trading_name||workspace.company.legal_name,chartMax=Math.max(1,...monthly.flatMap(m=>[m.revenue,m.expense])),recent=transactionsResult.data??[],margin=revenue?(profit/revenue)*100:0;
+ const vatDescription=vat>0?(fr?"TVA estimée à payer":"Estimated VAT payable"):vat<0?(fr?"TVA estimée à récupérer":"Estimated VAT recoverable"):(fr?"Position TVA équilibrée":"VAT position balanced");
+ return <V2Page>
+  <PageHeader
+   eyebrow={`${t(locale,"financialYear")} ${year} · ${bounds.start} → ${bounds.end}`}
+   title={<>{greeting}, {name}.</>}
+   description={fr?"Vos chiffres essentiels, vos tendances et vos prochaines actions dans une vue financière claire.":"Your essential numbers, financial picture and next actions in one clear workspace."}
+   actions={[
+    {label:fr?"Ajouter une transaction":"Add transaction",href:"/app/transactions",icon:Plus,variant:"primary"},
+    {label:t(locale,"viewReports"),href:"/app/reports",icon:ArrowRight,variant:"secondary"},
+   ]}
+  />
+
+  <MetricGrid>
+   <MetricCard label={t(locale,"revenue")} value={money(revenue,currency,locale)} description={fr?"Revenus comptabilisés sur l’exercice sélectionné.":"Posted revenue for the selected financial year."} icon={WalletCards} href="/app/reports"/>
+   <MetricCard label={t(locale,"expenses")} value={money(expenses,currency,locale)} description={fr?"Charges d’exploitation comptabilisées sur l’exercice.":"Operating expenses posted for the financial year."} icon={ReceiptText} href="/app/transactions?status=posted"/>
+   <MetricCard label={t(locale,"netResult")} value={money(profit,currency,locale)} description={profit>=0?(fr?"Résultat positif avant impôts estimés.":"Positive result before estimated taxes."):(fr?"Les charges dépassent actuellement les revenus.":"Expenses currently exceed revenue.")} icon={Sparkles} href="/app/reports"/>
+   <MetricCard label={t(locale,"vatPosition")} value={money(Math.abs(vat),currency,locale)} description={vatDescription} icon={Landmark} href="/app/vat"/>
+  </MetricGrid>
+
+  <div style={{height:"var(--z-space-7)"}}/>
+
+  <V2TwoColumn>
+   <Panel>
+    <SectionHeader eyebrow={t(locale,"overview")} title={t(locale,"revenueExpenses")} description={fr?"Évolution mensuelle des revenus et charges comptabilisés.":"Monthly movement of posted revenue and expenses."} action={<div className={styles.legend}><span><i className={styles.revenueDot}/>{t(locale,"revenue")}</span><span><i className={styles.expenseDot}/>{t(locale,"expenses")}</span></div>}/>
+    <div className={styles.chartSummary}><div><span>{t(locale,"estimatedTaxes")}</span><strong>{money(estimatedTaxes,currency,locale)}</strong></div><div><span>{t(locale,"margin")}</span><strong className={margin>=0?styles.positive:styles.negative}>{revenue?`${Math.round(margin)}%`:"—"}</strong></div></div>
+    <div className={styles.barChart}>{monthly.map((month,index)=><div className={styles.barGroup} key={monthKeys[index].key}><div className={styles.bars}><span className={styles.revenueBar} style={{height:`${Math.max(month.revenue?4:0,(month.revenue/chartMax)*100)}%`}}/><span className={styles.expenseBar} style={{height:`${Math.max(month.expense?4:0,(month.expense/chartMax)*100)}%`}}/></div><small>{monthKeys[index].label}</small></div>)}</div>
+   </Panel>
+
+   <article className={styles.aiCard}>
+    <div className={styles.aiTop}><div><p>Zuelen Copilot</p><h2>{t(locale,"yourBooksExplained")}</h2></div><span><Sparkles size={18}/></span></div>
+    <div className={styles.aiIllustration} aria-hidden="true"><div className={styles.aiTileOne}><span>€</span><b>{Math.max(0,Math.round(profit/1000))}k</b></div><div className={styles.aiOrb}><Sparkles size={23}/></div><div className={styles.aiTileTwo}><i/><i/><i/></div><div className={styles.aiGridDots}/></div>
+    <p>{fr?"Posez une question sur la TVA, la trésorerie, les impôts, les factures ou la clôture. Zuelen utilise le contexte de votre exercice sélectionné.":"Ask about VAT, cash, taxes, invoices or year-end. Zuelen uses the context of your selected financial year."}</p>
+    <Link href="/app/copilot" className={styles.aiAction}>{t(locale,"openCopilot")} <ArrowRight size={14}/></Link>
+   </article>
+  </V2TwoColumn>
+
+  <div style={{height:"var(--z-space-7)"}}/>
+
+  <Panel>
+   <SectionHeader eyebrow={t(locale,"recentActivity")} title={t(locale,"latestTransactions")} description={fr?"Les mouvements les plus récents de l’exercice sélectionné.":"The latest activity in the selected financial year."} action={<V2Button label={t(locale,"viewAll")} href="/app/transactions" icon={ArrowRight} variant="ghost"/>}/>
+   {recent.length===0?<div className={styles.empty}>{t(locale,"noTransactions")}</div>:<div className={styles.activityList}>{recent.map(row=>{const income=row.direction==="income";return <div className={styles.activityRow} key={row.id}><span className={`${styles.activityIcon} ${income?styles.incomeIcon:""}`}>{income?<ArrowDownLeft size={15}/>:<ArrowUpRight size={15}/>}</span><div><strong>{row.counterparty_name||row.description||(income?t(locale,"income"):t(locale,"expense"))}</strong><small>{new Date(`${row.occurred_on}T12:00:00`).toLocaleDateString(dateLocale,{day:"2-digit",month:"short"})} · {row.classification_status==="posted"?t(locale,"posted"):t(locale,"needsReview")}</small></div><b className={income?styles.incomeAmount:""}>{income?"+":"−"}{money(Number(row.amount_gross),row.currency,locale)}</b></div>})}</div>}
+  </Panel>
+ </V2Page>;
 }
