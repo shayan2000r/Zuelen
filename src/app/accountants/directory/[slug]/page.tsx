@@ -79,6 +79,7 @@ export default async function StandaloneAccountantProfilePage({ params }: { para
       approvalStatus={ownProfile.approval_status}
       plan={ownSubscription?.tier ?? null}
       hasBusinessWorkspace={Boolean(workspace.company)}
+      locale={locale}
     >{content}</ProfessionalFrame>;
   }
 
