@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { accountantPriceId } from "@/lib/accountants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripeGet, verifyStripeSignature } from "@/lib/stripe";
 
@@ -34,10 +35,10 @@ async function syncAccountantSubscription(subscription: JsonObject, metadata: Re
   const items = subscriptionItems(subscription);
   const firstItem = items[0] ?? {};
   const priceId = idOf(firstItem?.price);
-  const configuredBasic = process.env.STRIPE_ACCOUNTANT_BASIC_MONTHLY_PRICE_ID;
-  const configuredPremium = process.env.STRIPE_ACCOUNTANT_PREMIUM_MONTHLY_PRICE_ID;
-  // Price is the source of truth after a Customer Portal plan change. Metadata is
-  // retained as a fallback for the original Checkout-created subscription.
+  const configuredBasic = accountantPriceId("basic");
+  const configuredPremium = accountantPriceId("premium");
+  // Price is the source of truth after an upgrade or downgrade. Metadata remains
+  // a fallback for the original Checkout-created subscription.
   const tier = priceId === configuredPremium
     ? "premium"
     : priceId === configuredBasic
