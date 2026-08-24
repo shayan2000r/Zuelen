@@ -67,8 +67,8 @@ export default async function StandaloneAccountantsPage({ searchParams }: { sear
 
   const directory = <div className={styles.page}>
     <section className={styles.hero}>
-      <div><span className={styles.eyebrow}><BriefcaseBusiness size={14}/>{fr ? "Réseau professionnel Zuelen" : "Zuelen professional network"}</span><h1>{fr ? "Trouvez un comptable qui comprend votre entreprise." : "Find an accountant who understands your business."}</h1><p>{fr ? "Recherchez des professionnels indépendants selon leur expertise, leurs langues et les entreprises qu’ils accompagnent." : "Search independent professionals by expertise, languages and the businesses they support."}</p></div>
-      <div className={styles.heroProof}><BadgeCheck size={22}/><div><strong>{fr ? "Profils approuvés" : "Approved profiles"}</strong><span>{fr ? "Chaque profil est examiné par Zuelen avant publication." : "Every profile is reviewed by Zuelen before publication."}</span></div></div>
+      <div><span className={styles.eyebrow}><BriefcaseBusiness size={14}/>{fr ? "Réseau professionnel Zuelen" : "Zuelen professional network"}</span><h1>{fr ? "Trouvez le bon comptable pour votre entreprise." : "Find the right accountant for your business."}</h1><p>{fr ? "Comparez des professionnels vérifiés selon leur expertise, leurs langues et leur façon de travailler." : "Compare verified professionals by expertise, languages and how they work."}</p></div>
+      <div className={styles.heroProof}><BadgeCheck size={20}/><div><strong>{fr ? "Profils vérifiés" : "Verified profiles"}</strong><span>{fr ? "Chaque profil est vérifié par Zuelen avant publication." : "Every profile is reviewed by Zuelen before publication."}</span></div></div>
     </section>
 
     <form className={styles.filters} method="get">
@@ -80,18 +80,24 @@ export default async function StandaloneAccountantsPage({ searchParams }: { sear
       {(q || language || specialty || location) ? <Link href="/accountants/directory">{fr ? "Effacer" : "Clear"}</Link> : null}
     </form>
 
-    <div className={styles.resultsBar}><div><strong>{visible.length}</strong><span>{fr ? `professionnel${visible.length === 1 ? "" : "s"}` : `professional${visible.length === 1 ? "" : "s"}`}</span></div><p>{fr ? "Les profils Premium sont affichés en priorité, sans masquer les profils Basic pertinents." : "Premium profiles receive priority placement without hiding relevant Basic profiles."}</p></div>
+    <div className={styles.resultsBar}><div><strong>{visible.length}</strong><span>{fr ? `professionnel${visible.length === 1 ? "" : "s"}` : `professional${visible.length === 1 ? "" : "s"}`}</span></div><p>{fr ? "Les profils Premium bénéficient d’un placement prioritaire, sans masquer les profils Basic pertinents." : "Premium profiles receive priority placement without hiding relevant Basic profiles."}</p></div>
 
     {visible.length ? <section className={styles.grid}>{visible.map(profile => {
       const subscription = subscriptionMap.get(profile.id)!;
       const premium = subscription.tier === "premium";
       return <Link href={`/accountants/directory/${profile.slug}`} className={`${styles.card} ${premium ? styles.premium : ""}`} key={profile.id}>
-        {premium ? <span className={styles.featured}><Sparkles size={12}/>{fr?"Mis en avant":"Featured"}</span> : null}
-        <div className={styles.cardTop}>{profile.photo_url ? <img src={profile.photo_url} alt=""/> : <span className={styles.avatar}>{accountantInitials(profile.full_name)}</span>}<div><h2>{profile.full_name}</h2><p>{profile.professional_title}</p>{profile.firm_name ? <small>{profile.firm_name}</small> : null}</div></div>
-        <div className={styles.meta}>{profile.location ? <span><MapPin size={13}/>{profile.location}</span> : null}{profile.languages.length ? <span><Languages size={13}/>{profile.languages.slice(0,3).map(value=>accountantLanguageLabel(value,locale)).join(" · ")}</span> : null}{profile.accepting_new_clients ? <span className={styles.accepting}><UserRoundCheck size={13}/>{fr ? "Nouveaux clients" : "Accepting clients"}</span> : null}</div>
-        {profile.bio ? <p className={styles.bio}>{profile.bio}</p> : null}
-        <div className={styles.tags}>{profile.specialties.slice(0,4).map(item => <span key={item}>{accountantSpecialtyLabel(item, locale)}</span>)}</div>
-        <div className={styles.cardFoot}><span>{fr ? "Voir le profil" : "View profile"}</span><ArrowRight size={15}/></div>
+        <div className={styles.cardVisual}>
+          {premium ? <span className={styles.featured}><Sparkles size={11}/>{fr ? "Premium" : "Premium"}</span> : <span className={styles.verified}><BadgeCheck size={11}/>{fr ? "Vérifié" : "Verified"}</span>}
+          <div className={styles.photoWrap}>{profile.photo_url ? <img src={profile.photo_url} alt=""/> : <span className={styles.avatar}>{accountantInitials(profile.full_name)}</span>}</div>
+        </div>
+        <div className={styles.cardBody}>
+          <div className={styles.cardIdentity}><h2>{profile.full_name}</h2><p>{profile.professional_title}</p>{profile.firm_name ? <small>{profile.firm_name}</small> : null}</div>
+          {profile.accepting_new_clients ? <span className={styles.availability}><UserRoundCheck size={13}/>{fr ? "Accepte de nouveaux clients" : "Accepting new clients"}</span> : <span className={styles.availabilityMuted}>{fr ? "Disponibilité limitée" : "Limited availability"}</span>}
+          <div className={styles.meta}>{profile.location ? <span><MapPin size={13}/>{profile.location}</span> : null}{profile.languages.length ? <span><Languages size={13}/>{profile.languages.slice(0,3).map(value=>accountantLanguageLabel(value,locale)).join(" · ")}</span> : null}</div>
+          {profile.bio ? <p className={styles.bio}>{profile.bio}</p> : null}
+          <div className={styles.tags}>{profile.specialties.slice(0,3).map(item => <span key={item}>{accountantSpecialtyLabel(item, locale)}</span>)}{profile.specialties.length > 3 ? <span>+{profile.specialties.length - 3}</span> : null}</div>
+          <div className={styles.cardFoot}><span>{fr ? "Voir le profil" : "View profile"}</span><ArrowRight size={15}/></div>
+        </div>
       </Link>;
     })}</section> : <section className={styles.empty}><BriefcaseBusiness size={28}/><h2>{fr ? "Aucun profil ne correspond encore à ces filtres." : "No profiles match these filters yet."}</h2><p>{fr ? "Élargissez votre recherche ou revenez bientôt pendant que nous développons le réseau Zuelen." : "Broaden your search or check back soon as we grow the Zuelen professional network."}</p></section>}
 
@@ -108,12 +114,13 @@ export default async function StandaloneAccountantsPage({ searchParams }: { sear
       approvalStatus={ownProfile.approval_status}
       plan={ownSubscription?.tier ?? null}
       hasBusinessWorkspace={Boolean(workspace.company)}
+      locale={locale}
     >{directory}</ProfessionalFrame>;
   }
 
   return <main style={{minHeight:"100vh",background:"#f7f7f4"}}>
     <header style={{height:72,maxWidth:1280,margin:"0 auto",padding:"0 36px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid #e1e4dd"}}>
-      <Link href={workspace.company ? "/app" : "/professional"} style={{display:"flex",alignItems:"center",gap:9,textDecoration:"none",color:"#202622"}}><img src="/zuelen-icon.png" alt="" style={{width:29,height:29,objectFit:"contain"}}/><strong style={{fontSize:14,letterSpacing:"-.04em"}}>Zuelen</strong><span style={{fontSize:9,color:"#7a8179",borderLeft:"1px solid #d9ddd5",paddingLeft:9}}>Accountant directory</span></Link>
+      <Link href={workspace.company ? "/app" : "/professional"} style={{display:"flex",alignItems:"center",gap:9,textDecoration:"none",color:"#202622"}}><img src="/zuelen-icon.png" alt="" style={{width:29,height:29,objectFit:"contain"}}/><strong style={{fontSize:14,letterSpacing:"-.04em"}}>Zuelen</strong><span style={{fontSize:9,color:"#7a8179",borderLeft:"1px solid #d9ddd5",paddingLeft:9}}>{fr ? "Annuaire comptables" : "Accountant directory"}</span></Link>
       <div style={{display:"flex",alignItems:"center",gap:14}}>{workspace.company ? <Link href="/app" style={{fontSize:10,color:"#68716b",textDecoration:"none"}}>{fr?"Espace entreprise":"Business workspace"}</Link> : null}<Link href="/professional" style={{fontSize:10,fontWeight:800,color:"#214b30",textDecoration:"none"}}>{fr?"Espace professionnel":"Professional workspace"}</Link></div>
     </header>
     {directory}
