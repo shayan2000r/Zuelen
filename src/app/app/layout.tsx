@@ -13,6 +13,7 @@ import "./workflow-upgrades.css";
 import "./zuelen-gradient-theme.css";
 import "./qa-polish.css";
 import "./v2-rollout.css";
+import "./v2-all-pages.css";
 
 export const dynamic = "force-dynamic";
 
