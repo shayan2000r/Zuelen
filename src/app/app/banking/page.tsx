@@ -1,9 +1,10 @@
-import { ArrowRight, CheckCircle2, Eye, Search } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, CheckCircle2, CircleHelp, Eye, FileUp, Landmark, Search, WalletCards } from "lucide-react";
 import { redirect } from "next/navigation";
 import { BankImporter } from "@/components/bank-importer";
 import { BankMovementTable } from "@/components/bank-movement-table";
 import { BankImportHistory } from "@/components/bank-import-history";
+import { DataEmptyState, DataPanel, DataPanelHeader, DataSummary, DataToolbar } from "@/components/zuelen-data-ui-v2";
+import { PageHeader, Panel, V2Button, V2Page } from "@/components/zuelen-ui-v2";
 import styles from "@/components/banking.module.css";
 import { fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { normalizeLocale } from "@/lib/i18n";
@@ -27,15 +28,42 @@ export default async function BankingPage({searchParams}:{searchParams:SearchPar
  const visibleRows=rows.filter(row=>{const statusMatch=status==="all"||(status==="matched"?row.match_status==="matched":status==="review"?row.match_status!=="matched":true);if(!statusMatch)return false;if(!q)return true;const account=accountMap.get(row.bank_account_id);return[row.counterparty_name,row.reference,row.currency,row.match_status,account?.name,account?.iban].filter(Boolean).join(" ").toLowerCase().includes(q)});
  const batchIds=rawBatches.map(b=>b.id),batchRows=batchIds.length?(await supabase.from("bank_transactions").select("id,import_batch_id,booking_date,amount,currency,match_status").in("import_batch_id",batchIds)).data??[]:[],signatureGroups=new Map<string,string[]>(),batchMeta=new Map<string,{signature:string;activeCount:number}>();
  for(const batch of rawBatches){const items=batchRows.filter(r=>r.import_batch_id===batch.id),signature=items.map(r=>`${r.booking_date}|${Number(r.amount).toFixed(2)}|${r.currency}`).sort().join(";");batchMeta.set(batch.id,{signature,activeCount:items.filter(r=>r.match_status!=="ignored").length});if(signature){const list=signatureGroups.get(signature)??[];list.push(batch.id);signatureGroups.set(signature,list)}}
- const batches=rawBatches.map(b=>{const meta=batchMeta.get(b.id);return{...b,activeCount:meta?.activeCount??0,isPotentialDuplicate:Boolean(meta?.signature&&(signatureGroups.get(meta.signature)?.length??0)>1)}});
- return <div className={styles.page}>
-  <div className={styles.intro}><div><p>{fr?`Trésorerie → comptabilité · ${year}`:`Cash → books · ${year}`}</p><h1>{fr?"Banque":"Banking"}</h1><span>{editable?(fr?`Importez les relevés ${year}, rapprochez les mouvements et maintenez l'exercice sélectionné aligné avec le grand livre.`:`Import ${year} statements, reconcile movements and keep the selected financial year aligned with the ledger.`):(fr?`Accès en lecture seule aux relevés, mouvements et historique de rapprochement ${year}.`:`Read-only access to ${year} bank statements, movements and reconciliation history.`)}</span></div><div className={styles.health}>{editable?<CheckCircle2 size={14}/>:<Eye size={14}/>} {editable?(fr?`${coverage}% rapprochés${unmatched?` · ${unmatched} à vérifier`:""}`:`${coverage}% reconciled${unmatched?` · ${unmatched} to review`:""}`):(fr?"Lecteur · lecture seule":"Viewer · read only")}</div></div>
-  <section className={styles.layout}>{editable?<BankImporter defaultCurrency={currency}/>:<article className={styles.importHistory}><div><p>{fr?"Imports de relevés bancaires":"Bank statement imports"}</p><h2>{fr?"Accès en lecture seule":"Read-only access"}</h2></div><span>{fr?"Seuls les propriétaires, administrateurs, comptables et aides-comptables peuvent importer ou supprimer des justificatifs bancaires.":"Only Owners, Admins, Accountants and Bookkeepers can import or remove bank evidence."}</span></article>}<div className={styles.right}>
-   <article className={styles.panel}><div className={styles.panelHead}><div><p>{fr?`File de rapprochement · ${year}`:`Reconciliation queue · ${year}`}</p><h2>{fr?"Mouvements bancaires":"Bank movements"}</h2></div><Link href="/app/transactions" className={styles.reviewLink}>{fr?"Vérifier la comptabilité":"Review accounting"} <ArrowRight size={13}/></Link></div>
-    <form className="compta-list-tools" method="get"><label><Search size={15}/><input name="q" defaultValue={params.q??""} placeholder={fr?`Rechercher dans les mouvements ${year}`:`Search ${year} bank movements`}/></label><select name="status" defaultValue={status}><option value="all">{fr?"Tous les statuts":"All statuses"}</option><option value="review">{fr?"À vérifier":"Needs review"}</option><option value="matched">{fr?"Rapprochés":"Reconciled"}</option></select><button type="submit">{fr?"Appliquer":"Apply"}</button></form>
-    {visibleRows.length===0?<div className={styles.empty}><h3>{rows.length?(fr?"Aucun mouvement bancaire correspondant.":"No matching bank movements."):(fr?`Aucune activité bancaire en ${year}.`:`No bank activity in ${year} yet.`)}</h3><p>{rows.length?(fr?"Essayez une autre recherche ou un autre filtre de rapprochement.":"Try a different search or reconciliation filter."):editable?(fr?`Importez votre relevé bancaire ${year}. Compta créera des transactions vérifiables à partir des dates du relevé.`:`Import your ${year} bank statement. Compta will create reviewable transactions dated from the statement.`):(fr?"Aucune activité de relevé n'a été importée pour cet exercice.":"No statement activity has been imported for this year.")}</p></div>:<BankMovementTable rows={visibleRows} accounts={accounts.map(a=>({id:a.id,name:a.name}))} readOnly={!editable}/>} 
-   </article>
-   <BankImportHistory batches={batches} readOnly={!editable}/>
-  </div></section>
- </div>;
+ const batches=rawBatches.map(b=>{const meta=batchMeta.get(b.id);return{...b,activeCount:meta?.activeCount??0,isPotentialDuplicate:Boolean(meta?.signature&&(signatureGroups.get(meta.signature)?.length??0)>1)}}),noResults=rows.length>0&&visibleRows.length===0;
+
+ return <V2Page>
+  <PageHeader
+   eyebrow={fr?`Trésorerie → comptabilité · ${year}`:`Cash → books · ${year}`}
+   title={fr?"Banque":"Banking"}
+   description={editable?(fr?`Importez les relevés ${year}, rapprochez les mouvements et gardez l'exercice sélectionné aligné avec le grand livre.`:`Import ${year} statements, reconcile movements and keep the selected financial year aligned with the ledger.`):(fr?`Accès en lecture seule aux relevés, mouvements et historique de rapprochement ${year}.`:`Read-only access to ${year} bank statements, movements and reconciliation history.`)}
+   actions={editable?[{label:fr?"Importer un relevé":"Import statement",href:"#bank-import",icon:FileUp,variant:"primary"},{label:fr?"Voir les transactions":"View transactions",href:"/app/transactions",icon:ArrowRight,variant:"secondary"}]:[{label:fr?"Voir les transactions":"View transactions",href:"/app/transactions",icon:ArrowRight,variant:"secondary"}]}
+  />
+
+  <DataSummary items={[
+   {label:fr?"Comptes bancaires":"Bank accounts",value:accounts.length,description:fr?"Comptes connectés ou suivis":"Accounts currently tracked",icon:Landmark},
+   {label:fr?"Mouvements":"Bank movements",value:rows.length,description:fr?`Exercice ${year}`:`Financial year ${year}`,icon:WalletCards},
+   {label:fr?"À rapprocher":"Needs reconciliation",value:unmatched,description:unmatched?(fr?"Action requise":"Action required"):(fr?"Tout est rapproché":"Everything reconciled"),icon:CircleHelp,tone:unmatched?"warning":"success"},
+   {label:fr?"Couverture":"Reconciliation coverage",value:`${coverage}%`,description:fr?`${matched} mouvement${matched===1?"":"s"} rapproché${matched===1?"":"s"}`:`${matched} movement${matched===1?"":"s"} reconciled`,icon:CheckCircle2,tone:coverage===100?"success":"info"}
+  ]}/>
+
+  <div style={{height:"var(--z-space-6)"}}/>
+  <section className={styles.layout}>
+   <div id="bank-import">
+    {editable?<BankImporter defaultCurrency={currency}/>:<Panel><div className={styles.importHistory}><div><p>{fr?"Imports de relevés bancaires":"Bank statement imports"}</p><h2>{fr?"Accès en lecture seule":"Read-only access"}</h2></div><span>{fr?"Seuls les propriétaires, administrateurs, comptables et aides-comptables peuvent importer ou supprimer des justificatifs bancaires.":"Only Owners, Admins, Accountants and Bookkeepers can import or remove bank evidence."}</span></div></Panel>}
+   </div>
+   <div className={styles.right}>
+    <DataPanel>
+     <DataPanelHeader eyebrow={fr?`File de rapprochement · ${year}`:`Reconciliation queue · ${year}`} title={fr?"Mouvements bancaires":"Bank movements"} meta={fr?`${visibleRows.length} affichés`:`${visibleRows.length} shown`}/>
+     <DataToolbar>
+      <form className="compta-list-tools" method="get">
+       <label><Search size={15}/><input name="q" defaultValue={params.q??""} placeholder={fr?`Rechercher dans les mouvements ${year}`:`Search ${year} bank movements`}/></label>
+       <select name="status" defaultValue={status}><option value="all">{fr?"Tous les statuts":"All statuses"}</option><option value="review">{fr?"À vérifier":"Needs review"}</option><option value="matched">{fr?"Rapprochés":"Reconciled"}</option></select>
+       <button type="submit">{fr?"Appliquer":"Apply"}</button>
+      </form>
+     </DataToolbar>
+     {visibleRows.length===0?<DataEmptyState icon={noResults?Search:Landmark} title={noResults?(fr?"Aucun mouvement correspondant":"No matching bank movements"):(fr?`Aucune activité bancaire en ${year}`:`No bank activity in ${year} yet`)} description={noResults?(fr?"Essayez une autre recherche ou un autre filtre de rapprochement.":"Try a different search or reconciliation filter."):editable?(fr?`Importez votre relevé bancaire ${year}. Zuelen créera des transactions vérifiables à partir des dates du relevé.`:`Import your ${year} bank statement. Zuelen will create reviewable transactions dated from the statement.`):(fr?"Aucune activité de relevé n'a été importée pour cet exercice.":"No statement activity has been imported for this year.")} action={noResults?<V2Button label={fr?"Effacer les filtres":"Clear filters"} href="/app/banking" variant="secondary"/>:undefined}/>:<BankMovementTable rows={visibleRows} accounts={accounts.map(a=>({id:a.id,name:a.name}))} readOnly={!editable}/>} 
+    </DataPanel>
+    <BankImportHistory batches={batches} readOnly={!editable}/>
+   </div>
+  </section>
+ </V2Page>;
 }
