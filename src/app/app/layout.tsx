@@ -12,6 +12,9 @@ import "./dark-compat.css";
 import "./workflow-upgrades.css";
 import "./zuelen-gradient-theme.css";
 import "./qa-polish.css";
+import "./v2-rollout.css";
+import "./v2-all-pages.css";
+import "./v2-final-qa.css";
 
 export const dynamic = "force-dynamic";
 

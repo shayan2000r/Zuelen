@@ -1,0 +1,108 @@
+/* Zuelen UI v2 — final protected-app convergence layer.
+   This intentionally styles structural patterns shared by Banking, Accounting,
+   Invoices, Documents, Reports, Taxes, VAT, Year-end/eCDF, Compliance,
+   Copilot and Settings without changing any business logic. */
+
+.workspace{font-family:var(--z-font-sans)}
+.workspace :where(h1,h2,h3,h4,h5,h6){font-family:var(--z-font-sans);text-wrap:balance}
+.workspace :where(p,small){line-height:1.55}
+
+/* Page headers / introductions */
+.workspace :where([class*="intro"],[class*="pageHead"],[class*="headerRow"],[class*="heroHead"]){gap:var(--z-space-5)}
+.workspace :where([class*="intro"],[class*="pageHead"],[class*="headerRow"]) h1{font-size:clamp(28px,3vw,40px)!important;line-height:1.05!important;letter-spacing:-.045em!important;font-weight:var(--z-weight-semibold)!important;color:var(--z-text)!important}
+.workspace :where([class*="intro"],[class*="pageHead"],[class*="headerRow"]) h2,.workspace :where([class*="intro"],[class*="pageHead"])>div>p:last-child{color:var(--z-text-secondary)!important;font-size:var(--z-text-sm)!important;line-height:1.6!important;font-weight:var(--z-weight-regular)!important}
+.workspace :where([class*="eyebrow"],[class*="kicker"],[class*="overline"],[class*="intro"]>div>p:first-child,[class*="panelHead"] p,[class*="sectionHead"]>div>span){color:var(--z-text-tertiary)!important;font-size:var(--z-text-xs)!important;font-weight:var(--z-weight-semibold)!important;letter-spacing:.075em!important;text-transform:uppercase}
+
+/* Standard cards, panels and list containers */
+.workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"],[class*="library"],[class*="summary"],[class*="widget"],[class*="Widget"],[class*="box"],[class*="Box"]){border-color:var(--z-border)!important}
+.workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"],[class*="library"],[class*="widget"],[class*="Widget"]){background:var(--z-surface-1)!important;box-shadow:var(--z-shadow-xs)!important}
+.workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"],[class*="library"],[class*="widget"],[class*="Widget"]):not([class*="hero"]):not([class*="Hero"]){border-radius:var(--z-radius-lg)!important}
+.workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"]):hover{border-color:var(--z-border-hover)}
+
+/* Section headers */
+.workspace :where([class*="panelHead"],[class*="sectionHead"],[class*="cardHead"],[class*="libraryHead"]){border-color:var(--z-border)!important}
+.workspace :where([class*="panelHead"],[class*="sectionHead"],[class*="cardHead"],[class*="libraryHead"]) h2{font-size:var(--z-text-lg)!important;letter-spacing:-.025em!important;color:var(--z-text)!important}
+.workspace :where([class*="panelHead"],[class*="sectionHead"],[class*="libraryHead"])>span{color:var(--z-text-tertiary)!important;font-size:var(--z-text-xs)!important}
+
+/* Metrics / summary strips */
+.workspace :where([class*="metrics"],[class*="summaryGrid"],[class*="metricGrid"]){gap:var(--z-grid-gap)!important}
+.workspace :where([class*="metric"],[class*="Metric"]){background:var(--z-surface-1)!important;border-color:var(--z-border)!important;box-shadow:var(--z-shadow-xs)!important;border-radius:var(--z-radius-lg)!important}
+.workspace :where([class*="metric"],[class*="Metric"]) strong{font-variant-numeric:tabular-nums;letter-spacing:-.035em}
+.workspace :where([class*="metric"],[class*="Metric"]) :where(span,small){color:var(--z-text-secondary)!important}
+
+/* Search, filter and tab toolbars */
+.workspace :where([class*="tools"],[class*="toolbar"],[class*="filters"],[class*="filterBar"],[class*="controls"]){border-color:var(--z-border)!important;background:var(--z-surface-1)!important;box-shadow:none!important}
+.workspace :where([class*="tools"],[class*="toolbar"],[class*="filters"],[class*="filterBar"]) label:has(input){background:var(--z-surface-1)!important;border-color:var(--z-border)!important;border-radius:var(--z-radius-md)!important;color:var(--z-text-tertiary)!important}
+.workspace :where([class*="tabs"],[class*="Tabs"]){border-color:var(--z-border)!important}
+.workspace :where([class*="tabs"],[class*="Tabs"]) :where(a,button){border-radius:var(--z-radius-sm)!important;color:var(--z-text-secondary)!important}
+.workspace :where([class*="tabs"],[class*="Tabs"]) :where(a,button):hover{background:var(--z-surface-2)!important;color:var(--z-text)!important}
+.workspace :where([class*="activeTab"],[class*="tabActive"]){background:var(--z-brand-soft)!important;color:var(--z-brand)!important;border-color:color-mix(in srgb,var(--z-brand) 28%,var(--z-border))!important}
+
+/* Tables and dense data */
+.workspace :where([class*="tableScroll"],[class*="tableWrap"],[class*="tableFrame"]){overflow:auto;scrollbar-width:thin;scrollbar-color:var(--z-border-strong) transparent}
+.workspace table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.workspace table thead{background:var(--z-surface-1)}
+.workspace table th{padding:11px 13px!important;color:var(--z-text-tertiary)!important;font-size:10px!important;font-weight:var(--z-weight-semibold)!important;text-transform:uppercase;letter-spacing:.065em;border-bottom:1px solid var(--z-border)!important;white-space:nowrap}
+.workspace table td{padding:13px!important;color:var(--z-text)!important;font-size:var(--z-text-xs)!important;border-bottom:1px solid var(--z-border)!important;vertical-align:middle}
+.workspace table tbody tr{transition:background var(--z-transition-fast)}
+.workspace table tbody tr:hover{background:var(--z-surface-2)!important}
+.workspace table tbody tr:last-child td{border-bottom-color:transparent!important}
+.workspace td:has([class*="amount"]),.workspace td[class*="amount"]{font-variant-numeric:tabular-nums}
+
+/* Documents / invoices / banking list rows */
+.workspace :where([class*="docRow"],[class*="invoiceRow"],[class*="bankRow"],[class*="listRow"],[class*="activityRow"]){border-color:var(--z-border)!important;background:var(--z-surface-1)!important;transition:background var(--z-transition-fast),border-color var(--z-transition-fast)}
+.workspace :where([class*="docRow"],[class*="invoiceRow"],[class*="bankRow"],[class*="listRow"],[class*="activityRow"]):hover{background:var(--z-surface-2)!important;border-color:var(--z-border-hover)!important}
+.workspace :where([class*="folderCard"],[class*="typeCard"],[class*="optionCard"]){background:var(--z-surface-1)!important;border-color:var(--z-border)!important;border-radius:var(--z-radius-lg)!important;box-shadow:var(--z-shadow-xs)!important}
+.workspace :where([class*="folderActive"],[class*="selectedCard"],[class*="optionSelected"]){background:var(--z-brand-soft)!important;border-color:color-mix(in srgb,var(--z-brand) 38%,var(--z-border))!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--z-brand) 8%,transparent)!important}
+.workspace :where([class*="docIcon"],[class*="folderIcon"],[class*="rowIcon"],[class*="itemIcon"]){background:var(--z-brand-soft)!important;color:var(--z-brand)!important;border-color:color-mix(in srgb,var(--z-brand) 20%,var(--z-border))!important}
+
+/* Forms and settings */
+.workspace form :where(label>span,legend){color:var(--z-text-secondary)!important;font-size:var(--z-text-xs)!important;font-weight:var(--z-weight-semibold)!important}
+.workspace fieldset{border-color:var(--z-border)!important}
+.workspace :where([class*="formGrid"],[class*="fields"],[class*="fieldGrid"]){gap:var(--z-space-4)!important}
+.workspace :where([class*="toggle"],[class*="Toggle"]):not(input){border-color:var(--z-border)!important}
+.workspace input[type="checkbox"],.workspace input[type="radio"]{accent-color:var(--z-brand)}
+.workspace input[type="file"]{padding:8px!important}
+.workspace input[type="file"]::file-selector-button{height:30px;border:1px solid var(--z-border);border-radius:var(--z-radius-xs);background:var(--z-surface-2);color:var(--z-text);padding:0 10px;margin-right:10px;font:inherit;font-size:10px;font-weight:var(--z-weight-semibold);cursor:pointer}
+
+/* Buttons — preserve semantic danger and secondary variants */
+.workspace :where(button,a)[class*="secondary"],.workspace :where(button,a)[class*="outline"]{background:var(--z-surface-1)!important;color:var(--z-text)!important;border-color:var(--z-border)!important;box-shadow:none!important}
+.workspace :where(button,a)[class*="secondary"]:hover,.workspace :where(button,a)[class*="outline"]:hover{background:var(--z-surface-2)!important;border-color:var(--z-border-hover)!important}
+.workspace :where(button,a)[class*="danger"],.workspace :where(button,a)[class*="delete"],.workspace :where(button,a)[class*="remove"]{background:var(--z-danger-soft)!important;color:var(--z-danger)!important;border-color:color-mix(in srgb,var(--z-danger) 24%,var(--z-border))!important}
+
+/* Status, alerts, empty and processing states */
+.workspace :where([class*="notice"],[class*="Notice"],[class*="banner"],[class*="Banner"],[class*="alert"],[class*="Alert"]){border-radius:var(--z-radius-md)!important;border-color:var(--z-border)!important;box-shadow:none!important}
+.workspace :where([class*="empty"],[class*="Empty"]){border-color:var(--z-border)!important;color:var(--z-text-secondary)!important}
+.workspace :where([class*="empty"],[class*="Empty"]) h3,.workspace :where([class*="empty"],[class*="Empty"]) h2{color:var(--z-text)!important}
+.workspace :where([class*="success"],[class*="Success"]):not(svg){--state-color:var(--z-success)}
+.workspace :where([class*="warning"],[class*="Warning"],[class*="pending"],[class*="Pending"]):not(svg){--state-color:var(--z-warning)}
+.workspace :where([class*="error"],[class*="Error"],[class*="danger"],[class*="Danger"]):not(svg){--state-color:var(--z-danger)}
+
+/* Popovers, dialogs, menus, drawers */
+.workspace :where([class*="menu"],[class*="Menu"],[class*="popover"],[class*="Popover"],[class*="dialog"],[class*="Dialog"],[class*="modal"],[class*="Modal"]){border-color:var(--z-border)!important;background:var(--z-surface-elevated)!important;box-shadow:var(--z-shadow-lg)!important}
+.workspace :where([class*="overlay"],[class*="Overlay"]){backdrop-filter:blur(8px)}
+.workspace :where([class*="menu"],[class*="Menu"],[class*="popover"],[class*="Popover"]) :where(a,button):hover{background:var(--z-brand-soft)!important}
+
+/* Copilot — one of the deliberately expressive product surfaces */
+.workspace :where([class*="copilot"],[class*="Copilot"],[class*="assistant"],[class*="Assistant"])[class*="hero"],
+.workspace :where([class*="copilot"],[class*="Copilot"],[class*="assistant"],[class*="Assistant"])[class*="panel"]{background:radial-gradient(circle at 85% 10%,color-mix(in srgb,var(--z-brand) 18%,transparent),transparent 30%),var(--z-surface-1)!important}
+.workspace :where([class*="prompt"],[class*="Prompt"],[class*="composer"],[class*="Composer"]){border-color:var(--z-border)!important;background:var(--z-surface-1)!important;box-shadow:var(--z-shadow-sm)!important}
+.workspace :where([class*="suggestion"],[class*="Suggestion"],[class*="chip"],[class*="Chip"]){border-color:var(--z-border)!important}
+
+/* Premium / upgrade surfaces remain distinct but coherent. */
+.workspace :where([class*="upgrade"],[class*="Upgrade"],[class*="premiumCard"],[class*="PremiumCard"]){background:var(--z-gradient-premium)!important;color:#fff!important;border-color:transparent!important;box-shadow:var(--z-shadow-md)!important}
+.workspace :where([class*="upgrade"],[class*="Upgrade"],[class*="premiumCard"],[class*="PremiumCard"]) :where(h2,h3,strong){color:#fff!important}
+.workspace :where([class*="upgrade"],[class*="Upgrade"],[class*="premiumCard"],[class*="PremiumCard"]) :where(p,small){color:#d3ded6!important}
+
+/* Responsive convergence */
+@media(max-width:900px){
+  .workspace :where([class*="grid"],[class*="Grid"]){column-gap:var(--z-grid-gap)}
+  .workspace :where([class*="tools"],[class*="toolbar"],[class*="filters"],[class*="filterBar"]){max-width:100%}
+}
+@media(max-width:640px){
+  .workspace :where([class*="intro"],[class*="pageHead"],[class*="headerRow"]){align-items:flex-start!important;flex-direction:column!important}
+  .workspace :where([class*="intro"],[class*="pageHead"],[class*="headerRow"]) h1{font-size:30px!important}
+  .workspace :where([class*="tools"],[class*="toolbar"],[class*="filters"],[class*="filterBar"]){gap:8px!important}
+  .workspace table th,.workspace table td{padding-left:10px!important;padding-right:10px!important}
+  .workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"]){border-radius:var(--z-radius-md)!important}
+}

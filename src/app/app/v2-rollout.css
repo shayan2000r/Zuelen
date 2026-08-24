@@ -1,0 +1,110 @@
+/* Universal compatibility and shell layer for Zuelen UI v2.
+   Imported last inside the protected Business app so legacy page-specific CSS
+   resolves to the same tokens, spacing and interaction grammar. */
+
+.app-shell{
+  --page:var(--z-bg)!important;
+  --card:var(--z-surface-1)!important;
+  --card-strong:var(--z-surface-1)!important;
+  --accent:var(--z-brand)!important;
+  --accent-ink:var(--z-brand-on)!important;
+  --text:var(--z-text)!important;
+  --muted:var(--z-text-secondary)!important;
+  --border:var(--z-border)!important;
+  --border-strong:var(--z-border-strong)!important;
+  --button:var(--z-brand)!important;
+  --button-text:var(--z-brand-on)!important;
+  --danger:var(--z-danger)!important;
+  --success:var(--z-success)!important;
+  --shadow-sm:var(--z-shadow-xs)!important;
+  --shadow-md:var(--z-shadow-md)!important;
+  --glass:color-mix(in srgb,var(--z-surface-elevated) 92%,transparent)!important;
+  background:var(--z-bg)!important;
+  color:var(--z-text)!important;
+  grid-template-columns:252px minmax(0,1fr)!important;
+}
+
+.workspace{grid-column:2!important;min-width:0;min-height:100vh;background:
+  radial-gradient(circle at 92% 2%,color-mix(in srgb,var(--z-brand) 3.5%,transparent),transparent 22%),
+  var(--z-bg)!important;color:var(--z-text)!important}
+.workspace :where(h1,h2,h3,h4,h5,h6,strong,b){color:var(--z-text)}
+.workspace :where(p,small,label,th,.muted){color:var(--z-text-secondary)}
+
+/* Shell */
+.sidebar{
+  inset:12px auto 12px 12px!important;
+  width:228px!important;
+  height:auto!important;
+  padding:12px!important;
+  border:1px solid rgba(255,255,255,.07)!important;
+  border-radius:var(--z-radius-xl)!important;
+  background:#151b16!important;
+  color:#f2f5f1!important;
+  box-shadow:0 18px 50px rgba(18,31,21,.16)!important;
+  backdrop-filter:none!important;
+}
+.brand-row{height:42px!important;margin-bottom:12px!important;padding:0 6px!important}
+.brand-word{color:#f2f5f1!important;font-size:17px!important;font-weight:650!important}
+.brand-mark{width:31px!important;height:31px!important;border-radius:9px!important;background:transparent!important;color:inherit!important;box-shadow:none!important;overflow:hidden!important}
+.brand-mark img{display:block;width:100%;height:100%;object-fit:contain}
+.company-switcher{margin-bottom:14px!important;padding:9px!important;border:1px solid rgba(255,255,255,.08)!important;border-radius:var(--z-radius-md)!important;background:rgba(255,255,255,.035)!important;color:#f2f5f1!important}
+.company-switcher:hover{background:rgba(255,255,255,.055)!important;border-color:rgba(255,255,255,.12)!important}
+.company-avatar{background:rgba(121,184,139,.13)!important;color:#a7d6b3!important;border-radius:9px!important}
+.company-copy strong{color:#f4f7f3!important}.company-copy small{color:#8f9a90!important}
+.nav-list{gap:3px!important;overflow:auto!important;scrollbar-width:none}.nav-list::-webkit-scrollbar{display:none}
+.nav-item{height:39px!important;padding:0 10px!important;border-radius:10px!important;color:#9fa9a0!important;font-size:11px!important;font-weight:560!important;transition:background var(--z-transition-fast),color var(--z-transition-fast)!important}
+.nav-item:hover{background:rgba(255,255,255,.055)!important;color:#f5f7f4!important;transform:none!important}
+.nav-active{background:rgba(121,184,139,.14)!important;color:#f5f7f4!important;box-shadow:inset 0 0 0 1px rgba(121,184,139,.12)!important}
+.nav-active svg{color:#8cc69b!important}.nav-item em{background:rgba(121,184,139,.13)!important;color:#9dd0aa!important;border:0!important}
+.user-row{color:#f2f5f1!important}.user-avatar{background:rgba(121,184,139,.14)!important;color:#a7d6b3!important}
+.sidebar :where(button,a):focus-visible{outline:0;box-shadow:0 0 0 3px rgba(121,184,139,.16)!important}
+
+.topbar{position:sticky!important;top:0!important;right:auto!important;left:auto!important;width:100%!important;height:64px!important;margin:0!important;padding:0 28px!important;border:0!important;border-bottom:1px solid var(--z-border)!important;border-radius:0!important;background:color-mix(in srgb,var(--z-bg) 88%,transparent)!important;box-shadow:none!important;backdrop-filter:blur(18px) saturate(1.15)!important;-webkit-backdrop-filter:blur(18px) saturate(1.15)!important;z-index:70!important}
+.topbar-left{display:flex!important}.topbar-actions{gap:6px!important;margin-left:auto!important}
+.topbar .search-btn,.topbar .icon-btn{width:38px!important;height:38px!important;border:1px solid transparent!important;border-radius:var(--z-radius-sm)!important;background:transparent!important;color:var(--z-text-secondary)!important;box-shadow:none!important}
+.topbar .search-btn:hover,.topbar .icon-btn:hover{background:var(--z-surface-2)!important;border-color:var(--z-border)!important;color:var(--z-text)!important}
+.topbar .search-btn span,.topbar .search-btn kbd{display:none!important}
+.notification-dot{background:var(--z-danger)!important;box-shadow:0 0 0 2px var(--z-bg)!important}
+
+/* Page rhythm. Existing pages keep their own layout logic but inherit one canvas. */
+.workspace>div[class*="page"],.workspace>div[class*="liveWrap"],.workspace>div[class*="invoicePage"],.workspace>div[class*="invoiceDetailWrap"],.workspace>div[class*="shell"]{width:100%;max-width:var(--z-content-max)!important;margin:0 auto!important;padding:var(--z-page-pad-y) var(--z-page-pad-x) 48px!important;box-sizing:border-box}
+
+/* Surfaces */
+.workspace :where(article,section[class*="card"],div[class*="card"],section[class*="panel"],div[class*="panel"],details[class*="card"],details[class*="Card"]){border-radius:var(--z-radius-lg)}
+.workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"],[class*="metric"],[class*="Metric"],[class*="section"],[class*="Section"]){border-color:var(--z-border)!important}
+.workspace :where([class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"]){background:var(--z-surface-1)!important;box-shadow:var(--z-shadow-xs)}
+.workspace table{color:var(--z-text)}.workspace table th{color:var(--z-text-tertiary)!important}.workspace table td{border-color:var(--z-border)!important}
+
+/* Controls */
+.workspace :where(input,select,textarea){background:var(--z-surface-1)!important;color:var(--z-text)!important;border-color:var(--z-border-strong)!important;border-radius:var(--z-radius-md)!important;transition:border-color var(--z-transition-fast),box-shadow var(--z-transition-fast),background var(--z-transition-fast)!important}
+.workspace :where(input,select,textarea):hover:not(:disabled){border-color:var(--z-border-hover)!important}
+.workspace :where(input,select,textarea):focus{outline:0!important;border-color:var(--z-brand)!important;box-shadow:var(--z-focus-ring)!important}
+.workspace :where(input,textarea)::placeholder{color:var(--z-text-tertiary)!important;opacity:.82}
+.workspace :where(input,select,textarea):disabled{background:var(--z-surface-2)!important;color:var(--z-text-disabled)!important;cursor:not-allowed}
+
+.workspace button,.workspace a[class*="Button"],.workspace a[class*="button"],.workspace a[class*="Action"],.workspace a[class*="action"]{font-family:var(--z-font-sans);transition:background var(--z-transition-fast),border-color var(--z-transition-fast),color var(--z-transition-fast),box-shadow var(--z-transition-fast),transform var(--z-transition-fast)}
+.workspace button:focus-visible,.workspace a:focus-visible{outline:0;box-shadow:var(--z-focus-ring)}
+.workspace button[type="submit"],.workspace [class*="primary"],.workspace [class*="submitButton"],.workspace [class*="newInvoiceButton"],.workspace [class*="uploadButton"]{background:var(--z-brand)!important;color:var(--z-brand-on)!important;border-color:var(--z-brand)!important}
+.workspace button[type="submit"]:hover,.workspace [class*="primary"]:hover,.workspace [class*="submitButton"]:hover,.workspace [class*="newInvoiceButton"]:hover,.workspace [class*="uploadButton"]:hover{background:var(--z-brand-hover)!important;border-color:var(--z-brand-hover)!important}
+
+/* Shared toolbars */
+.compta-list-tools{padding:12px 16px!important;gap:8px!important;background:var(--z-surface-1)!important;border-color:var(--z-border)!important}.compta-list-tools label{height:40px!important;border-radius:var(--z-radius-md)!important;background:var(--z-surface-1)!important;border-color:var(--z-border)!important}.compta-list-tools select{height:40px!important;border-radius:var(--z-radius-md)!important;background:var(--z-surface-1)!important;color:var(--z-text)!important;border-color:var(--z-border)!important}.compta-list-tools button{height:40px!important;border-radius:var(--z-radius-sm)!important;background:var(--z-brand)!important;color:var(--z-brand-on)!important;border:0!important}
+
+/* Portal actions / drawers */
+.compta-fab{position:fixed!important;right:28px!important;bottom:28px!important;z-index:85!important;height:48px!important;padding:0 17px!important;border:1px solid var(--z-brand)!important;border-radius:var(--z-radius-md)!important;background:var(--z-brand)!important;color:var(--z-brand-on)!important;box-shadow:var(--z-shadow-md)!important}.compta-fab:hover{background:var(--z-brand-hover)!important;border-color:var(--z-brand-hover)!important;color:var(--z-brand-on)!important}.compta-fab svg{color:currentColor!important}.compta-drawer-overlay{background:rgba(8,12,9,.42)!important;backdrop-filter:blur(7px)!important}.compta-drawer-close{border-radius:var(--z-radius-sm)!important;background:var(--z-surface-1)!important;color:var(--z-text)!important;border-color:var(--z-border)!important}.compta-drawer-card{border-radius:var(--z-radius-xl)!important;background:var(--z-surface-1)!important;color:var(--z-text)!important;box-shadow:var(--z-shadow-lg)!important}
+
+/* Search and account popovers are deliberately neutral; green marks focus/selection. */
+.workspace [class*="searchOverlay"],.workspace~[class*="searchOverlay"]{background:rgba(8,12,9,.38)!important;backdrop-filter:blur(8px)!important}
+.workspace [class*="searchDialog"],.workspace~[class*="searchDialog"]{background:var(--z-surface-elevated)!important;border-color:var(--z-border)!important;border-radius:var(--z-radius-xl)!important;box-shadow:var(--z-shadow-lg)!important}
+
+/* Semantic state helpers */
+.workspace :where([class*="Pill"],[class*="pill"],[class*="Badge"],[class*="badge"],[class*="Status"],[class*="status"]){border-radius:var(--z-radius-pill)}
+
+html[data-zuelen-theme="dark"] .workspace{background:radial-gradient(circle at 92% 2%,rgba(121,184,139,.025),transparent 22%),var(--z-bg)!important}
+html[data-zuelen-theme="dark"] .topbar{background:color-mix(in srgb,var(--z-bg) 90%,transparent)!important}
+html[data-zuelen-theme="dark"] .workspace :where(input,select,textarea){color-scheme:dark}
+html[data-zuelen-theme="dark"] .workspace :where(article,details,[class*="card"],[class*="Card"],[class*="panel"],[class*="Panel"]){background:var(--z-surface-1)!important;color:var(--z-text)!important}
+html[data-zuelen-theme="dark"] .workspace table tbody tr{background:transparent!important}
+
+@media(max-width:880px){.app-shell{grid-template-columns:1fr!important}.workspace{grid-column:1!important}.sidebar{width:min(286px,calc(100vw - 24px))!important}.topbar{padding:0 14px!important}.workspace>div[class*="page"],.workspace>div[class*="liveWrap"],.workspace>div[class*="invoicePage"],.workspace>div[class*="invoiceDetailWrap"],.workspace>div[class*="shell"]{padding:var(--z-page-pad-y) var(--z-page-pad-x) 92px!important}.compta-fab{right:16px!important;bottom:78px!important}}
+@media(max-width:600px){.topbar{height:58px!important}.workspace>div[class*="page"],.workspace>div[class*="liveWrap"],.workspace>div[class*="invoicePage"],.workspace>div[class*="invoiceDetailWrap"],.workspace>div[class*="shell"]{padding-top:20px!important}}
