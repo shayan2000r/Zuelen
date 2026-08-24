@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { accountantPriceId, normalizeAccountantTier, normalizeWebsite } from "@/lib/accountants";
-import { stripePost } from "@/lib/stripe";
+import { stripeGet, stripePost } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
@@ -119,7 +119,24 @@ export async function startAccountantTrialAction(formData: FormData) {
   const price = accountantPriceId(tier);
   const { data: subscription, error } = await supabase.from("accountant_listing_subscriptions").select("*").eq("profile_id", profile.id).maybeSingle();
   if (error) throw new Error(error.message);
-  if (subscription?.stripe_subscription_id && ["active", "trialing", "past_due"].includes(subscription.status)) return createAccountantPortalAction();
+
+  if (subscription?.stripe_subscription_id && ["active", "trialing", "past_due"].includes(subscription.status)) {
+    if (subscription.tier === tier) return createAccountantPortalAction();
+    const stripeSubscription = await stripeGet(`/subscriptions/${encodeURIComponent(subscription.stripe_subscription_id)}`);
+    const itemId = stripeSubscription?.items?.data?.[0]?.id;
+    if (!itemId) throw new Error("Stripe did not return the current accountant subscription item.");
+    await stripePost(`/subscriptions/${encodeURIComponent(subscription.stripe_subscription_id)}`, {
+      "items[0][id]": itemId,
+      "items[0][price]": price,
+      proration_behavior: "create_prorations",
+      "metadata[kind]": "accountant_listing",
+      "metadata[accountant_profile_id]": profile.id,
+      "metadata[tier]": tier,
+    });
+    revalidatePath("/accountants/manage");
+    revalidatePath("/accountants/directory");
+    redirect(`/accountants/manage?plan=${tier}`);
+  }
 
   const params: Record<string, string | number | boolean | null | undefined> = {
     mode: "subscription",
@@ -128,6 +145,7 @@ export async function startAccountantTrialAction(formData: FormData) {
     "line_items[0][price]": price,
     "line_items[0][quantity]": 1,
     client_reference_id: profile.id,
+    integration_identifier: "zuelen_accountant_kmtrqvps",
     "metadata[kind]": "accountant_listing",
     "metadata[accountant_profile_id]": profile.id,
     "metadata[tier]": tier,
