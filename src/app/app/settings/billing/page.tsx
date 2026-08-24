@@ -5,6 +5,7 @@ import { getBillingSnapshot } from "@/lib/billing";
 import { canManageOrganization } from "@/lib/permissions";
 import { stripeConfigured } from "@/lib/stripe";
 import { createBillingPortalAction, createPremiumCheckoutAction, createSeatCheckoutAction } from "./actions";
+import { PageHeader, StatusBadge, V2Page } from "@/components/zuelen-ui-v2";
 import styles from "../commerce.module.css";
 
 export const dynamic = "force-dynamic";
@@ -25,14 +26,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const currentPriceSuffix = snapshot.billing_source === "internal" ? l("pre-launch access", "accès pré-lancement") : snapshot.plan === "premium" && snapshot.billing_interval === "year" ? l("/ month equivalent · €390/year", "/ mois équivalent · 390 €/an") : l("/ month", "/ mois");
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <div>
-          <h1>{l("Subscription & billing", "Abonnement & facturation")}</h1>
-          <p>{l("Manage your Zuelen plan, seats, payment details and invoices in one place.", "Gérez votre formule Zuelen, vos sièges, vos moyens de paiement et vos factures au même endroit.")}</p>
-        </div>
-        <span className={styles.planPill}><span className={styles.dot} />{snapshot.plan === "premium" ? "Premium" : "Basic"}</span>
-      </div>
+    <V2Page className={styles.page}>
+      <PageHeader eyebrow={l("Plan & payments", "Formule & paiements")} title={l("Subscription & billing", "Abonnement & facturation")} description={l("Manage your Zuelen plan, seats, payment details and invoices in one place.", "Gérez votre formule Zuelen, vos sièges, vos moyens de paiement et vos factures au même endroit.")} meta={<StatusBadge tone={snapshot.plan === "premium" ? "success" : "neutral"}><span className={styles.dot} />{snapshot.plan === "premium" ? "Premium" : "Basic"}</StatusBadge>} />
 
       {params.checkout === "success" ? <div className={styles.notice}>{l("Payment completed. Stripe is confirming your Premium subscription; the plan updates automatically as soon as the webhook is received.", "Paiement effectué. Stripe confirme votre abonnement Premium ; la formule se met à jour automatiquement dès réception de la notification.")}</div> : null}
       {params.seat === "success" ? <div className={styles.notice}>{l("Seat checkout completed. Your paid seat count will update automatically.", "Paiement du siège effectué. Le nombre de sièges payants se mettra à jour automatiquement.")}</div> : null}
@@ -93,6 +88,6 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <div className={styles.actions}><span className={styles.planPill}><ShieldCheck size={13} />{l("Full product access", "Accès complet au produit")}</span><span className={styles.planPill}><CreditCard size={13} />{snapshot.billing_source === "stripe" ? "Stripe" : l("Internal preview", "Prévisualisation interne")}</span></div>
         </section>}
       </div>
-    </div>
+    </V2Page>
   );
 }

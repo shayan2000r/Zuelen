@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowUpRight, CalendarClock, FileText, Infinity as InfinityIcon, Landmark, ReceiptText, UsersRound, WalletCards } from "lucide-react";
 import { getWorkspace } from "@/lib/workspace";
 import { getBillingSnapshot, type UsageMetric } from "@/lib/billing";
+import { PageHeader, StatusBadge, V2Page } from "@/components/zuelen-ui-v2";
 import styles from "../commerce.module.css";
 
 export const dynamic = "force-dynamic";
@@ -26,14 +27,8 @@ export default async function UsagePage() {
   }).format(new Date(snapshot.period_end));
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <div>
-          <h1>{l("Usage", "Utilisation")}</h1>
-          <p>{l("See exactly what your plan includes, what you've used, and when your allowance resets.", "Consultez précisément ce que votre formule inclut, votre consommation et la date de renouvellement de vos quotas.")}</p>
-        </div>
-        <span className={styles.planPill}><span className={styles.dot} />{snapshot.plan === "premium" ? "Premium" : "Basic"}</span>
-      </div>
+    <V2Page className={styles.page}>
+      <PageHeader eyebrow={l("Plan & capacity", "Formule & capacité")} title={l("Usage", "Utilisation")} description={l("See exactly what your plan includes, what you've used, and when your allowance resets.", "Consultez précisément ce que votre formule inclut, votre consommation et la date de renouvellement de vos quotas.")} meta={<StatusBadge tone={snapshot.plan === "premium" ? "success" : "neutral"}><span className={styles.dot} />{snapshot.plan === "premium" ? "Premium" : "Basic"}</StatusBadge>} />
 
       <div className={styles.grid}>
         <section className={`${styles.card} ${styles.full}`}>
@@ -85,6 +80,6 @@ export default async function UsagePage() {
           </div>
         </section>
       </div>
-    </div>
+    </V2Page>
   );
 }

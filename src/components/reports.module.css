@@ -46,7 +46,7 @@
 .row strong,.total strong{font-size:12px;text-align:right}
 .total{font-weight:700;border-top:1px solid var(--z-border-strong)}
 .result{margin-top:14px;border:0;background:var(--z-text);border-radius:var(--z-radius-md);padding:13px 14px}
-.result span{color:var(--z-surface-canvas)}
+.result span{color:var(--z-bg)}
 .result strong{font-size:16px;color:var(--z-brand)}
 .trial{overflow:hidden}
 .trial summary{list-style:none;cursor:pointer;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}

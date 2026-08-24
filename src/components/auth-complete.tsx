@@ -49,5 +49,5 @@ export function AuthComplete({nextPath}:{nextPath:string}){
   void complete();
   return()=>{active=false};
  },[nextPath,router]);
- return <main className={styles.shell}><section className={styles.card}><div className={styles.brand}><span>Z</span>Zuelen</div><div className={styles.icon}><ShieldCheck size={23}/></div><h1>Confirming your invitation</h1><p>{message}</p><LoaderCircle className={styles.spin} size={20}/></section></main>;
+ return <main className={styles.shell}><section className={styles.card}><div className={styles.brand}><img src="/zuelen-icon.png" alt=""/>Zuelen</div><div className={styles.icon}><ShieldCheck size={23}/></div><h1>Confirming your invitation</h1><p>{message}</p><LoaderCircle className={styles.spin} size={20}/></section></main>;
 }

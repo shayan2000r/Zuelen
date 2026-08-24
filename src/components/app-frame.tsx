@@ -30,6 +30,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { setLocalePreference } from "@/app/app/locale-actions";
@@ -144,7 +145,7 @@ function AppFrameInner({ children, companyName, fiscalYear, fiscalYears, email, 
   return <RoleProvider role={userRole}>
     <main className="app-shell" data-role={userRole ?? "member"} data-locale={locale} data-plan={plan}>
       <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
-        <div className="brand-row"><Link href="/app" className={styles.brandLink}><div className="brand-mark"><span>Z</span></div><div className="brand-word">Zuelen</div><span className={frame.brandBadge}>LU</span></Link><button className="icon-btn mobile-only" onClick={() => setMobileNav(false)} aria-label={tx("closeNavigation")}><X size={18}/></button></div>
+        <div className="brand-row"><Link href="/app" className={styles.brandLink}><span className={frame.brandMark}><Image src="/zuelen-icon.png" alt="" width={31} height={31} priority /></span><div className="brand-word">Zuelen</div><span className={frame.brandBadge}>LU</span></Link><button className="icon-btn mobile-only" onClick={() => setMobileNav(false)} aria-label={tx("closeNavigation")}><X size={18}/></button></div>
         <div className={`company-switcher ${frame.yearSwitcher}`}>{companyAvatar("company-avatar")}<span className={`company-copy ${frame.yearCopy}`}><strong>{companyName}</strong><span className={frame.yearSelectWrap}><span className={frame.yearHint}>{tx("financialYear")}</span><select className={frame.yearSelect} value={fiscalYear} disabled={switchingYear} onChange={event => changeFiscalYear(Number(event.target.value))} aria-label={tx("financialYear")}>{fiscalYears.map(year => <option key={year} value={year}>{year}</option>)}</select><ChevronDown size={11}/><span className={frame.companyPlanBadge}>{plan === "premium" ? "Premium" : "Basic"}</span></span></span></div>
         <nav className="nav-list" aria-label={locale === "fr" ? "Navigation principale" : "Primary navigation"}><div className={frame.primaryNav}>{navLink(overview)}</div><div className={frame.groupDivider}/>{groups.map(renderGroup)}<div className={frame.groupDivider}/><div className={frame.primaryNav}>{standaloneItems.map(item => navLink(item))}</div><div className={frame.groupDivider}/>{renderGroup(settingsGroup)}</nav>
         <div className="sidebar-spacer"/><div className={frame.themeRow}><span>{tx("appearance")}</span><div className={frame.themeToggle} role="group" aria-label={tx("appearance")}><button type="button" className={theme === "light" ? frame.themeActive : ""} onClick={() => applyTheme("light")} aria-label={tx("lightMode")}><Sun size={14}/></button><button type="button" className={theme === "dark" ? frame.themeActive : ""} onClick={() => applyTheme("dark")} aria-label={tx("darkMode")}><Moon size={14}/></button></div></div>

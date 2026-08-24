@@ -54,7 +54,7 @@ export default async function BankingPage({searchParams}:{searchParams:SearchPar
     <DataPanel>
      <DataPanelHeader eyebrow={fr?`File de rapprochement · ${year}`:`Reconciliation queue · ${year}`} title={fr?"Mouvements bancaires":"Bank movements"} meta={fr?`${visibleRows.length} affichés`:`${visibleRows.length} shown`}/>
      <DataToolbar>
-      <form className="compta-list-tools" method="get">
+      <form method="get">
        <label><Search size={15}/><input name="q" defaultValue={params.q??""} placeholder={fr?`Rechercher dans les mouvements ${year}`:`Search ${year} bank movements`}/></label>
        <select name="status" defaultValue={status}><option value="all">{fr?"Tous les statuts":"All statuses"}</option><option value="review">{fr?"À vérifier":"Needs review"}</option><option value="matched">{fr?"Rapprochés":"Reconciled"}</option></select>
        <button type="submit">{fr?"Appliquer":"Apply"}</button>

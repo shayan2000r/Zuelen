@@ -48,7 +48,7 @@
 .adjustmentForm label{display:grid;gap:5px}
 .adjustmentForm label span{font-size:11px;color:var(--z-text-secondary);font-weight:650}
 .adjustmentForm select,.adjustmentForm input{height:38px;border:1px solid var(--z-border);border-radius:var(--z-radius-sm);background:var(--z-surface-1);color:var(--z-text);padding:0 10px;font:inherit;font-size:12px;min-width:0}
-.adjustmentForm select:focus-visible,.adjustmentForm input:focus-visible{outline:2px solid var(--z-focus);outline-offset:2px}
+.adjustmentForm select:focus-visible,.adjustmentForm input:focus-visible{outline:0;box-shadow:var(--z-focus-ring)}
 .adjustmentForm .adjustmentButton{margin:0}
 .adjustmentError,.adjustmentSuccess{display:block;font-size:11px;line-height:1.45;margin-top:8px}
 .adjustmentError{color:var(--z-danger)}
