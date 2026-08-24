@@ -52,15 +52,9 @@ export async function saveAccountantProfileAction(formData: FormData) {
   const businessTypes = list(formData, "business_types");
   const yearsRaw = text(formData, "years_experience");
   const yearsExperience = yearsRaw ? Number.parseInt(yearsRaw, 10) : null;
-  if (fullName.length < 2 || professionalTitle.length < 2 || !email.includes("@")) {
-    throw new Error("Name, professional title and a valid contact email are required.");
-  }
-  if (!languages.length || !specialties.length) {
-    throw new Error("Choose at least one language and one specialty for your professional profile.");
-  }
-  if (yearsExperience !== null && (!Number.isInteger(yearsExperience) || yearsExperience < 0 || yearsExperience > 80)) {
-    throw new Error("Years of experience must be between 0 and 80.");
-  }
+  if (fullName.length < 2 || professionalTitle.length < 2 || !email.includes("@")) throw new Error("Name, professional title and a valid contact email are required.");
+  if (!languages.length || !specialties.length) throw new Error("Choose at least one language and one specialty for your professional profile.");
+  if (yearsExperience !== null && (!Number.isInteger(yearsExperience) || yearsExperience < 0 || yearsExperience > 80)) throw new Error("Years of experience must be between 0 and 80.");
 
   let photoUrl = profile?.photo_url ?? null;
   const photo = formData.get("photo");
@@ -76,7 +70,6 @@ export async function saveAccountantProfileAction(formData: FormData) {
   let slug = profile?.slug as string | undefined;
   if (!slug) {
     const base = slugify(text(formData, "firm_name") || fullName);
-    // The suffix avoids collisions with pending/private profiles that RLS intentionally hides.
     slug = `${base}-${userId.replace(/-/g, "").slice(0, 8)}`;
   }
 
@@ -109,12 +102,14 @@ export async function saveAccountantProfileAction(formData: FormData) {
     : supabase.from("accountant_profiles").insert(payload);
   const { error } = await query;
   if (error) throw new Error(error.message);
+
   revalidatePath("/professional");
-  revalidatePath("/accountants/manage");
+  revalidatePath("/professional/profile");
+  revalidatePath("/professional/billing");
   revalidatePath("/app/accountants");
   revalidatePath("/accountants/directory");
   const returnTo = safeReturnPath(text(formData, "return_to"));
-  redirect(returnTo || "/accountants/manage?saved=1");
+  redirect(returnTo || "/professional/profile?saved=1");
 }
 
 export async function startAccountantTrialAction(formData: FormData) {
@@ -139,14 +134,15 @@ export async function startAccountantTrialAction(formData: FormData) {
       "metadata[accountant_profile_id]": profile.id,
       "metadata[tier]": tier,
     });
-    revalidatePath("/accountants/manage");
+    revalidatePath("/professional");
+    revalidatePath("/professional/billing");
     revalidatePath("/accountants/directory");
-    redirect(`/accountants/manage?plan=${tier}`);
+    redirect(`/professional/billing?plan=${tier}`);
   }
 
   const params: Record<string, string | number | boolean | null | undefined> = {
     mode: "subscription",
-    success_url: `${APP_URL}/accountants/manage?checkout=success`,
+    success_url: `${APP_URL}/professional?checkout=success`,
     cancel_url: `${APP_URL}/professional?step=3&checkout=cancelled`,
     "line_items[0][price]": price,
     "line_items[0][quantity]": 1,
@@ -162,8 +158,6 @@ export async function startAccountantTrialAction(formData: FormData) {
     billing_address_collection: "auto",
     "tax_id_collection[enabled]": true,
   };
-  // The free trial is deliberately one-time. A canceled profile can resubscribe,
-  // but it does not receive another 30 free days.
   if (!subscription?.trial_end) params["subscription_data[trial_period_days]"] = 30;
   if (subscription?.stripe_customer_id) params.customer = subscription.stripe_customer_id;
   else if (workspace.email) params.customer_email = workspace.email;
@@ -181,7 +175,7 @@ export async function createAccountantPortalAction() {
   if (!subscription?.stripe_customer_id) throw new Error("No Stripe billing profile exists yet.");
   const session = await stripePost("/billing_portal/sessions", {
     customer: subscription.stripe_customer_id,
-    return_url: `${APP_URL}/accountants/manage`,
+    return_url: `${APP_URL}/professional/billing`,
   });
   if (!session.url) throw new Error("Stripe did not return a billing portal URL.");
   redirect(String(session.url));
