@@ -47,10 +47,16 @@ export async function saveAccountantProfileAction(formData: FormData) {
   const fullName = text(formData, "full_name");
   const professionalTitle = text(formData, "professional_title");
   const email = text(formData, "email");
+  const languages = list(formData, "languages");
+  const specialties = list(formData, "specialties");
+  const businessTypes = list(formData, "business_types");
   const yearsRaw = text(formData, "years_experience");
   const yearsExperience = yearsRaw ? Number.parseInt(yearsRaw, 10) : null;
   if (fullName.length < 2 || professionalTitle.length < 2 || !email.includes("@")) {
     throw new Error("Name, professional title and a valid contact email are required.");
+  }
+  if (!languages.length || !specialties.length) {
+    throw new Error("Choose at least one language and one specialty for your professional profile.");
   }
   if (yearsExperience !== null && (!Number.isInteger(yearsExperience) || yearsExperience < 0 || yearsExperience > 80)) {
     throw new Error("Years of experience must be between 0 and 80.");
@@ -82,9 +88,9 @@ export async function saveAccountantProfileAction(formData: FormData) {
     professional_title: professionalTitle,
     bio: text(formData, "bio") || null,
     location: text(formData, "location") || "Luxembourg",
-    languages: list(formData, "languages"),
-    specialties: list(formData, "specialties"),
-    business_types: list(formData, "business_types"),
+    languages,
+    specialties,
+    business_types: businessTypes,
     email,
     phone: text(formData, "phone") || null,
     website: normalizeWebsite(text(formData, "website")),
