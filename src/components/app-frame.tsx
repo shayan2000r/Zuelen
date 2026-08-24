@@ -4,6 +4,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  BriefcaseBusiness,
   CalendarCheck2,
   ChevronDown,
   CreditCard,
@@ -139,6 +140,7 @@ function AppFrameInner({
     { label: tx("reports"), description: tx("financialAnalyticsStatements"), icon: BarChart3, href: "/app/reports", premium: true },
     { label: tx("documents"), description: tx("companyDocumentVault"), icon: FileText, href: "/app/documents" },
     { label: tx("copilot"), description: tx("askYourBooks"), icon: Sparkles, href: "/app/copilot", premium: true },
+    { label: l("Find an Accountant", "Trouver un comptable"), description: l("Browse independent accounting professionals", "Parcourir les professionnels comptables indépendants"), icon: BriefcaseBusiness, href: "/app/accountants" },
   ], [locale]);
 
   const settingsGroup = useMemo<CollapsibleGroup>(() => ({
