@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
 import { BarChart3, Bell, BriefcaseBusiness, Building2, Check, ChevronDown, CreditCard, LayoutDashboard, LogOut, Menu, Moon, Search, Settings, Sun, UserRound, X } from "lucide-react";
 import { setLocalePreference } from "@/app/app/locale-actions";
 import type { Locale } from "@/lib/i18n";
@@ -21,6 +21,21 @@ type Props = {
 };
 
 type Theme = "light" | "dark";
+const MOBILE_NAV_QUERY = "(max-width: 900px)";
+
+function subscribeToMobileViewport(onChange: () => void) {
+  const media = window.matchMedia(MOBILE_NAV_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+function getMobileViewportSnapshot() {
+  return window.matchMedia(MOBILE_NAV_QUERY).matches;
+}
+
+function getServerViewportSnapshot() {
+  return false;
+}
 
 function initials(value: string) {
   return value.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "A";
@@ -28,6 +43,7 @@ function initials(value: string) {
 
 export function ProfessionalFrame({ children, name, firmName, email, photoUrl, approvalStatus, plan, hasBusinessWorkspace, locale }: Props) {
   const pathname = usePathname();
+  const isMobileViewport = useSyncExternalStore(subscribeToMobileViewport, getMobileViewportSnapshot, getServerViewportSnapshot);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>("light");
   const [accountOpen, setAccountOpen] = useState(false);
@@ -123,10 +139,11 @@ export function ProfessionalFrame({ children, name, firmName, email, photoUrl, a
   const workspaceLabel = plan === "premium" ? "Premium" : plan === "basic" ? "Basic" : l("Professional", "Professionnel");
   const normalizedQuery = query.trim().toLowerCase();
   const searchResults = normalizedQuery ? nav.filter(item => `${item.label} ${item.description}`.toLowerCase().includes(normalizedQuery)) : nav;
+  const mobileSidebarHidden = isMobileViewport && !mobileOpen;
 
   return (
     <main className={styles.shell}>
-      <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
+      <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-hidden={mobileSidebarHidden} inert={mobileSidebarHidden}>
         <div className={styles.brandRow}>
           <Link href="/professional" className={styles.brand} onClick={() => setMobileOpen(false)}>
             <img src="/zuelen-icon.png" alt="" />
@@ -164,7 +181,7 @@ export function ProfessionalFrame({ children, name, firmName, email, photoUrl, a
 
           <div className={styles.topActions}>
             <div className={styles.languageWrap} ref={languageRef}>
-              <button type="button" className={styles.languageButton} onClick={() => setLanguageOpen(value => !value)} aria-expanded={languageOpen}>
+              <button type="button" className={styles.languageButton} onClick={() => setLanguageOpen(value => !value)} aria-expanded={languageOpen} aria-label={l("Change language. Current language: English", "Changer de langue. Langue actuelle : français")}>
                 <span className={styles.languageFlag}>{locale === "fr" ? "🇫🇷" : "🇬🇧"}</span><strong>{locale.toUpperCase()}</strong><ChevronDown size={13}/>
               </button>
               {languageOpen ? <div className={styles.languageMenu}>
@@ -177,11 +194,11 @@ export function ProfessionalFrame({ children, name, firmName, email, photoUrl, a
 
             <div className={styles.notificationWrap} ref={notificationsRef}>
               <button className={styles.iconButton} type="button" onClick={() => setNotificationsOpen(value => !value)} aria-expanded={notificationsOpen} aria-label={l("Notifications", "Notifications")}><Bell size={17}/>{approvalStatus !== "approved" ? <span className={styles.notificationDot}/> : null}</button>
-              {notificationsOpen ? <div className={styles.notificationPanel}><div><strong>{l("Notifications", "Notifications")}</strong><button type="button" onClick={() => setNotificationsOpen(false)}><X size={14}/></button></div>{approvalStatus === "pending" ? <Link href="/professional/profile"><span className={styles.noticeIcon}><UserRound size={15}/></span><span><strong>{l("Profile review in progress", "Vérification du profil en cours")}</strong><small>{l("We’ll email you as soon as Zuelen completes the review.", "Nous vous enverrons un e-mail dès que la vérification sera terminée.")}</small></span></Link> : approvalStatus === "rejected" ? <Link href="/professional/profile"><span className={styles.noticeIcon}><UserRound size={15}/></span><span><strong>{l("Your profile needs changes", "Votre profil nécessite des modifications")}</strong><small>{l("Open My Profile to review the requested changes.", "Ouvrez Mon profil pour consulter les modifications demandées.")}</small></span></Link> : <p>{l("You’re all caught up.", "Tout est à jour.")}</p>}</div> : null}
+              {notificationsOpen ? <div className={styles.notificationPanel}><div><strong>{l("Notifications", "Notifications")}</strong><button type="button" onClick={() => setNotificationsOpen(false)} aria-label={l("Close notifications", "Fermer les notifications")}><X size={14}/></button></div>{approvalStatus === "pending" ? <Link href="/professional/profile"><span className={styles.noticeIcon}><UserRound size={15}/></span><span><strong>{l("Profile review in progress", "Vérification du profil en cours")}</strong><small>{l("We’ll email you as soon as Zuelen completes the review.", "Nous vous enverrons un e-mail dès que la vérification sera terminée.")}</small></span></Link> : approvalStatus === "rejected" ? <Link href="/professional/profile"><span className={styles.noticeIcon}><UserRound size={15}/></span><span><strong>{l("Your profile needs changes", "Votre profil nécessite des modifications")}</strong><small>{l("Open My Profile to review the requested changes.", "Ouvrez Mon profil pour consulter les modifications demandées.")}</small></span></Link> : <p>{l("You’re all caught up.", "Tout est à jour.")}</p>}</div> : null}
             </div>
 
             <div className={styles.accountWrap} ref={accountRef}>
-              <button type="button" className={styles.accountButton} onClick={() => setAccountOpen(value => !value)} aria-expanded={accountOpen}>
+              <button type="button" className={styles.accountButton} onClick={() => setAccountOpen(value => !value)} aria-expanded={accountOpen} aria-label={l("Open account menu", "Ouvrir le menu du compte")}>
                 {photoUrl ? <img src={photoUrl} alt=""/> : <span>{initials(name)}</span>}
                 <div><strong>{name}</strong><small>{workspaceLabel}</small></div><ChevronDown size={14}/>
               </button>
@@ -196,7 +213,7 @@ export function ProfessionalFrame({ children, name, firmName, email, photoUrl, a
         <div className={styles.content}>{children}</div>
       </section>
 
-      {searchOpen ? <div className={styles.searchOverlay} role="dialog" aria-modal="true" onMouseDown={event => { if (event.currentTarget === event.target) setSearchOpen(false); }}><div className={styles.searchDialog}><div className={styles.searchInput}><Search size={18}/><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder={l("Search professional workspace…", "Rechercher dans l’espace professionnel…")}/><button type="button" onClick={() => setSearchOpen(false)}><kbd>ESC</kbd></button></div><div className={styles.searchResults}><p>{normalizedQuery ? l("Results", "Résultats") : l("Quick navigation", "Navigation rapide")}</p>{searchResults.map(item => <Link key={item.href} href={item.href} onClick={() => setSearchOpen(false)}><span><item.icon size={17}/></span><div><strong>{item.label}</strong><small>{item.description}</small></div></Link>)}</div></div></div> : null}
+      {searchOpen ? <div className={styles.searchOverlay} role="dialog" aria-modal="true" aria-label={l("Search professional workspace", "Rechercher dans l’espace professionnel")} onMouseDown={event => { if (event.currentTarget === event.target) setSearchOpen(false); }}><div className={styles.searchDialog}><div className={styles.searchInput}><Search size={18}/><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder={l("Search professional workspace…", "Rechercher dans l’espace professionnel…")}/><button type="button" onClick={() => setSearchOpen(false)} aria-label={l("Close search", "Fermer la recherche")}><kbd>ESC</kbd></button></div><div className={styles.searchResults}><p>{normalizedQuery ? l("Results", "Résultats") : l("Quick navigation", "Navigation rapide")}</p>{searchResults.map(item => <Link key={item.href} href={item.href} onClick={() => setSearchOpen(false)}><span><item.icon size={17}/></span><div><strong>{item.label}</strong><small>{item.description}</small></div></Link>)}</div></div></div> : null}
     </main>
   );
 }
