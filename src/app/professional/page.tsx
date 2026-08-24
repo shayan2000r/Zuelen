@@ -6,7 +6,7 @@ import { getWorkspace } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
-type Params = { step?: string };
+type Params = { step?: string; checkout?: string };
 
 export default async function ProfessionalPage({ searchParams }: { searchParams: Promise<Params> }) {
   const workspace = await getWorkspace();
@@ -32,5 +32,6 @@ export default async function ProfessionalPage({ searchParams }: { searchParams:
     subscription={subscription}
     stripeConfigured={accountantStripeConfigured()}
     initialStep={profile && params.step === "3" ? 3 : 1}
+    checkoutStatus={params.checkout ?? null}
   />;
 }
