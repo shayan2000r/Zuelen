@@ -49,6 +49,13 @@ export const ACCOUNTANT_LANGUAGES = ["Luxembourgish", "French", "English", "Germ
 export const ACCOUNTANT_SPECIALTIES = ["Bookkeeping", "VAT", "Annual accounts", "Corporate tax", "Payroll", "Company formation", "eCDF & RCS filings", "Management reporting"] as const;
 export const ACCOUNTANT_BUSINESS_TYPES = ["Freelancers", "Sole traders", "SARL-S", "SARL", "SA", "Startups", "Retail", "Professional services", "E-commerce"] as const;
 
+// Stripe Price IDs are public catalog identifiers, not secrets. Keep production
+// fallbacks here so the live accountant plans remain deployable even when an
+// environment-variable writer is unavailable. Environment variables still
+// override these values for staging or future catalog migrations.
+const LIVE_ACCOUNTANT_BASIC_MONTHLY_PRICE_ID = "price_1U7tTjAUTtqJnPRbkC4yLryy";
+const LIVE_ACCOUNTANT_PREMIUM_MONTHLY_PRICE_ID = "price_1U7tTqAUTtqJnPRbcr9iUMTN";
+
 const LANGUAGE_META: Record<string, { flag: string; en: string; fr: string }> = {
   Luxembourgish: { flag: "🇱🇺", en: "Luxembourgish", fr: "Luxembourgeois" },
   French: { flag: "🇫🇷", en: "French", fr: "Français" },
@@ -97,19 +104,13 @@ export function accountantBusinessTypeLabel(value: string, locale: "en" | "fr" =
 }
 
 export function accountantStripeConfigured() {
-  return Boolean(
-    process.env.STRIPE_SECRET_KEY &&
-    process.env.STRIPE_ACCOUNTANT_BASIC_MONTHLY_PRICE_ID &&
-    process.env.STRIPE_ACCOUNTANT_PREMIUM_MONTHLY_PRICE_ID
-  );
+  return Boolean(process.env.STRIPE_SECRET_KEY && accountantPriceId("basic") && accountantPriceId("premium"));
 }
 
 export function accountantPriceId(tier: AccountantTier) {
-  const id = tier === "premium"
-    ? process.env.STRIPE_ACCOUNTANT_PREMIUM_MONTHLY_PRICE_ID
-    : process.env.STRIPE_ACCOUNTANT_BASIC_MONTHLY_PRICE_ID;
-  if (!id) throw new Error(`The Accountant ${tier === "premium" ? "Premium" : "Basic"} Stripe price is not configured.`);
-  return id;
+  return tier === "premium"
+    ? process.env.STRIPE_ACCOUNTANT_PREMIUM_MONTHLY_PRICE_ID || LIVE_ACCOUNTANT_PREMIUM_MONTHLY_PRICE_ID
+    : process.env.STRIPE_ACCOUNTANT_BASIC_MONTHLY_PRICE_ID || LIVE_ACCOUNTANT_BASIC_MONTHLY_PRICE_ID;
 }
 
 export function normalizeAccountantTier(value: unknown): AccountantTier {
