@@ -130,7 +130,7 @@ function AppFrameInner({ children, companyName, fiscalYear, fiscalYears, email, 
   useEffect(() => { const stored = window.localStorage.getItem("zuelen-theme"); const initialTheme: Theme = stored === "dark" ? "dark" : "light"; setTheme(initialTheme); document.documentElement.dataset.zuelenTheme = initialTheme; }, []);
   useEffect(() => { for (const group of [...groups, settingsGroup]) { if (group.items.some(item => item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href))) setOpenGroups(current => ({ ...current, [group.key]: true })); } }, [pathname, groups, settingsGroup]);
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } if (event.key === "Escape") { setSearchOpen(false); setNotificationsOpen(false); setLanguageOpen(false); setAccountOpen(false); } };
+    const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } if (event.key === "Escape") { setMobileNav(false); setSearchOpen(false); setNotificationsOpen(false); setLanguageOpen(false); setAccountOpen(false); } };
     const onMouse = (event: MouseEvent) => { if (accountRef.current && !accountRef.current.contains(event.target as Node)) setAccountOpen(false); };
     window.addEventListener("keydown", onKey); document.addEventListener("mousedown", onMouse); return () => { window.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onMouse); };
   }, []);
