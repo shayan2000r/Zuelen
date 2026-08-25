@@ -72,6 +72,10 @@ export function CcssConfigurator({
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const l = (en: string, french: string) => fr ? french : en;
   const close = (dialog: React.RefObject<HTMLDialogElement | null>) => dialog.current?.close();
+  const changeAffiliationType = (next: string) => {
+    setAffiliationType(next);
+    if (next === "manager") setLegalForm("company");
+  };
   const open = (
     dialog: React.RefObject<HTMLDialogElement | null>,
     form: React.RefObject<HTMLFormElement | null>,
@@ -95,13 +99,13 @@ export function CcssConfigurator({
           <input type="hidden" name="tax_year" value={year}/>
           <FormSection title={l("CCSS affiliation", "Affiliation CCSS")} description={l("This determines contribution bases. It does not use your tax class.", "Cette section détermine les assiettes de cotisation. Elle n’utilise pas votre classe d’impôt.")}>
             <FieldGroup columns={2}>
-              <SelectField label={l("Affiliation status", "Statut d’affiliation")} name="affiliation_type" value={affiliationType} onChange={(event) => setAffiliationType(event.target.value)} required>
+              <SelectField label={l("Affiliation status", "Statut d’affiliation")} name="affiliation_type" value={affiliationType} onChange={(event) => changeAffiliationType(event.target.value)} required>
                 <option value="principal">{l("Principal self-employed activity", "Activité indépendante principale")}</option>
                 <option value="secondary">{l("Accessory activity with salaried work", "Activité accessoire avec emploi salarié")}</option>
                 <option value="manager">{l("Independent company manager/director", "Dirigeant de société affilié comme indépendant")}</option>
               </SelectField>
               <SelectField label={l("Activity carried on through", "Activité exercée")} name="activity_legal_form" value={legalForm} onChange={(event) => setLegalForm(event.target.value)} required>
-                <option value="own_name">{l("My own name / sole activity", "En mon nom propre")}</option>
+                {affiliationType !== "manager" ? <option value="own_name">{l("My own name / sole activity", "En mon nom propre")}</option> : null}
                 <option value="company">{l("SARL, SARL-S or another company", "SARL, SARL-S ou autre société")}</option>
               </SelectField>
               <TextField label={l("Affiliation start date", "Date de début d’affiliation")} name="affiliation_start_date" type="date" defaultValue={ccssProfile?.affiliation_start_date ?? `${year}-01-01`} required/>
