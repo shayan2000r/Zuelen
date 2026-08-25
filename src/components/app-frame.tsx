@@ -13,6 +13,7 @@ import {
   FileCheck2,
   FileText,
   Gauge,
+  HeartHandshake,
   Landmark,
   LayoutDashboard,
   LogOut,
@@ -96,6 +97,7 @@ function AppFrameInner({ children, companyName, fiscalYear, fiscalYears, email, 
   ] }), [locale]);
   const taxesGroup = useMemo<CollapsibleGroup>(() => ({ key: "taxes", label: l("Taxes", "Fiscalité"), icon: Landmark, items: [
     { label: l("Tax overview", "Vue fiscale"), description: l("Tax estimates and reserves", "Estimations et réserves fiscales"), icon: Landmark, href: "/app/taxes" },
+    { label: "CCSS", description: l("Personal social-security planning", "Planification de la sécurité sociale personnelle"), icon: HeartHandshake, href: "/app/ccss" },
     { label: l("VAT", "TVA"), description: tx("vatReadiness"), icon: ReceiptText, href: "/app/vat" },
     { label: l("Year-end & accounts", "Clôture & comptes annuels"), description: l("Close the year and prepare annual accounts", "Clôturer l’exercice et préparer les comptes annuels"), icon: CalendarCheck2, href: "/app/year-end", premium: true },
     { label: l("Compliance calendar", "Calendrier conformité"), description: tx("deadlinesObligations"), icon: FileCheck2, href: "/app/compliance" },
@@ -118,7 +120,7 @@ function AppFrameInner({ children, companyName, fiscalYear, fiscalYears, email, 
   const allItems = useMemo(() => [overview, ...groups.flatMap(group => group.items), ...standaloneItems, ...settingsGroup.items], [overview, groups, standaloneItems, settingsGroup]);
   const [openGroups, setOpenGroups] = useState<Record<GroupKey, boolean>>({
     accounting: pathname.startsWith("/app/accounting") || pathname.startsWith("/app/transactions") || pathname.startsWith("/app/banking") || pathname.startsWith("/app/invoices"),
-    taxes: pathname.startsWith("/app/taxes") || pathname.startsWith("/app/vat") || pathname.startsWith("/app/year-end") || pathname.startsWith("/app/ecdf") || pathname.startsWith("/app/compliance"),
+    taxes: pathname.startsWith("/app/taxes") || pathname.startsWith("/app/ccss") || pathname.startsWith("/app/vat") || pathname.startsWith("/app/year-end") || pathname.startsWith("/app/ecdf") || pathname.startsWith("/app/compliance"),
     settings: pathname.startsWith("/app/settings"),
   });
   const userLabel = useMemo(() => userName?.trim() || email?.split("@")[0] || tx("member"), [userName, email, locale]);
@@ -128,7 +130,7 @@ function AppFrameInner({ children, companyName, fiscalYear, fiscalYears, email, 
   useEffect(() => { const stored = window.localStorage.getItem("zuelen-theme"); const initialTheme: Theme = stored === "dark" ? "dark" : "light"; setTheme(initialTheme); document.documentElement.dataset.zuelenTheme = initialTheme; }, []);
   useEffect(() => { for (const group of [...groups, settingsGroup]) { if (group.items.some(item => item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href))) setOpenGroups(current => ({ ...current, [group.key]: true })); } }, [pathname, groups, settingsGroup]);
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } if (event.key === "Escape") { setSearchOpen(false); setNotificationsOpen(false); setLanguageOpen(false); setAccountOpen(false); } };
+    const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } if (event.key === "Escape") { setMobileNav(false); setSearchOpen(false); setNotificationsOpen(false); setLanguageOpen(false); setAccountOpen(false); } };
     const onMouse = (event: MouseEvent) => { if (accountRef.current && !accountRef.current.contains(event.target as Node)) setAccountOpen(false); };
     window.addEventListener("keydown", onKey); document.addEventListener("mousedown", onMouse); return () => { window.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onMouse); };
   }, []);
