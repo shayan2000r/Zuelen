@@ -182,7 +182,7 @@ export default async function CcssPage() {
       eyebrow={`CCSS · ${year}`}
       title={l("Know what to set aside for social security.", "Sachez combien mettre de côté pour votre sécurité sociale.")}
       description={l("A month-by-month Luxembourg estimate built from professional income, verified CCSS parameters and your affiliation situation.", "Une estimation luxembourgeoise mois par mois, fondée sur le revenu professionnel, les paramètres CCSS vérifiés et votre situation d’affiliation.")}
-      meta={<CcssConfigurator year={year} locale={locale} fiscalProfile={fiscalProfile} ccssProfile={ccssProfile} defaultLegalForm={/sarl|s\.à r\.l|sa|s\.a\./i.test(workspace.company.legal_form) ? "company" : "own_name"} documents={documents}/>} 
+      meta={<CcssConfigurator year={year} locale={locale} fiscalProfile={fiscalProfile} ccssProfile={ccssProfile} defaultLegalForm={workspace.company.entity_kind === "independent" ? "own_name" : "company"} documents={documents}/>} 
     />
 
     {openStatement ? <section className={styles.actualBanner}><div className={styles.actualIcon}><FileCheck2 size={19}/></div><div><span>{l("From CCSS statement", "Depuis l’extrait CCSS")}</span><strong>{money(openStatement.amount_due, locale)}</strong><small>{l("Payment deadline", "Échéance de paiement")} · {new Date(`${openStatement.due_date}T12:00:00`).toLocaleDateString(dateLocale, { day: "2-digit", month: "long", year: "numeric" })}</small></div><StatusBadge tone={openStatement.payment_status === "disputed" ? "warning" : "danger"}>{statusLabel(openStatement.payment_status, fr)}</StatusBadge></section> : null}

@@ -12,7 +12,7 @@ export const dynamic="force-dynamic";
 function money(v:number,c:string,l:Locale){return new Intl.NumberFormat(intlLocale(l),{style:"currency",currency:c,minimumFractionDigits:2}).format(v)}
 type RateBucket={base:number;vat:number};
 export default async function VatFilingPage(){
- const w=await getWorkspace();if(!w.authenticated)redirect("/sign-in");if(!w.company)redirect("/setup");const locale=normalizeLocale(w.profile?.locale),fr=locale==="fr",dateLocale=intlLocale(locale),s=await createClient(),year=await getActiveFiscalYear(w.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,w.company.fiscal_year_start_month),currency=w.company.base_currency||"EUR",from=bounds.start,to=bounds.end,frequency=w.company.vat_filing_frequency||"annual";
+ const w=await getWorkspace();if(!w.authenticated)redirect("/sign-in");if(!w.company)redirect("/setup");if(!w.capabilities?.hasVat)redirect("/app/taxes?not_applicable=vat");const locale=normalizeLocale(w.profile?.locale),fr=locale==="fr",dateLocale=intlLocale(locale),s=await createClient(),year=await getActiveFiscalYear(w.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,w.company.fiscal_year_start_month),currency=w.company.base_currency||"EUR",from=bounds.start,to=bounds.end,frequency=w.company.vat_filing_frequency||"annual";
  const[{data:accounts},{data:entries},{data:invoices},{count:pendingCount},{data:taxMeta},{data:filings}]=await Promise.all([
   s.from("company_accounts").select("id,code").eq("company_id",w.company.id).in("code",["421611","461411"]),
   s.from("journal_entries").select("id").eq("company_id",w.company.id).eq("status","posted").gte("entry_date",from).lte("entry_date",to),

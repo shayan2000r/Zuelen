@@ -1,6 +1,10 @@
+import { redirect } from "next/navigation";
 import { PremiumRouteGate } from "@/components/premium-route-gate";
+import { getWorkspace } from "@/lib/workspace";
 
-export default function YearEndLayout({ children }: { children: React.ReactNode }) {
+export default async function YearEndLayout({ children }: { children: React.ReactNode }) {
+  const workspace = await getWorkspace();
+  if (!workspace.capabilities?.hasCompanyYearEnd) redirect("/app/taxes?not_applicable=year-end");
   return (
     <PremiumRouteGate
       title="Unlock year-end & annual accounts"

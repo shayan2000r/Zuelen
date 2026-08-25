@@ -8,33 +8,38 @@ import { FieldGroup, FormSection, SelectField, TextareaField, TextField, ToggleF
 import styles from "@/app/app/settings/settings.module.css";
 
 const initial: SettingsState = { status: "idle", message: "" };
-type Company = { legal_name: string; trading_name: string | null; legal_form: string; rcs_number: string | null; vat_number: string | null; tax_number: string | null; business_permit_number: string | null; municipality: string | null; activity: string | null; fiscal_year_start_month: number; base_currency: string; vat_registered: boolean; vat_filing_frequency: string | null; registered_address: Record<string, unknown> };
+type Company = { legal_name: string; trading_name: string | null; legal_form: string; entity_kind: "independent"|"company"; rcs_number: string | null; vat_number: string | null; tax_number: string | null; business_permit_number: string | null; municipality: string | null; activity: string | null; fiscal_year_start_month: number; base_currency: string; vat_registered: boolean; vat_filing_frequency: string | null; registered_address: Record<string, unknown> };
 function address(company: Company, key: string) { const value = company.registered_address?.[key]; return typeof value === "string" ? value : ""; }
 
-export function CompanySettingsForm({ company }: { company: Company }) {
+type IndependentProfile = { activity_category:string; activity_start_date:string; accounting_start_date:string } | null;
+export function CompanySettingsForm({ company, independentProfile=null }: { company: Company; independentProfile?:IndependentProfile }) {
   const [state, action, pending] = useActionState(saveCompanySettings, initial);
   const { locale, intlLocale } = useI18n();
   const fr = locale === "fr";
+  const independent = company.entity_kind === "independent";
 
   return <form action={action} className={styles.form}>
-    <FormSection title={fr ? "Informations légales" : "Legal details"} description={fr ? "Identité utilisée sur les factures et documents de l’entreprise." : "Company identity used on invoices and official records."}>
+    <input type="hidden" name="legal_form" value={company.legal_form}/>
+    <FormSection title={independent ? (fr ? "Profil de l’activité" : "Activity profile") : (fr ? "Informations légales" : "Legal details")} description={independent ? (fr ? "Identité utilisée pour l’activité exercée en votre nom propre." : "Identity used for the activity operated in your own name.") : (fr ? "Identité utilisée sur les factures et documents de l’entreprise." : "Company identity used on invoices and official records.")}>
       <FieldGroup columns={1}>
-        <TextField label={fr ? "Dénomination légale" : "Legal company name"} name="legal_name" defaultValue={company.legal_name} required />
+        <TextField label={independent ? (fr ? "Nom légal personnel" : "Personal legal name") : (fr ? "Dénomination légale" : "Legal company name")} name="legal_name" defaultValue={company.legal_name} required />
       </FieldGroup>
       <FieldGroup columns={2}>
         <TextField label={fr ? "Nom commercial" : "Trading name"} name="trading_name" defaultValue={company.trading_name ?? ""} placeholder={fr ? "Nom public facultatif" : "Optional public name"} />
-        <SelectField label={fr ? "Forme juridique" : "Legal form"} name="legal_form" defaultValue={company.legal_form}><option value="SARL-S">SARL-S</option><option value="SARL">SARL</option><option value="SA">SA</option><option value="SOLE_TRADER">{fr ? "Entreprise individuelle" : "Sole trader"}</option><option value="OTHER">{fr ? "Autre" : "Other"}</option></SelectField>
+        {!independent?<SelectField label={fr ? "Forme juridique" : "Legal form"} name="legal_form_display" defaultValue={company.legal_form} onChange={event=>{const hidden=event.currentTarget.form?.elements.namedItem("legal_form");if(hidden instanceof HTMLInputElement)hidden.value=event.target.value}}><option value="SARL-S">SARL-S</option><option value="SARL">SARL</option><option value="SA">SA</option><option value="SAS">SAS</option><option value="SCA">SCA</option><option value="OTHER">{fr ? "Autre" : "Other"}</option></SelectField>:null}
         <TextField label={fr ? "Numéro RCS" : "RCS number"} name="rcs_number" defaultValue={company.rcs_number ?? ""} placeholder="B 123456" />
         <TextField label={fr ? "Autorisation d’établissement" : "Business permit"} name="business_permit_number" defaultValue={company.business_permit_number ?? ""} placeholder="12345678 / 0" />
         <TextField label={fr ? "Numéro TVA" : "VAT number"} name="vat_number" defaultValue={company.vat_number ?? ""} placeholder="LU12345678" />
         <TextField label={fr ? "Numéro fiscal" : "Tax number"} name="tax_number" defaultValue={company.tax_number ?? ""} placeholder={fr ? "Référence ACD facultative" : "Optional ACD reference"} />
       </FieldGroup>
       <FieldGroup columns={1}>
-        <TextareaField label={fr ? "Activité de l’entreprise" : "Business activity"} name="activity" defaultValue={company.activity ?? ""} rows={3} placeholder={fr ? "Décrivez l’activité principale de l’entreprise" : "Describe the company’s main activity"} />
+        <TextareaField label={independent ? (fr ? "Description de l’activité" : "Activity description") : (fr ? "Activité de l’entreprise" : "Business activity")} name="activity" defaultValue={company.activity ?? ""} rows={3} placeholder={independent ? (fr ? "Décrivez votre activité professionnelle" : "Describe your professional activity") : (fr ? "Décrivez l’activité principale de l’entreprise" : "Describe the company’s main activity")} />
       </FieldGroup>
     </FormSection>
 
-    <FormSection title={fr ? "Adresse" : "Address"} description={fr ? "Siège social officiel de l’entreprise." : "Official registered office for the company."}>
+    {independent?<FormSection title={fr ? "Cadre de l’activité" : "Activity basis"} description={fr ? "Informations factuelles utilisées pour adapter les parcours de l’activité." : "Factual information used to adapt this activity’s workflows."}><FieldGroup columns={2}><SelectField label={fr ? "Catégorie pratique" : "Practical category"} name="activity_category" defaultValue={independentProfile?.activity_category??"other"}><option value="consultant_freelancer">{fr?"Consultant / freelance":"Consultant / freelancer"}</option><option value="liberal_profession">{fr?"Profession libérale":"Liberal profession"}</option><option value="commercial">{fr?"Activité commerciale":"Commercial / trading"}</option><option value="craft">{fr?"Artisanat":"Craft / artisan"}</option><option value="other">{fr?"Autre":"Other"}</option></SelectField><TextField label={fr?"Date de début d’activité":"Activity start date"} name="activity_start_date" type="date" defaultValue={independentProfile?.activity_start_date??""} required/><TextField label={fr?"Début de la comptabilité":"Accounting start date"} name="accounting_start_date" type="date" defaultValue={independentProfile?.accounting_start_date??""} required/></FieldGroup></FormSection>:null}
+
+    <FormSection title={fr ? "Adresse" : "Address"} description={independent ? (fr ? "Adresse de contact ou d’établissement de l’activité." : "Contact or establishment address for the activity.") : (fr ? "Siège social officiel de l’entreprise." : "Official registered office for the company.")}>
       <FieldGroup columns={1}><TextField label={fr ? "Rue" : "Street"} name="street" defaultValue={address(company, "street")} placeholder="12 rue du Commerce" /></FieldGroup>
       <FieldGroup columns={2}>
         <TextField label={fr ? "Code postal" : "Postal code"} name="postal_code" defaultValue={address(company, "postal_code")} placeholder="L-1234" />
@@ -53,6 +58,6 @@ export function CompanySettingsForm({ company }: { company: Company }) {
       <ToggleField title={fr ? "Assujetti à la TVA" : "VAT registered"} description={fr ? "Active les workflows de comptabilité et de déclaration TVA." : "Enable VAT accounting and filing workflows."} name="vat_registered" defaultChecked={company.vat_registered} />
     </FormSection>
 
-    <div className={styles.saveBar}>{state.message ? <span className={state.status === "error" ? styles.error : styles.success}>{state.message}</span> : <span>{fr ? "Les modifications mettent à jour le profil de l’entreprise dans Zuelen." : "Changes update the company profile across Zuelen."}</span>}<button type="submit" disabled={pending}>{pending ? <LoaderCircle className={styles.spin} size={15} /> : <Check size={15} />} {pending ? (fr ? "Enregistrement…" : "Saving…") : (fr ? "Enregistrer les modifications" : "Save changes")}</button></div>
+    <div className={styles.saveBar}>{state.message ? <span className={state.status === "error" ? styles.error : styles.success}>{state.message}</span> : <span>{independent ? (fr ? "Les modifications mettent à jour le profil de l’activité dans Zuelen." : "Changes update the activity profile across Zuelen.") : (fr ? "Les modifications mettent à jour le profil de l’entreprise dans Zuelen." : "Changes update the company profile across Zuelen.")}</span>}<button type="submit" disabled={pending}>{pending ? <LoaderCircle className={styles.spin} size={15} /> : <Check size={15} />} {pending ? (fr ? "Enregistrement…" : "Saving…") : (fr ? "Enregistrer les modifications" : "Save changes")}</button></div>
   </form>;
 }
