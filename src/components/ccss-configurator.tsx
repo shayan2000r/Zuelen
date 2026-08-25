@@ -59,6 +59,8 @@ export function CcssConfigurator({
   const fr = locale === "fr";
   const configDialog = useRef<HTMLDialogElement>(null);
   const statementDialog = useRef<HTMLDialogElement>(null);
+  const configForm = useRef<HTMLFormElement>(null);
+  const statementForm = useRef<HTMLFormElement>(null);
   const [configState, configAction, configPending] = useActionState(saveCcssConfiguration, initialState);
   const [statementState, statementAction, statementPending] = useActionState(saveCcssStatement, initialState);
   const [civilStatus, setCivilStatus] = useState(fiscalProfile?.civil_status ?? "single");
@@ -70,17 +72,26 @@ export function CcssConfigurator({
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const l = (en: string, french: string) => fr ? french : en;
   const close = (dialog: React.RefObject<HTMLDialogElement | null>) => dialog.current?.close();
+  const open = (
+    dialog: React.RefObject<HTMLDialogElement | null>,
+    form: React.RefObject<HTMLFormElement | null>,
+  ) => {
+    dialog.current?.showModal();
+    requestAnimationFrame(() => {
+      if (form.current) form.current.scrollTop = 0;
+    });
+  };
 
   return <>
     <div className={styles.actions}>
-      <button type="button" className={styles.primary} onClick={() => configDialog.current?.showModal()}><Settings2 size={15}/>{l("Configure my situation", "Configurer ma situation")}</button>
-      {ccssProfile ? <button type="button" className={styles.secondary} onClick={() => statementDialog.current?.showModal()}><CalendarPlus2 size={15}/>{l("Record statement", "Enregistrer un extrait")}</button> : null}
+      <button type="button" className={styles.primary} onClick={() => open(configDialog, configForm)}><Settings2 size={15}/>{l("Configure my situation", "Configurer ma situation")}</button>
+      {ccssProfile ? <button type="button" className={styles.secondary} onClick={() => open(statementDialog, statementForm)}><CalendarPlus2 size={15}/>{l("Record statement", "Enregistrer un extrait")}</button> : null}
     </div>
 
     <dialog ref={configDialog} className={styles.dialog} aria-labelledby="ccss-config-title" onCancel={() => close(configDialog)}>
       <div className={styles.dialogShell}>
         <header className={styles.dialogHeader}><div><span>CCSS · {year}</span><h2 id="ccss-config-title">{l("Configure your situation", "Configurer votre situation")}</h2><p>{l("Confirm the professional income and affiliation facts that CCSS uses. Your personal tax situation remains separate.", "Confirmez le revenu professionnel et les éléments d’affiliation utilisés par le CCSS. Votre situation fiscale personnelle reste distincte.")}</p></div><button type="button" onClick={() => close(configDialog)} aria-label={l("Close", "Fermer")}><X size={18}/></button></header>
-        <form action={configAction} className={styles.form}>
+        <form ref={configForm} action={configAction} className={styles.form}>
           <input type="hidden" name="tax_year" value={year}/>
           <FormSection title={l("CCSS affiliation", "Affiliation CCSS")} description={l("This determines contribution bases. It does not use your tax class.", "Cette section détermine les assiettes de cotisation. Elle n’utilise pas votre classe d’impôt.")}>
             <FieldGroup columns={2}>
@@ -173,7 +184,7 @@ export function CcssConfigurator({
     <dialog ref={statementDialog} className={styles.dialog} aria-labelledby="ccss-statement-title" onCancel={() => close(statementDialog)}>
       <div className={`${styles.dialogShell} ${styles.statementShell}`}>
         <header className={styles.dialogHeader}><div><span>{l("From CCSS statement", "Depuis l’extrait CCSS")}</span><h2 id="ccss-statement-title">{l("Record an actual statement", "Enregistrer un extrait réel")}</h2><p>{l("The due date is calculated as 10 days after the issue date — never from an invented recurring day.", "L’échéance est calculée à 10 jours après la date d’émission — jamais à partir d’un jour mensuel inventé.")}</p></div><button type="button" onClick={() => close(statementDialog)} aria-label={l("Close", "Fermer")}><X size={18}/></button></header>
-        <form action={statementAction} className={styles.form}>
+        <form ref={statementForm} action={statementAction} className={styles.form}>
           <input type="hidden" name="tax_year" value={year}/>
           <FieldGroup columns={2}>
             <TextField label={l("Contribution period", "Période de cotisation")} name="contribution_period" type="month" defaultValue={`${year}-${String(new Date().getMonth() + 1).padStart(2, "0")}`} required/>
@@ -194,4 +205,3 @@ export function CcssConfigurator({
     </dialog>
   </>;
 }
-
