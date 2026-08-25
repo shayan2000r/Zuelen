@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const workspace = await getWorkspace();
   if (!workspace.authenticated) redirect("/sign-in");
-  if (!workspace.organization || !workspace.company) redirect("/setup");
+  if (!workspace.organization || !workspace.company) redirect(workspace.workspaces.length ? "/contexts" : "/setup");
 
   const fiscalYear = await getActiveFiscalYear(workspace.company.fiscal_year_start_month);
   const bounds = fiscalYearBounds(fiscalYear, workspace.company.fiscal_year_start_month);
@@ -55,6 +55,10 @@ export default async function ProtectedAppLayout({ children }: { children: React
       locale={normalizeLocale(workspace.profile?.locale)}
       accountTranslations={(accountsResult.data ?? []) as AccountTranslation[]}
       plan={billing.plan}
+      entityKind={workspace.company.entity_kind}
+      capabilities={workspace.capabilities!}
+      workspaces={workspace.workspaces}
+      activeWorkspaceId={workspace.company.id}
     >
       {children}
     </AppFrame>

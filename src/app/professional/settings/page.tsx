@@ -27,7 +27,7 @@ export default async function ProfessionalSettingsPage({ searchParams }: { searc
     photoUrl={profile.photo_url}
     approvalStatus={profile.approval_status}
     plan={subscription?.tier ?? null}
-    hasBusinessWorkspace={Boolean(workspace.company)}
+    hasBusinessWorkspace={workspace.workspaces.length > 0}
     locale={locale}
   >
     <div className={styles.page}>
@@ -59,7 +59,7 @@ export default async function ProfessionalSettingsPage({ searchParams }: { searc
         <div className={styles.sectionHead}><div><span>{l("Workspaces", "Espaces")}</span><h2>{l("One login, separate workspaces", "Un compte, plusieurs espaces")}</h2></div><Building2 size={19}/></div>
         <div className={settings.workspaceSetting}>
           <div><strong>{l("Business workspace", "Espace entreprise")}</strong><p>{workspace.company ? l("Your Zuelen login already has a business workspace. You can switch between business and professional from the account menu.", "Votre compte Zuelen possède déjà un espace entreprise. Vous pouvez passer de l’espace entreprise à l’espace professionnel depuis le menu du compte.") : l("Create a business workspace with the same email and login. Your professional profile stays separate.", "Créez un espace entreprise avec le même e-mail et le même compte. Votre profil professionnel restera séparé.")}</p></div>
-          <Link href={workspace.company ? "/app" : "/setup"} className={styles.secondaryLink}>{workspace.company ? l("Open business workspace", "Ouvrir l’espace entreprise") : l("Create business workspace", "Créer un espace entreprise")}</Link>
+          <Link href={workspace.workspaces.length ? "/contexts" : "/setup?add=1"} className={styles.secondaryLink}>{workspace.workspaces.length ? l("Open my Zuelen activities", "Ouvrir mes activités Zuelen") : l("Create an activity", "Créer une activité")}</Link>
         </div>
       </section>
 

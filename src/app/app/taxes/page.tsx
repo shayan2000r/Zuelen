@@ -11,13 +11,14 @@ import { fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { intlLocale, normalizeLocale, type Locale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { IndependentTaxes } from "@/components/independent-taxes";
 
 export const dynamic="force-dynamic";
 function money(v:number,l:Locale,c="EUR"){return new Intl.NumberFormat(intlLocale(l),{style:"currency",currency:c,minimumFractionDigits:2}).format(v)}
 function irc(profit:number){if(profit<=0)return 0;if(profit<=175000)return profit*.14;if(profit<=200001)return 24500+(profit-175000)*.30;return profit*.16}
 
 export default async function TaxesPage(){
- const workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",dateLocale=intlLocale(locale),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),currency=workspace.company.base_currency||"EUR",supabase=await createClient();
+ const workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");if(workspace.company.entity_kind==="independent")return <IndependentTaxes workspace={workspace}/>;const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",dateLocale=intlLocale(locale),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),currency=workspace.company.base_currency||"EUR",supabase=await createClient();
  const[entriesResult,accountsResult,invoicesResult,pendingResult,aedResult,taxEventsResult,bankResult,profileResult]=await Promise.all([
   supabase.from("journal_entries").select("id").eq("company_id",workspace.company.id).eq("status","posted").gte("entry_date",bounds.start).lte("entry_date",bounds.end),
   supabase.from("company_accounts").select("id,code,account_type").eq("company_id",workspace.company.id).eq("is_active",true),

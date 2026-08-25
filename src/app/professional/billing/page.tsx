@@ -35,7 +35,7 @@ export default async function ProfessionalBillingPage({ searchParams }: { search
     photoUrl={profile.photo_url}
     approvalStatus={profile.approval_status}
     plan={subscription?.tier ?? null}
-    hasBusinessWorkspace={Boolean(workspace.company)}
+    hasBusinessWorkspace={workspace.workspaces.length > 0}
     locale={locale}
   >
     <div className={styles.page}>

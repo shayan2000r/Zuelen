@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BadgeCheck, BarChart3, BriefcaseBusiness, Check, Clock3, CreditCard, ExternalLink, Sparkles, UserRound } from "lucide-react";
 import { redirect } from "next/navigation";
 import { AccountantOnboarding } from "@/components/accountant-onboarding";
@@ -70,7 +69,7 @@ export default async function ProfessionalPage({ searchParams }: { searchParams:
     photoUrl={profile.photo_url}
     approvalStatus={profile.approval_status}
     plan={subscription?.tier ?? null}
-    hasBusinessWorkspace={Boolean(workspace.company)}
+    hasBusinessWorkspace={workspace.workspaces.length > 0}
     locale={locale}
   >
     <V2Page>

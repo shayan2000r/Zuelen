@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Landmark, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, HeartHandshake, Landmark, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
@@ -16,26 +16,26 @@ function irc(profit:number){if(profit<=0)return 0;if(profit<=175000)return profi
 
 export default async function OverviewPage(){
  const workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");
- const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",dateLocale=intlLocale(locale),now=new Date(),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),currency=workspace.company.base_currency||"EUR",supabase=await createClient();
+ const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",independent=workspace.company.entity_kind==="independent",dateLocale=intlLocale(locale),now=new Date(),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),currency=workspace.company.base_currency||"EUR",supabase=await createClient();
  const monthKeys=Array.from({length:12},(_,index)=>{const d=new Date(Date.UTC(year,workspace.company!.fiscal_year_start_month-1+index,1));return{key:d.toISOString().slice(0,7),label:d.toLocaleDateString(dateLocale,{month:"short",timeZone:"UTC"}).replace(".","").slice(0,3)}}),monthIndex=new Map(monthKeys.map((month,index)=>[month.key,index]));
  const[entriesResult,accountsResult,transactionsResult,taxProfileResult]=await Promise.all([
   supabase.from("journal_entries").select("id,entry_date").eq("company_id",workspace.company.id).eq("status","posted").gte("entry_date",bounds.start).lte("entry_date",bounds.end),
   supabase.from("company_accounts").select("id,code,account_type").eq("company_id",workspace.company.id),
   supabase.from("source_transactions").select("id,occurred_on,direction,amount_gross,currency,counterparty_name,description,classification_status").eq("company_id",workspace.company.id).not("classification_status","in",'(reversed,ignored)').gte("occurred_on",bounds.start).lte("occurred_on",bounds.end).order("occurred_on",{ascending:false}).order("created_at",{ascending:false}).limit(8),
-  supabase.from("company_tax_profiles").select("icc_multiplier,icc_multiplier_year").eq("company_id",workspace.company.id).maybeSingle(),
+  independent?Promise.resolve({data:null,error:null}):supabase.from("company_tax_profiles").select("icc_multiplier,icc_multiplier_year").eq("company_id",workspace.company.id).maybeSingle(),
  ]);
  for(const result of[entriesResult,accountsResult,transactionsResult,taxProfileResult])if(result.error)throw new Error(result.error.message);
  const entries=entriesResult.data??[],accounts=(accountsResult.data??[]) as Account[],accountMap=new Map(accounts.map(a=>[a.id,a])),dateMap=new Map(entries.map(e=>[e.id,e.entry_date])),monthly=Array.from({length:12},()=>({revenue:0,expense:0}));
  let lines:LedgerLine[]=[];if(entries.length){const r=await supabase.from("journal_lines").select("journal_entry_id,company_account_id,debit,credit").in("journal_entry_id",entries.map(e=>e.id));if(r.error)throw new Error(r.error.message);lines=(r.data??[]) as LedgerLine[]}
  let revenue=0,expenses=0,outputVat=0,inputVat=0;for(const line of lines){const a=accountMap.get(line.company_account_id);if(!a)continue;const d=Number(line.debit),c=Number(line.credit),date=dateMap.get(line.journal_entry_id),index=date?monthIndex.get(date.slice(0,7)):-1;if(a.account_type==="revenue"){const v=c-d;revenue+=v;if(index!==undefined&&index>=0)monthly[index].revenue+=v}if(a.account_type==="expense"&&!['6711','6721','6811'].includes(a.code)){const v=d-c;expenses+=v;if(index!==undefined&&index>=0)monthly[index].expense+=v}if(a.code==="461411")outputVat+=c-d;if(a.code==="421611")inputVat+=d-c}
- const profit=revenue-expenses,vat=outputVat-inputVat,profitForTax=Math.max(0,profit),ircTax=irc(profitForTax),fund=ircTax*.07,profileYear=Number(taxProfileResult.data?.icc_multiplier_year),multiplier=profileYear===year&&taxProfileResult.data?.icc_multiplier!=null?Number(taxProfileResult.data.icc_multiplier):null,icc=multiplier===null?0:Math.max(profitForTax-17500,0)*.03*multiplier,estimatedTaxes=ircTax+fund+icc;
+ const profit=revenue-expenses,vat=outputVat-inputVat,profitForTax=Math.max(0,profit),ircTax=independent?0:irc(profitForTax),fund=ircTax*.07,profileYear=Number(taxProfileResult.data?.icc_multiplier_year),multiplier=profileYear===year&&taxProfileResult.data?.icc_multiplier!=null?Number(taxProfileResult.data.icc_multiplier):null,icc=independent||multiplier===null?0:Math.max(profitForTax-17500,0)*.03*multiplier,estimatedTaxes=ircTax+fund+icc;
  const hour=now.getHours(),greeting=fr?(hour<18?"Bonjour":"Bonsoir"):(hour<12?"Good morning":hour<18?"Good afternoon":"Good evening"),name=workspace.company.trading_name||workspace.company.legal_name,chartMax=Math.max(1,...monthly.flatMap(m=>[m.revenue,m.expense])),recent=transactionsResult.data??[],margin=revenue?(profit/revenue)*100:0;
  const vatDescription=vat>0?(fr?"TVA estimée à payer":"Estimated VAT payable"):vat<0?(fr?"TVA estimée à récupérer":"Estimated VAT recoverable"):(fr?"Position TVA équilibrée":"VAT position balanced");
  return <V2Page>
   <PageHeader
    eyebrow={`${t(locale,"financialYear")} ${year} · ${bounds.start} → ${bounds.end}`}
    title={<>{greeting}, {name}.</>}
-   description={fr?"Vos chiffres essentiels, vos tendances et vos prochaines actions dans une vue financière claire.":"Your essential numbers, financial picture and next actions in one clear workspace."}
+   description={independent?(fr?"Votre chiffre d’affaires, vos charges, votre bénéfice professionnel et vos prochaines obligations dans une vue claire.":"Your income, expenses, professional profit and next obligations in one clear view."):(fr?"Vos chiffres essentiels, vos tendances et vos prochaines actions dans une vue financière claire.":"Your essential numbers, financial picture and next actions in one clear workspace.")}
    actions={[
     {label:fr?"Ajouter une transaction":"Add transaction",href:"/app/transactions",icon:Plus,variant:"primary"},
     {label:t(locale,"viewReports"),href:"/app/reports",icon:ArrowRight,variant:"secondary"},
@@ -45,8 +45,8 @@ export default async function OverviewPage(){
   <MetricGrid>
    <MetricCard label={t(locale,"revenue")} value={money(revenue,currency,locale)} description={fr?"Revenus comptabilisés sur l’exercice sélectionné.":"Posted revenue for the selected financial year."} icon={WalletCards} href="/app/reports"/>
    <MetricCard label={t(locale,"expenses")} value={money(expenses,currency,locale)} description={fr?"Charges d’exploitation comptabilisées sur l’exercice.":"Operating expenses posted for the financial year."} icon={ReceiptText} href="/app/transactions?status=posted"/>
-   <MetricCard label={t(locale,"netResult")} value={money(profit,currency,locale)} description={profit>=0?(fr?"Résultat positif avant impôts estimés.":"Positive result before estimated taxes."):(fr?"Les charges dépassent actuellement les revenus.":"Expenses currently exceed revenue.")} icon={Sparkles} href="/app/reports"/>
-   <MetricCard label={t(locale,"vatPosition")} value={money(Math.abs(vat),currency,locale)} description={vatDescription} icon={Landmark} href="/app/vat"/>
+   <MetricCard label={independent?(fr?"Bénéfice professionnel":"Professional profit"):t(locale,"netResult")} value={money(profit,currency,locale)} description={profit>=0?(independent?(fr?"Revenus moins charges comptabilisées. Aucun impôt personnel n’est estimé ici.":"Posted income less expenses. No personal income tax is estimated here."):(fr?"Résultat positif avant impôts estimés.":"Positive result before estimated taxes.")):(fr?"Les charges dépassent actuellement les revenus.":"Expenses currently exceed revenue.")} icon={Sparkles} href="/app/reports"/>
+   {workspace.capabilities?.hasVat?<MetricCard label={t(locale,"vatPosition")} value={money(Math.abs(vat),currency,locale)} description={vatDescription} icon={Landmark} href="/app/vat"/>:<MetricCard label="CCSS" value={fr?"Estimation personnelle":"Personal estimate"} description={fr?"Planifiez les cotisations à mettre de côté.":"Plan the social-security contributions to set aside."} icon={HeartHandshake} href="/app/ccss"/>}
   </MetricGrid>
 
   <div style={{height:"var(--z-space-7)"}}/>
@@ -54,7 +54,7 @@ export default async function OverviewPage(){
   <V2TwoColumn>
    <Panel>
     <SectionHeader eyebrow={t(locale,"overview")} title={t(locale,"revenueExpenses")} description={fr?"Évolution mensuelle des revenus et charges comptabilisés.":"Monthly movement of posted revenue and expenses."} action={<div className={styles.legend}><span><i className={styles.revenueDot}/>{t(locale,"revenue")}</span><span><i className={styles.expenseDot}/>{t(locale,"expenses")}</span></div>}/>
-    <div className={styles.chartSummary}><div><span>{t(locale,"estimatedTaxes")}</span><strong>{money(estimatedTaxes,currency,locale)}</strong></div><div><span>{t(locale,"margin")}</span><strong className={margin>=0?styles.positive:styles.negative}>{revenue?`${Math.round(margin)}%`:"—"}</strong></div></div>
+    <div className={styles.chartSummary}><div><span>{independent?(fr?"Planification CCSS":"CCSS planning"):t(locale,"estimatedTaxes")}</span><strong>{independent?(fr?"Ouvrir CCSS":"Open CCSS"):money(estimatedTaxes,currency,locale)}</strong></div><div><span>{t(locale,"margin")}</span><strong className={margin>=0?styles.positive:styles.negative}>{revenue?`${Math.round(margin)}%`:"—"}</strong></div></div>
     <div className={styles.barChart}>{monthly.map((month,index)=><div className={styles.barGroup} key={monthKeys[index].key}><div className={styles.bars}><span className={styles.revenueBar} style={{height:`${Math.max(month.revenue?4:0,(month.revenue/chartMax)*100)}%`}}/><span className={styles.expenseBar} style={{height:`${Math.max(month.expense?4:0,(month.expense/chartMax)*100)}%`}}/></div><small>{monthKeys[index].label}</small></div>)}</div>
    </Panel>
 
