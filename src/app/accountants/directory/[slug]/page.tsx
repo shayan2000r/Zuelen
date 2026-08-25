@@ -78,7 +78,7 @@ export default async function StandaloneAccountantProfilePage({ params }: { para
       photoUrl={ownProfile.photo_url}
       approvalStatus={ownProfile.approval_status}
       plan={ownSubscription?.tier ?? null}
-      hasBusinessWorkspace={Boolean(workspace.company)}
+      hasBusinessWorkspace={workspace.workspaces.length > 0}
       locale={locale}
     >{content}</ProfessionalFrame>;
   }

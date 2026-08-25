@@ -1,84 +1,27 @@
 "use client";
 
-import { ArrowRight, BriefcaseBusiness, Building2, Check, Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { safeInternalDestination } from "@/lib/safe-navigation";
 import styles from "./auth.module.css";
 
-type Audience = "business" | "accountant";
-
-export function SignInForm({nextPath=null,initialAudience="business"}:{nextPath?:string|null;initialAudience?:Audience}) {
+export function SignInForm({ nextPath=null }: { nextPath?:string|null }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [audience,setAudience]=useState<Audience>(initialAudience);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const destination=nextPath&&nextPath.startsWith("/")&&!nextPath.startsWith("//")?nextPath:null;
-  const explicitProfessionalDestination=Boolean(destination?.startsWith("/professional")||destination?.startsWith("/accountants/"));
-  const hasExplicitNonProfessionalDestination=Boolean(destination&&!explicitProfessionalDestination);
-  const businessDestination=hasExplicitNonProfessionalDestination?destination:null;
-  const professional=audience==="accountant";
-  const showAudienceSwitcher=!hasExplicitNonProfessionalDestination;
+  const [mode,setMode] = useState<"signin"|"signup">("signin");
+  const [locale,setLocale] = useState<"en"|"fr">("en");
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
+  const [showPassword,setShowPassword] = useState(false);
+  const [loading,setLoading] = useState(false);
+  const [message,setMessage] = useState<string|null>(null);
+  const destination=safeInternalDestination(nextPath);
+  const fr=locale==="fr";
+  const l=(en:string,french:string)=>fr?french:en;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoading(true);
-    setMessage(null);
+  async function handleSubmit(event:FormEvent<HTMLFormElement>){event.preventDefault();setLoading(true);setMessage(null);try{const supabase=createClient();if(mode==="signin"){const{error}=await supabase.auth.signInWithPassword({email,password});if(error)throw error;const query=destination?`?next=${encodeURIComponent(destination)}`:"";router.push(`/auth/resolve${query}`);router.refresh()}else{const next=destination??"/setup";const callback=`${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;const{data,error}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:callback}});if(error)throw error;if(data.session){router.push(next);router.refresh()}else setMessage(l("Check your inbox to confirm your email. Your confirmation link will return you to Zuelen.","Consultez votre boîte mail pour confirmer votre adresse. Le lien de confirmation vous ramènera dans Zuelen."))}}catch(error){setMessage(error instanceof Error?error.message:l("Something went wrong. Please try again.","Une erreur est survenue. Veuillez réessayer."))}finally{setLoading(false)}}
 
-    try {
-      const supabase = createClient();
-      if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        router.push(professional?"/professional":businessDestination??"/app");
-        router.refresh();
-      } else {
-        const next=professional?"/professional":businessDestination??"/setup";
-        const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callback } });
-        if (error) throw error;
-        if (data.session) {
-          router.push(next);
-          router.refresh();
-        } else {
-          setMessage(professional
-            ? "Check your inbox to confirm your email. The confirmation link will take you to your accountant onboarding."
-            : businessDestination
-              ? "Check your inbox to confirm your email. The confirmation link will return you to your invitation."
-              : "Check your inbox to confirm your email. The confirmation link will return you to Zuelen setup.");
-        }
-      }
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const eyebrow=professional?"Zuelen for accountants":businessDestination?"Team invitation":mode === "signin" ? "Welcome back" : "Create your workspace";
-  const heading=professional?(mode==="signin"?"Sign in to your professional workspace":"Create your accountant account"):businessDestination?(mode==="signin"?"Sign in to accept your invitation":"Create your account to join"):mode === "signin" ? "Sign in to Zuelen" : "Start with your company";
-  const intro=professional?"Manage your professional listing, visibility and enquiries in a workspace built for accountants.":businessDestination?"Use the email address that received the invitation.":mode === "signin" ? "Continue where you left off." : "Set up your account now. Your Luxembourg company profile comes next.";
-  const audienceButton=(active:boolean)=>({
-    width:"100%",border:active?"1px solid color-mix(in srgb,var(--z-brand) 45%,var(--z-border))":"1px solid var(--z-border)",background:active?"var(--z-brand-soft)":"var(--z-surface-1)",borderRadius:"var(--z-radius-md)",padding:"10px 11px",display:"grid",gridTemplateColumns:"28px 1fr",gap:8,alignItems:"center",textAlign:"left" as const,cursor:"pointer",color:"var(--z-text)",boxShadow:active?"var(--z-focus-ring)":"none"
-  });
-
-  return (
-    <main className={styles.shell}>
-      <section className={styles.storyPanel}>
-        <div className={styles.storyTop}><img className={styles.logoMark} src="/zuelen-icon.png" alt="Zuelen" style={{background:"transparent",display:"block",objectFit:"contain"}} /><span>Zuelen</span></div>
-        <div className={styles.storyContent}><p className={styles.overline}>{professional?"Connect with Luxembourg businesses.":"Luxembourg business, under control."}</p><h1>{professional?"Put your expertise where businesses already manage their finances.":"Your books, taxes and deadlines — finally in one place."}</h1><p className={styles.storyLead}>{professional?"Create a trusted listing, get discovered by relevant businesses, and manage your professional presence from one focused workspace.":"Built for owner-operated Luxembourg companies that want clarity without becoming accountants."}</p><div className={styles.storyProofs}><div><span><Check size={13} /></span><p><strong>{professional?"30-day free trial":"One source of truth"}</strong><small>{professional?"Choose Basic or Premium and try your listing before your first charge.":"Bookkeeping feeds VAT, annual accounts and tax preparation."}</small></p></div><div><span><ShieldCheck size={13} /></span><p><strong>{professional?"Curated directory":"Luxembourg-first"}</strong><small>{professional?"Every professional profile is reviewed before publication.":"Designed around PCN, eCDF, RCS, AED and ACD workflows."}</small></p></div><div><span><Sparkles size={13} /></span><p><strong>{professional?"Premium visibility":"Guided, not overwhelming"}</strong><small>{professional?"Featured placement and lead analytics are available on Premium.":"Zuelen tells you what needs attention before it becomes a problem."}</small></p></div></div></div>
-        <div className={styles.storyFooter}><LockKeyhole size={13} />{professional?"One Zuelen login can hold both a business workspace and an accountant profile.":"Financial data is isolated per company with row-level security."}</div>
-      </section>
-      <section className={styles.formPanel}><div className={styles.formWrap}>
-        {showAudienceSwitcher?<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:24}} aria-label="Choose Zuelen experience"><button type="button" style={audienceButton(audience==="business")} onClick={()=>{setAudience("business");setMessage(null)}}><Building2 size={15}/><span><strong style={{display:"block",fontSize:11}}>Business</strong><small style={{display:"block",fontSize:10,color:"var(--z-text-tertiary)",marginTop:2}}>Manage a company</small></span></button><button type="button" style={audienceButton(audience==="accountant")} onClick={()=>{setAudience("accountant");setMessage(null)}}><BriefcaseBusiness size={15}/><span><strong style={{display:"block",fontSize:11}}>Accountant</strong><small style={{display:"block",fontSize:10,color:"var(--z-text-tertiary)",marginTop:2}}>List your practice</small></span></button></div>:null}
-        <div className={styles.formHeader}><span className={styles.formEyebrow}>{eyebrow}</span><h2>{heading}</h2><p>{intro}</p></div>
-        <form className={styles.form} onSubmit={handleSubmit}><label><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder={professional?"you@practice.lu":"you@company.lu"} required /></label><label><span>Password</span><div className={styles.passwordWrap}><input type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "signin" ? "current-password" : "new-password"} minLength={8} placeholder="At least 8 characters" required /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></label>{message ? <div className={styles.message}>{message}</div> : null}<button className={styles.submit} type="submit" disabled={loading}>{loading ? <LoaderCircle className={styles.spin} size={17} /> : null}<span>{mode === "signin" ? "Sign in" : "Create account"}</span>{!loading ? <ArrowRight size={16} /> : null}</button></form>
-        <div className={styles.switchMode}><span>{mode === "signin" ? "New to Zuelen?" : "Already have an account?"}</span><button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMessage(null); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></div>
-      </div></section>
-    </main>
-  );
+  return <main className={styles.shell}><section className={styles.storyPanel}><div className={styles.storyTop}><Image className={styles.logoMark} src="/zuelen-icon.png" alt="Zuelen" width={34} height={34} style={{background:"transparent",display:"block",objectFit:"contain"}}/><span>Zuelen</span></div><div className={styles.storyContent}><p className={styles.overline}>{l("Luxembourg business, under control.","Votre activité luxembourgeoise, sous contrôle.")}</p><h1>{l("One secure account for every way you work.","Un compte sécurisé pour toutes vos activités.")}</h1><p className={styles.storyLead}>{l("Manage an Independent activity, a company, or your accounting-professional presence without separate credentials.","Gérez une activité indépendante, une société ou votre présence de professionnel comptable sans multiplier les identifiants.")}</p><div className={styles.storyProofs}><div><span><Check size={13}/></span><p><strong>{l("One identity","Une seule identité")}</strong><small>{l("Add activities and professional contexts whenever you need them.","Ajoutez des activités et des contextes professionnels quand vous en avez besoin.")}</small></p></div><div><span><ShieldCheck size={13}/></span><p><strong>{l("Isolated workspaces","Espaces isolés")}</strong><small>{l("Every activity keeps its own books, access and subscription.","Chaque activité conserve sa comptabilité, ses accès et son abonnement.")}</small></p></div><div><span><Sparkles size={13}/></span><p><strong>{l("Luxembourg-first","Pensé pour le Luxembourg")}</strong><small>{l("Accounting, VAT, CCSS and compliance adapt to your situation.","Comptabilité, TVA, CCSS et obligations s’adaptent à votre situation.")}</small></p></div></div></div><div className={styles.storyFooter}><LockKeyhole size={13}/>{l("Financial data is protected by organization-level row security.","Les données financières sont protégées par une sécurité au niveau de chaque organisation.")}</div></section><section className={styles.formPanel}><div className={styles.formWrap}><div style={{display:"flex",justifyContent:"flex-end",gap:5,marginBottom:24}} aria-label={l("Language","Langue")}><button type="button" onClick={()=>setLocale("en")} aria-pressed={!fr} style={{border:"1px solid var(--z-border)",background:!fr?"var(--z-brand-soft)":"transparent",borderRadius:8,padding:"6px 8px",color:"var(--z-text)",cursor:"pointer"}}>EN</button><button type="button" onClick={()=>setLocale("fr")} aria-pressed={fr} style={{border:"1px solid var(--z-border)",background:fr?"var(--z-brand-soft)":"transparent",borderRadius:8,padding:"6px 8px",color:"var(--z-text)",cursor:"pointer"}}>FR</button></div><div className={styles.formHeader}><span className={styles.formEyebrow}>{destination?l("Secure invitation","Invitation sécurisée"):mode==="signin"?l("Welcome back","Bon retour"):l("Your Zuelen identity","Votre identité Zuelen")}</span><h2>{mode==="signin"?l("Sign in to Zuelen","Se connecter à Zuelen"):l("Create your Zuelen account","Créer votre compte Zuelen")}</h2><p>{destination?l("Sign in with the email address that received the invitation.","Connectez-vous avec l’adresse e-mail ayant reçu l’invitation."):mode==="signin"?l("Zuelen will open the right workspace or professional context.","Zuelen ouvrira le bon espace ou contexte professionnel."):l("After email verification, choose what you would like to set up.","Après vérification de l’e-mail, choisissez ce que vous souhaitez configurer.")}</p></div><form className={styles.form} onSubmit={handleSubmit}><label><span>{l("Email address","Adresse e-mail")}</span><input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" placeholder="you@example.lu" required/></label><label><span>{l("Password","Mot de passe")}</span><div className={styles.passwordWrap}><input type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode==="signin"?"current-password":"new-password"} minLength={8} placeholder={l("At least 8 characters","Au moins 8 caractères")} required/><button type="button" onClick={()=>setShowPassword(value=>!value)} aria-label={showPassword?l("Hide password","Masquer le mot de passe"):l("Show password","Afficher le mot de passe")}>{showPassword?<EyeOff size={16}/>:<Eye size={16}/>}</button></div></label>{message?<div className={styles.message}>{message}</div>:null}<button className={styles.submit} type="submit" disabled={loading}>{loading?<LoaderCircle className={styles.spin} size={17}/>:null}<span>{mode==="signin"?l("Sign in","Se connecter"):l("Create account","Créer un compte")}</span>{!loading?<ArrowRight size={16}/>:null}</button></form><div className={styles.switchMode}><span>{mode==="signin"?l("New to Zuelen?","Nouveau sur Zuelen ?"):l("Already have an account?","Vous avez déjà un compte ?")}</span><button type="button" onClick={()=>{setMode(mode==="signin"?"signup":"signin");setMessage(null)}}>{mode==="signin"?l("Create an account","Créer un compte"):l("Sign in","Se connecter")}</button></div></div></section></main>;
 }

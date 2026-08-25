@@ -113,14 +113,14 @@ export default async function StandaloneAccountantsPage({ searchParams }: { sear
       photoUrl={ownProfile.photo_url}
       approvalStatus={ownProfile.approval_status}
       plan={ownSubscription?.tier ?? null}
-      hasBusinessWorkspace={Boolean(workspace.company)}
+      hasBusinessWorkspace={workspace.workspaces.length > 0}
       locale={locale}
     >{directory}</ProfessionalFrame>;
   }
 
   return <main style={{minHeight:"100vh",background:"#f7f7f4"}}>
     <header style={{height:72,maxWidth:1280,margin:"0 auto",padding:"0 36px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid #e1e4dd"}}>
-      <Link href={workspace.company ? "/app" : "/professional"} style={{display:"flex",alignItems:"center",gap:9,textDecoration:"none",color:"#202622"}}><img src="/zuelen-icon.png" alt="" style={{width:29,height:29,objectFit:"contain"}}/><strong style={{fontSize:14,letterSpacing:"-.04em"}}>Zuelen</strong><span style={{fontSize:9,color:"#7a8179",borderLeft:"1px solid #d9ddd5",paddingLeft:9}}>{fr ? "Annuaire comptables" : "Accountant directory"}</span></Link>
+      <Link href={workspace.workspaces.length ? "/contexts" : "/professional"} style={{display:"flex",alignItems:"center",gap:9,textDecoration:"none",color:"#202622"}}><img src="/zuelen-icon.png" alt="" style={{width:29,height:29,objectFit:"contain"}}/><strong style={{fontSize:14,letterSpacing:"-.04em"}}>Zuelen</strong><span style={{fontSize:9,color:"#7a8179",borderLeft:"1px solid #d9ddd5",paddingLeft:9}}>{fr ? "Annuaire comptables" : "Accountant directory"}</span></Link>
       <div style={{display:"flex",alignItems:"center",gap:14}}>{workspace.company ? <Link href="/app" style={{fontSize:10,color:"#68716b",textDecoration:"none"}}>{fr?"Espace entreprise":"Business workspace"}</Link> : null}<Link href="/professional" style={{fontSize:10,fontWeight:800,color:"#214b30",textDecoration:"none"}}>{fr?"Espace professionnel":"Professional workspace"}</Link></div>
     </header>
     {directory}

@@ -15,9 +15,9 @@ export default function AuthConfirmedPage() {
   }, []);
 
   const destinationLabel = destination.startsWith("/professional")
-    ? "your accountant onboarding"
+    ? "your professional setup"
     : destination.startsWith("/setup")
-      ? "your company setup"
+      ? "your Zuelen setup"
       : "Zuelen";
 
   useEffect(() => {
@@ -94,13 +94,13 @@ export default function AuthConfirmedPage() {
             textTransform: "uppercase",
           }}
         >
-          Email confirmed
+          Email verified
         </p>
         <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.15, letterSpacing: "-.03em" }}>
           Your Zuelen account is ready.
         </h1>
         <p style={{ margin: "16px auto 0", maxWidth: 390, color: "#71776d", fontSize: 15, lineHeight: 1.65 }}>
-          Your email address has been verified successfully. We&apos;re taking you to {destinationLabel} now.
+          Let&apos;s configure how you&apos;ll use Zuelen. We&apos;re taking you to {destinationLabel} now.
         </p>
 
         <div

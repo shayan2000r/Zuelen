@@ -1,11 +1,11 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { seatLimitMessage } from "@/lib/billing";
 import { createClient } from "@/lib/supabase/server";
-import { getWorkspace } from "@/lib/workspace";
+import { ACTIVE_WORKSPACE_COOKIE, getWorkspace } from "@/lib/workspace";
 
 export type TeamActionState={status:"idle"|"success"|"error";message:string};
 const ROLES=new Set(["admin","accountant","bookkeeper","viewer"]);
@@ -53,5 +53,5 @@ export async function revokeTeamInvitationAction(formData:FormData){
 }
 
 export async function acceptTeamInvitationAction(formData:FormData){
- const token=String(formData.get("token")??"");if(!token)redirect("/sign-in");const supabase=await createClient(),{error}=await supabase.rpc("accept_organization_invitation",{p_token:token});if(error)redirect(`/invite/${encodeURIComponent(token)}?error=${encodeURIComponent(error.message)}`);redirect("/app");
+ const token=String(formData.get("token")??"");if(!token)redirect("/sign-in");const supabase=await createClient();const invitationResult=await supabase.rpc("get_organization_invitation_v2",{p_token:token});const invitation=Array.isArray(invitationResult.data)?invitationResult.data[0]:null;if(invitationResult.error||!invitation?.organization_id)redirect(`/invite/${encodeURIComponent(token)}?error=${encodeURIComponent(invitationResult.error?.message??"Invitation unavailable")}`);const{error}=await supabase.rpc("accept_organization_invitation",{p_token:token});if(error)redirect(`/invite/${encodeURIComponent(token)}?error=${encodeURIComponent(error.message)}`);const{data:company}=await supabase.from("companies").select("id").eq("organization_id",invitation.organization_id).order("created_at",{ascending:true}).limit(1).maybeSingle();if(company?.id)(await cookies()).set(ACTIVE_WORKSPACE_COOKIE,company.id,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:60*60*24*365});redirect("/app");
 }

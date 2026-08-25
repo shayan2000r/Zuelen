@@ -49,5 +49,5 @@ export async function deleteProfessionalProfileAction(formData: FormData) {
   revalidatePath("/professional", "layout");
   revalidatePath("/accountants/directory");
   revalidatePath("/app/accountants");
-  redirect(workspace.company ? "/app" : "/accountants/directory?professional=deleted");
+  redirect(workspace.workspaces.length ? "/contexts" : "/accountants/directory?professional=deleted");
 }

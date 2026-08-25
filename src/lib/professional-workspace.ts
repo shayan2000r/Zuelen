@@ -10,7 +10,7 @@ export const DIRECTORY_VISIBLE_ACCOUNTANT_STATUSES = new Set(["active", "trialin
 
 export async function getProfessionalWorkspace(requireProfile = true) {
   const workspace = await getWorkspace();
-  if (!workspace.authenticated || !workspace.userId) redirect("/sign-in?type=accountant");
+  if (!workspace.authenticated || !workspace.userId) redirect("/sign-in?next=/professional");
 
   const supabase = await createClient();
   const { data: profileData, error: profileError } = await supabase
