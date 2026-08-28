@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getMfaGateState } from "@/lib/mfa-assurance";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config";
 
 export async function updateSession(request: NextRequest) {
@@ -34,8 +35,8 @@ export async function updateSession(request: NextRequest) {
     || pathname === "/accountants/manage" || pathname.startsWith("/accountants/manage/");
 
   if (claims?.claims?.sub && protectedPath && pathname !== "/auth/mfa") {
-    const { data: assurance } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (assurance?.currentLevel === "aal1" && assurance.nextLevel === "aal2") {
+    const mfa = await getMfaGateState(supabase);
+    if (mfa.requiresChallenge) {
       const next = `${pathname}${request.nextUrl.search}`;
       const url = request.nextUrl.clone();
       url.pathname = "/auth/mfa";

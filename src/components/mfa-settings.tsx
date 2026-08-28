@@ -85,6 +85,8 @@ export function MfaSettings({ locale }: { locale: "en" | "fr" }) {
       const supabase = createClient();
       const { error } = await supabase.auth.mfa.unenroll({ factorId });
       if (error) throw error;
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) throw refreshError;
       await load();
       setMessage(l("Two-factor authentication has been disabled.", "La double authentification a été désactivée."));
       router.refresh();

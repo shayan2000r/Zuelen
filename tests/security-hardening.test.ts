@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { needsMfaChallenge } from "../src/lib/mfa-assurance.ts";
 import { safeInternalDestination } from "../src/lib/safe-navigation.ts";
 
 function read(path: string) {
@@ -19,11 +20,17 @@ test("OAuth and email confirmation destinations reject external redirects", () =
 
 test("verified TOTP factors are challenged before protected workspace access", () => {
   const proxy = read("../src/lib/supabase/proxy.ts");
-  assert.match(proxy, /getAuthenticatorAssuranceLevel/);
-  assert.match(proxy, /currentLevel === "aal1"/);
-  assert.match(proxy, /nextLevel === "aal2"/);
+  assert.equal(needsMfaChallenge("aal1", [{ status: "verified" }]), true);
+  assert.equal(needsMfaChallenge("aal2", [{ status: "verified" }]), false);
+  assert.equal(needsMfaChallenge("aal1", [{ status: "unverified" }]), false);
+  assert.equal(needsMfaChallenge("aal1", []), false);
+  assert.match(proxy, /getMfaGateState/);
+  assert.match(proxy, /mfa\.requiresChallenge/);
   assert.match(proxy, /url\.pathname = "\/auth\/mfa"/);
+  assert.match(read("../src/components/sign-in-form.tsx"), /mfa\.requiresChallenge \? `\/auth\/mfa/);
+  assert.match(read("../src/app/auth/callback/route.ts"), /new URL\("\/auth\/mfa"/);
   assert.match(read("../src/components/mfa-settings.tsx"), /factorType: "totp"/);
+  assert.match(read("../src/components/mfa-settings.tsx"), /refreshSession\(\)/);
   assert.match(read("../src/components/mfa-challenge.tsx"), /mfa\.verify/);
 });
 
