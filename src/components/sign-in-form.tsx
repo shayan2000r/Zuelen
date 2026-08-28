@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getMfaGateState } from "@/lib/mfa-assurance";
+import { currentUserRequiresMfa } from "@/lib/mfa-assurance";
 import { safeInternalDestination } from "@/lib/safe-navigation";
 import styles from "./auth.module.css";
 import extra from "./auth-security.module.css";
@@ -68,8 +68,8 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         const query = destination ? `?next=${encodeURIComponent(destination)}` : "";
-        const mfa = await getMfaGateState(supabase);
-        router.push(mfa.requiresChallenge ? `/auth/mfa${query}` : `/auth/resolve${query}`);
+        const requiresMfa = await currentUserRequiresMfa(supabase);
+        router.push(requiresMfa ? `/auth/mfa${query}` : `/auth/resolve${query}`);
         router.refresh();
       } else {
         const next = destination ?? "/setup";

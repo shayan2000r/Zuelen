@@ -24,14 +24,19 @@ test("verified TOTP factors are challenged before protected workspace access", (
   assert.equal(needsMfaChallenge("aal2", [{ status: "verified" }]), false);
   assert.equal(needsMfaChallenge("aal1", [{ status: "unverified" }]), false);
   assert.equal(needsMfaChallenge("aal1", []), false);
-  assert.match(proxy, /getMfaGateState/);
-  assert.match(proxy, /mfa\.requiresChallenge/);
+  assert.match(proxy, /currentUserRequiresMfa/);
   assert.match(proxy, /url\.pathname = "\/auth\/mfa"/);
-  assert.match(read("../src/components/sign-in-form.tsx"), /mfa\.requiresChallenge \? `\/auth\/mfa/);
+  assert.match(read("../src/components/sign-in-form.tsx"), /requiresMfa \? `\/auth\/mfa/);
   assert.match(read("../src/app/auth/callback/route.ts"), /new URL\("\/auth\/mfa"/);
   assert.match(read("../src/components/mfa-settings.tsx"), /factorType: "totp"/);
   assert.match(read("../src/components/mfa-settings.tsx"), /refreshSession\(\)/);
   assert.match(read("../src/components/mfa-challenge.tsx"), /mfa\.verify/);
+  const migration = read("../db/migrations/20260828082328_enforce_optional_mfa_gate.sql");
+  assert.match(migration, /from auth\.mfa_factors/);
+  assert.match(migration, /auth\.jwt\(\) ->> 'aal'/);
+  assert.match(migration, /security definer\s+set search_path = ''/i);
+  assert.match(migration, /grant execute on function public\.current_user_requires_mfa\(\) to authenticated/i);
+  assert.doesNotMatch(migration, /grant execute[^;]+to anon/i);
 });
 
 test("expensive authenticated actions use the database-backed limiter", () => {
