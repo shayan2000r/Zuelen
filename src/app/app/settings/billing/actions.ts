@@ -5,6 +5,8 @@ import { getWorkspace } from "@/lib/workspace";
 import { canManageOrganization } from "@/lib/permissions";
 import { getBillingSnapshot } from "@/lib/billing";
 import { premiumPriceId, seatPriceId, stripePost } from "@/lib/stripe";
+import { assertActionRateLimit } from "@/lib/rate-limit";
+import { createClient } from "@/lib/supabase/server";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.zuelen.lu";
 
@@ -21,6 +23,7 @@ async function billingContext() {
 export async function createPremiumCheckoutAction(formData: FormData) {
   const { workspace, organization, snapshot } = await billingContext();
   if (snapshot.plan === "premium" && snapshot.billing_source === "stripe") return createBillingPortalAction();
+  await assertActionRateLimit(await createClient(), "checkout");
 
   const interval = String(formData.get("interval")) === "year" ? "year" : "month";
   const price = premiumPriceId(interval);
@@ -50,6 +53,7 @@ export async function createPremiumCheckoutAction(formData: FormData) {
 export async function createSeatCheckoutAction() {
   const { workspace, organization, snapshot } = await billingContext();
   if (snapshot.stripe_seat_subscription_id) return createBillingPortalAction();
+  await assertActionRateLimit(await createClient(), "checkout");
   const params: Record<string, string | number | boolean | null | undefined> = {
     mode: "subscription",
     success_url: `${APP_URL}/app/settings/billing?seat=success`,

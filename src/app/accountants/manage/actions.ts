@@ -6,6 +6,7 @@ import { accountantPriceId, normalizeAccountantTier, normalizeWebsite } from "@/
 import { stripeGet, stripePost } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { assertActionRateLimit } from "@/lib/rate-limit";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.zuelen.lu";
 
@@ -117,6 +118,7 @@ export async function startAccountantTrialAction(formData: FormData) {
   if (!profile) throw new Error("Create your accountant profile before starting a subscription.");
   if (!profile.languages?.length || !profile.specialties?.length) throw new Error("Add at least one language and specialty before starting your subscription.");
   const tier = normalizeAccountantTier(formData.get("tier"));
+  await assertActionRateLimit(supabase, "checkout");
   const price = accountantPriceId(tier);
   const { data: subscription, error } = await supabase.from("accountant_listing_subscriptions").select("*").eq("profile_id", profile.id).maybeSingle();
   if (error) throw new Error(error.message);

@@ -140,8 +140,26 @@ export async function POST(request: Request) {
   if (!eventId) return NextResponse.json({ error: "Missing event id" }, { status: 400 });
 
   const admin = createAdminClient();
-  const { data: existing } = await admin.from("stripe_webhook_events").select("event_id").eq("event_id", eventId).maybeSingle();
-  if (existing) return NextResponse.json({ received: true, duplicate: true });
+  const processingStartedAt = new Date().toISOString();
+  const { error: claimError } = await admin.from("stripe_webhook_events").insert({ event_id: eventId, event_type: eventType, status: "processing", processing_started_at: processingStartedAt });
+  if (claimError?.code === "23505") {
+    const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: reclaimed, error: reclaimError } = await admin.from("stripe_webhook_events")
+      .update({ event_type: eventType, status: "processing", processing_started_at: processingStartedAt, last_error: null })
+      .eq("event_id", eventId)
+      .or(`status.eq.failed,and(status.eq.processing,processing_started_at.lt.${staleBefore})`)
+      .select("event_id")
+      .maybeSingle();
+    if (reclaimError) {
+      console.error("Stripe webhook reclaim failed", eventId, eventType, reclaimError.code);
+      return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    }
+    if (!reclaimed) return NextResponse.json({ received: true, duplicate: true });
+  }
+  if (claimError) {
+    console.error("Stripe webhook claim failed", eventId, eventType, claimError.code);
+    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+  }
 
   const object = event?.data?.object as JsonObject | undefined;
   try {
@@ -152,11 +170,12 @@ export async function POST(request: Request) {
       await syncSubscription(object);
     }
 
-    const { error } = await admin.from("stripe_webhook_events").insert({ event_id: eventId, event_type: eventType });
-    if (error && !error.message.toLowerCase().includes("duplicate")) throw new Error(error.message);
+    const { error: completeError } = await admin.from("stripe_webhook_events").update({ status: "processed", processed_at: new Date().toISOString(), last_error: null }).eq("event_id", eventId);
+    if (completeError) throw new Error(completeError.message);
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error("Stripe webhook processing failed", eventId, eventType, error);
+    await admin.from("stripe_webhook_events").update({ status: "failed", last_error: "Processing failed; safe to retry." }).eq("event_id", eventId);
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }
