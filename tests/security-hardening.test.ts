@@ -19,7 +19,9 @@ test("OAuth and email confirmation destinations reject external redirects", () =
 });
 
 test("verified TOTP factors are challenged before protected workspace access", () => {
+  const entrypoint = read("../src/proxy.ts");
   const proxy = read("../src/lib/supabase/proxy.ts");
+  assert.match(entrypoint, /return updateSession\(request\)/);
   assert.equal(needsMfaChallenge("aal1", [{ status: "verified" }]), true);
   assert.equal(needsMfaChallenge("aal2", [{ status: "verified" }]), false);
   assert.equal(needsMfaChallenge("aal1", [{ status: "unverified" }]), false);
