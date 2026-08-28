@@ -65,6 +65,7 @@ test("Stripe webhook claims an event before processing and makes failed or stale
 
 test("browser hardening headers and patched spreadsheet parser are configured", () => {
   const config = read("../next.config.ts");
+  assert.match(config, /poweredByHeader:\s*false/);
   for (const header of ["Content-Security-Policy", "Strict-Transport-Security", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy", "X-Frame-Options"]) assert.match(config, new RegExp(header));
   assert.match(config, /frame-ancestors 'none'/);
   assert.match(read("../package.json"), /xlsx-0\.20\.3/);
