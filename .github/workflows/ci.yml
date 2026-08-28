@@ -1,4 +1,4 @@
-name: Compta CI
+name: Zuelen CI
 
 on:
   push:
@@ -22,11 +22,23 @@ jobs:
         with:
           node-version: 22
 
+      - name: Enable pnpm
+        run: corepack enable
+
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
 
       - name: Build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://jqhsuytsjgdxzkkriukt.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder_for_build
-        run: npm run build
+        run: pnpm build

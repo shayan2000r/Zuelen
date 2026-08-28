@@ -3,6 +3,7 @@
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { safeInternalDestination } from "@/lib/safe-navigation";
 
 export default function AuthConfirmedPage() {
   const router = useRouter();
@@ -10,8 +11,8 @@ export default function AuthConfirmedPage() {
 
   const destination = useMemo(() => {
     if (typeof window === "undefined") return "/setup";
-    const value = new URLSearchParams(window.location.search).get("next") || "/setup";
-    return value.startsWith("/") && !value.startsWith("//") ? value : "/setup";
+    const value = new URLSearchParams(window.location.search).get("next");
+    return safeInternalDestination(value) ?? "/setup";
   }, []);
 
   const destinationLabel = destination.startsWith("/professional")

@@ -1,13 +1,14 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { safeInternalDestination } from "@/lib/safe-navigation";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type") as EmailOtpType | null;
-  const next = requestUrl.searchParams.get("next") || "/setup";
-  const redirectTo = new URL(next.startsWith("/") ? next : "/setup", request.url);
+  const next = safeInternalDestination(requestUrl.searchParams.get("next")) ?? "/setup";
+  const redirectTo = new URL(next, request.url);
 
   if (tokenHash && type) {
     const supabase = await createClient();
