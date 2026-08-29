@@ -1,7 +1,8 @@
 "use client";
 
 import { CalendarPlus2, FileCheck2, LoaderCircle, Settings2, ShieldCheck, X } from "lucide-react";
-import { useActionState, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { saveCcssConfiguration, saveCcssStatement, type CcssActionState } from "@/app/app/ccss/actions";
 import { FieldGroup, FormSection, SelectField, TextareaField, TextField, ToggleField } from "@/components/zuelen-form-ui-v2";
 import styles from "./ccss-configurator.module.css";
@@ -32,6 +33,9 @@ type CcssProfile = {
   aaa_factor: number | string;
   mde_membership: string;
   mde_class: number | null;
+  confirmed_monthly_normal_base: number | string | null;
+  confirmed_monthly_pension_base: number | string | null;
+  confirmed_monthly_dependency_base: number | string | null;
   pension_reduction_status: string;
   insignificant_income_exemption_status: string;
   assisting_spouse_enabled: boolean;
@@ -57,6 +61,7 @@ export function CcssConfigurator({
   documents: DocumentOption[];
 }) {
   const fr = locale === "fr";
+  const router = useRouter();
   const configDialog = useRef<HTMLDialogElement>(null);
   const statementDialog = useRef<HTMLDialogElement>(null);
   const configForm = useRef<HTMLFormElement>(null);
@@ -85,6 +90,12 @@ export function CcssConfigurator({
       if (form.current) form.current.scrollTop = 0;
     });
   };
+
+  useEffect(() => {
+    if (configState.status !== "success") return;
+    configDialog.current?.close();
+    router.refresh();
+  }, [configState, router]);
 
   return <>
     <div className={styles.actions}>
@@ -141,6 +152,11 @@ export function CcssConfigurator({
               <SelectField label={l("Insignificant-income exemption", "Dispense pour revenu insignifiant")} name="insignificant_income_exemption_status" defaultValue={ccssProfile?.insignificant_income_exemption_status ?? "not_requested"} required>
                 <option value="not_requested">{l("Not requested", "Non demandée")}</option><option value="requested">{l("Requested — assumption", "Demandée — hypothèse")}</option><option value="approved">{l("Approved by CCSS", "Approuvée par le CCSS")}</option>
               </SelectField>
+            </FieldGroup>
+            <FieldGroup columns={3}>
+              <TextField label={l("Confirmed normal monthly base", "Assiette mensuelle normale confirmée")} description={l("Optional — copy only from a current CCSS statement.", "Facultatif — recopiez uniquement une assiette figurant sur un extrait CCSS actuel.")} name="confirmed_monthly_normal_base" type="number" min="0" step="0.01" defaultValue={ccssProfile?.confirmed_monthly_normal_base ?? ""}/>
+              <TextField label={l("Confirmed pension monthly base", "Assiette mensuelle pension confirmée")} description={l("Use the reduced base only when CCSS approved it.", "Utilisez l’assiette réduite uniquement après approbation du CCSS.")} name="confirmed_monthly_pension_base" type="number" min="0" step="0.01" defaultValue={ccssProfile?.confirmed_monthly_pension_base ?? ""}/>
+              <TextField label={l("Confirmed dependency monthly base", "Assiette mensuelle dépendance confirmée")} description={l("Optional — as printed on the CCSS statement.", "Facultatif — telle qu’indiquée sur l’extrait CCSS.")} name="confirmed_monthly_dependency_base" type="number" min="0" step="0.01" defaultValue={ccssProfile?.confirmed_monthly_dependency_base ?? ""}/>
             </FieldGroup>
           </FormSection>
 
