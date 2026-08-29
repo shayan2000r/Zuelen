@@ -7,6 +7,7 @@ import { BarChart3, Bell, BriefcaseBusiness, Building2, Check, ChevronDown, Cred
 import { setLocalePreference } from "@/app/app/locale-actions";
 import type { Locale } from "@/lib/i18n";
 import styles from "./professional-frame.module.css";
+import polish from "./professional-frame-polish.module.css";
 
 type Props = {
   children: ReactNode;
@@ -153,12 +154,6 @@ export function ProfessionalFrame({ children, name, firmName, email, photoUrl, a
           <button className={styles.mobileClose} type="button" onClick={() => setMobileOpen(false)} aria-label={l("Close navigation", "Fermer la navigation")}><X size={18} /></button>
         </div>
 
-        <div className={styles.identity}>
-          {photoUrl ? <img src={photoUrl} alt="" /> : <span className={styles.avatar}>{initials(name)}</span>}
-          <div><strong>{name}</strong><small>{firmName || email || l("Professional profile", "Profil professionnel")}</small></div>
-          <span className={`${styles.status} ${styles[approvalStatus] ?? ""}`}>{approvalLabel(approvalStatus)}</span>
-        </div>
-
         <nav className={styles.nav} aria-label={l("Professional navigation", "Navigation professionnelle")}>
           {nav.map(item => {
             const active = item.href === "/professional" ? pathname === "/professional" : item.href === "/accountants/directory" ? pathname.startsWith("/accountants/directory") : pathname.startsWith(item.href);
@@ -203,8 +198,8 @@ export function ProfessionalFrame({ children, name, firmName, email, photoUrl, a
                 <div><strong>{name}</strong><small>{workspaceLabel}</small></div><ChevronDown size={14}/>
               </button>
               {accountOpen ? <div className={styles.accountMenu}>
-                <div className={styles.accountMenuHead}><strong>{name}</strong><span>{email}</span></div>
-                <div className={styles.accountMenuSection}><span>{l("Workspaces", "Espaces")}</span><Link href="/professional" className={styles.currentWorkspace}><BriefcaseBusiness size={15}/><div><strong>{l("Professional", "Professionnel")}</strong><small>{l("Accountant workspace", "Espace comptable")}</small></div><Check size={14}/></Link><Link href={hasBusinessWorkspace ? "/contexts" : "/setup?add=1"}><Building2 size={15}/><div><strong>{hasBusinessWorkspace ? l("My Zuelen activities", "Mes activités Zuelen") : l("Create an activity", "Créer une activité")}</strong><small>{hasBusinessWorkspace ? l("Choose an economic workspace", "Choisir un espace économique") : l("Use the same Zuelen login", "Utiliser le même compte Zuelen")}</small></div></Link></div>
+                <div className={`${styles.accountMenuHead} ${polish.accountMenuHead}`}><div><strong>{name}</strong><span>{email}</span></div><div className={polish.accountBadges}><b>{workspaceLabel}</b><em className={`${polish.menuStatus} ${polish[approvalStatus] ?? ""}`}>{approvalLabel(approvalStatus)}</em></div></div>
+                <div className={styles.accountMenuSection}><span>{l("Activities & workspaces", "Activités et espaces")}</span><Link href="/professional" className={styles.currentWorkspace}><BriefcaseBusiness size={15}/><div><strong>{l("Professional", "Professionnel")}</strong><small>{firmName || l("Accountant workspace", "Espace comptable")}</small></div><Check size={14}/></Link><Link href={hasBusinessWorkspace ? "/contexts" : "/setup?add=1"}><Building2 size={15}/><div><strong>{hasBusinessWorkspace ? l("My Zuelen activities", "Mes activités Zuelen") : l("Add another activity", "Ajouter une activité")}</strong><small>{hasBusinessWorkspace ? l("Choose an economic workspace", "Choisir un espace économique") : l("Use the same Zuelen login", "Utiliser le même compte Zuelen")}</small></div></Link></div>
                 <div className={styles.accountMenuSection}><Link href="/professional/settings"><Settings size={15}/><div><strong>{l("Settings", "Paramètres")}</strong><small>{l("Language, notifications and account", "Langue, notifications et compte")}</small></div></Link><form action="/auth/signout" method="post"><button type="submit"><LogOut size={15}/><span>{l("Sign out", "Se déconnecter")}</span></button></form></div>
               </div> : null}
             </div>

@@ -17,10 +17,10 @@ html[data-zuelen-theme="dark"] .themeToggle{background:rgba(255,255,255,.035)}ht
 .businessAccountSection form button>div strong,.businessAccountSection form button>div small{display:block}
 .businessAccountSection form button>div strong{font-size:10px}
 .businessAccountSection form button>div small{margin-top:4px;color:var(--z-text-secondary);font-size:8px;line-height:1.4}
-.accountPreferences{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:11px 12px;border-top:1px solid var(--z-border)}
+.accountPreferences{display:grid;grid-template-columns:1fr;gap:8px;padding:11px 12px;border-top:1px solid var(--z-border)}
 .accountPreferences>label,.accountPreferences>div{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:8px;border-radius:11px;background:var(--z-surface-1);border:1px solid var(--z-border)}
 .accountPreferences span{font-size:8px;font-weight:750;color:var(--z-text-secondary)}
-.accountPreferences select{height:31px;min-width:72px;border:1px solid var(--z-border);border-radius:9px;background:var(--z-surface-2);color:var(--z-text);padding:0 8px;font:inherit;font-size:9px;font-weight:700}
+.accountPreferences>label{width:100%}.accountPreferences>div{display:none}.accountPreferences select{height:34px;min-width:0;width:100%;border:1px solid var(--z-border);border-radius:9px;background:var(--z-surface-2);color:var(--z-text);padding:0 10px;font:inherit;font-size:10px;font-weight:700}
 .accountPreferences .themeToggle{padding:2px}
 .accountPreferences .themeToggle button{width:27px;height:27px}
 @media(max-width:650px){.businessAccountButton{min-width:0;width:44px;padding:5px}.businessAccountButton>div,.businessAccountButton>svg{display:none}.businessAccountMenu{position:fixed;right:14px;top:66px;max-height:calc(100vh - 80px);overflow:auto}.accountPreferences{grid-template-columns:1fr}}

@@ -1,0 +1,97 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(290px, .7fr) minmax(0, 1.3fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.summary,
+.catalog {
+  padding: clamp(24px, 3vw, 34px);
+  border-radius: var(--z-radius-xl);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--z-brand) 12%, transparent), transparent 28%),
+    var(--z-surface-1);
+}
+
+.summary dl {
+  margin-top: 14px;
+}
+
+.summary dl div {
+  padding: 16px 0;
+}
+
+.summary form {
+  margin-top: auto !important;
+  padding-top: 24px;
+}
+
+.catalogHead {
+  margin-bottom: 24px;
+}
+
+.catalogHead p {
+  margin: 7px 0 0;
+  color: var(--z-text-secondary);
+  font-size: var(--z-text-xs);
+  line-height: 1.55;
+}
+
+.plans {
+  gap: 16px;
+}
+
+.plan {
+  min-height: 420px;
+  padding: 26px;
+  border-radius: var(--z-radius-xl);
+}
+
+.plan > p {
+  min-height: 68px;
+  margin: 22px 0 14px;
+  line-height: 1.65;
+}
+
+.plan ul {
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.plan li svg {
+  flex: 0 0 auto;
+  color: var(--z-brand);
+}
+
+.premium {
+  position: relative;
+  border-color: color-mix(in srgb, var(--z-brand) 34%, var(--z-border));
+  box-shadow: var(--z-shadow-sm);
+}
+
+.trialBadge {
+  display: inline-flex;
+  width: max-content;
+  margin-top: 14px;
+  padding: 5px 8px;
+  border-radius: var(--z-radius-pill);
+  background: var(--z-brand-soft);
+  color: var(--z-brand);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .grid { grid-template-columns: 1fr; }
+  .plan { min-height: 0; }
+}
+
+@media (max-width: 620px) {
+  .summary, .catalog, .plan { padding: 20px; }
+}

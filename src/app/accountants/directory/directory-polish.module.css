@@ -1,0 +1,9 @@
+.hero{position:relative;overflow:hidden;align-items:center;min-height:260px;padding:clamp(28px,4vw,46px);background:radial-gradient(circle at 92% 16%,color-mix(in srgb,var(--z-brand) 14%,transparent),transparent 28%),radial-gradient(circle at 4% 100%,color-mix(in srgb,var(--z-brand) 7%,transparent),transparent 34%),var(--z-surface-1);box-shadow:var(--z-shadow-sm)}
+.hero h1{max-width:760px;font-size:clamp(34px,4.5vw,54px)}
+.proof{width:min(290px,100%);padding:20px;border-radius:var(--z-radius-xl);background:color-mix(in srgb,var(--z-surface-elevated) 88%,transparent);box-shadow:var(--z-shadow-sm);backdrop-filter:blur(12px)}
+.filterPanel{margin-top:20px;padding:16px;border-radius:var(--z-radius-xl);box-shadow:var(--z-shadow-sm)}
+.filterIntro{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 2px 4px}.filterIntro strong{font-size:var(--z-text-sm)}.filterIntro span{color:var(--z-text-tertiary);font-size:var(--z-text-xs)}
+.resultCount{padding:7px 10px;border:1px solid var(--z-border);border-radius:var(--z-radius-pill);background:var(--z-surface-1)}
+.card{min-height:440px;border-radius:var(--z-radius-xl);box-shadow:var(--z-shadow-sm)}.cardVisual{height:112px}.cardBody{padding:52px 22px 20px}
+.emptyLink{display:inline-flex;margin-top:18px;padding:10px 14px;border-radius:var(--z-radius-sm);background:var(--z-brand);color:var(--z-brand-on);font-size:var(--z-text-xs);font-weight:700;text-decoration:none}
+@media(max-width:760px){.hero{min-height:0;padding:24px}.hero h1{font-size:34px}.filterPanel{padding:12px}.filterIntro{align-items:flex-start;flex-direction:column}.card{min-height:0}}

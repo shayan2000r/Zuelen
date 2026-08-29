@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { accountantPriceId } from "@/lib/accountants";
+import { accountantPriceId, type AccountantTier } from "@/lib/accountants";
+import { sendAccountantTrialConfirmation } from "@/lib/accountant-trial-email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripeGet, verifyStripeSignature } from "@/lib/stripe";
 
@@ -30,7 +31,7 @@ function normalizedSubscriptionStatus(value: unknown) {
 
 async function syncAccountantSubscription(subscription: JsonObject, metadata: Record<string, string>) {
   const profileId = metadata.accountant_profile_id;
-  if (!profileId) return;
+  if (!profileId) return null;
   const admin = createAdminClient();
   const items = subscriptionItems(subscription);
   const firstItem = items[0] ?? {};
@@ -39,7 +40,7 @@ async function syncAccountantSubscription(subscription: JsonObject, metadata: Re
   const configuredPremium = accountantPriceId("premium");
   // Price is the source of truth after an upgrade or downgrade. Metadata remains
   // a fallback for the original Checkout-created subscription.
-  const tier = priceId === configuredPremium
+  const tier: AccountantTier | null = priceId === configuredPremium
     ? "premium"
     : priceId === configuredBasic
       ? "basic"
@@ -48,7 +49,7 @@ async function syncAccountantSubscription(subscription: JsonObject, metadata: Re
         : metadata.tier === "basic"
           ? "basic"
           : null;
-  if (!tier) return;
+  if (!tier) return null;
   const status = normalizedSubscriptionStatus(subscription.status);
   const periodStart = unixDate(subscription.current_period_start ?? firstItem.current_period_start);
   const periodEnd = unixDate(subscription.current_period_end ?? firstItem.current_period_end);
@@ -67,18 +68,29 @@ async function syncAccountantSubscription(subscription: JsonObject, metadata: Re
     stripe_price_id: priceId,
   }, { onConflict: "profile_id" });
   if (error) throw new Error(error.message);
+  const price = firstItem?.price && typeof firstItem.price === "object" ? firstItem.price : null;
+  return {
+    subscriptionId: String(subscription.id),
+    profileId,
+    tier,
+    status,
+    trialEnd,
+    nextBillingDate: periodEnd || trialEnd,
+    unitAmount: typeof price?.unit_amount === "number" ? price.unit_amount : null,
+    currency: typeof price?.currency === "string" ? price.currency : null,
+    quantity: typeof firstItem?.quantity === "number" ? firstItem.quantity : 1,
+  };
 }
 
 async function syncSubscription(subscription: JsonObject) {
   const metadata = (subscription.metadata ?? {}) as Record<string, string>;
   const kind = metadata.kind;
   if (kind === "accountant_listing") {
-    await syncAccountantSubscription(subscription, metadata);
-    return;
+    return syncAccountantSubscription(subscription, metadata);
   }
 
   const organizationId = metadata.organization_id;
-  if (!organizationId || (kind !== "plan" && kind !== "seat")) return;
+  if (!organizationId || (kind !== "plan" && kind !== "seat")) return null;
   const admin = createAdminClient();
   const items = subscriptionItems(subscription);
   const firstItem = items[0] ?? {};
@@ -106,7 +118,7 @@ async function syncSubscription(subscription: JsonObject) {
     if (periodStart) update.billing_anchor = periodStart;
     const { error } = await admin.from("organization_subscriptions").update(update).eq("organization_id", organizationId);
     if (error) throw new Error(error.message);
-    return;
+    return null;
   }
 
   const quantity = active
@@ -120,6 +132,7 @@ async function syncSubscription(subscription: JsonObject) {
     additional_seats: quantity,
   }).eq("organization_id", organizationId);
   if (error) throw new Error(error.message);
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -165,9 +178,13 @@ export async function POST(request: Request) {
   try {
     if (eventType === "checkout.session.completed" && object) {
       const subscriptionId = idOf(object.subscription);
-      if (subscriptionId) await syncSubscription(await stripeGet(`/subscriptions/${encodeURIComponent(subscriptionId)}`));
+      if (subscriptionId) {
+        const synced = await syncSubscription(await stripeGet(`/subscriptions/${encodeURIComponent(subscriptionId)}`));
+        if (synced?.status === "trialing" && synced.trialEnd && synced.nextBillingDate && synced.unitAmount !== null && synced.currency) await sendAccountantTrialConfirmation({ ...synced, trialEnd: synced.trialEnd, nextBillingDate: synced.nextBillingDate, unitAmount: synced.unitAmount, currency: synced.currency });
+      }
     } else if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(eventType) && object) {
-      await syncSubscription(object);
+      const synced = await syncSubscription(object);
+      if (synced?.status === "trialing" && synced.trialEnd && synced.nextBillingDate && synced.unitAmount !== null && synced.currency) await sendAccountantTrialConfirmation({ ...synced, trialEnd: synced.trialEnd, nextBillingDate: synced.nextBillingDate, unitAmount: synced.unitAmount, currency: synced.currency });
     }
 
     const { error: completeError } = await admin.from("stripe_webhook_events").update({ status: "processed", processed_at: new Date().toISOString(), last_error: null }).eq("event_id", eventId);
