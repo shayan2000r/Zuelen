@@ -3,3 +3,4 @@
 .card small{margin-bottom:30px}
 @media(max-width:900px){.card{min-height:350px}}
 @media(max-width:560px){.card{min-height:340px}.card small{margin-bottom:24px}}
+.intro{max-width:1080px}.intro h1{white-space:nowrap}@media(max-width:900px){.intro h1{white-space:normal}}
