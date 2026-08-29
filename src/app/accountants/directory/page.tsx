@@ -7,6 +7,7 @@ import { normalizeLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import styles from "../../app/accountants/accountants.module.css";
+import polish from "./directory-polish.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -66,12 +67,13 @@ export default async function StandaloneAccountantsPage({ searchParams }: { sear
   });
 
   const directory = <div className={styles.page}>
-    <section className={styles.hero}>
+    <section className={`${styles.hero} ${polish.hero}`}>
       <div><span className={styles.eyebrow}><BriefcaseBusiness size={14}/>{fr ? "Réseau professionnel Zuelen" : "Zuelen professional network"}</span><h1>{fr ? "Trouvez le bon comptable pour votre entreprise." : "Find the right accountant for your business."}</h1><p>{fr ? "Comparez des professionnels vérifiés selon leur expertise, leurs langues et leur façon de travailler." : "Compare verified professionals by expertise, languages and how they work."}</p></div>
-      <div className={styles.heroProof}><BadgeCheck size={20}/><div><strong>{fr ? "Profils vérifiés" : "Verified profiles"}</strong><span>{fr ? "Chaque profil est vérifié par Zuelen avant publication." : "Every profile is reviewed by Zuelen before publication."}</span></div></div>
+      <div className={`${styles.heroProof} ${polish.proof}`}><BadgeCheck size={20}/><div><strong>{fr ? "Profils vérifiés" : "Verified profiles"}</strong><span>{fr ? "Chaque profil est vérifié par Zuelen avant publication." : "Every profile is reviewed by Zuelen before publication."}</span></div></div>
     </section>
 
-    <form className={styles.filters} method="get">
+    <form className={`${styles.filters} ${polish.filterPanel}`} method="get">
+      <div className={polish.filterIntro}><strong>{fr ? "Rechercher dans le réseau" : "Search the network"}</strong><span>{fr ? "Affinez par localisation, langue et spécialité." : "Refine by location, language and specialty."}</span></div>
       <label className={styles.search}><Search size={16}/><input name="q" defaultValue={q} placeholder={fr ? "Nom, fiduciaire ou titre..." : "Name, firm or title..."}/></label>
       <input name="location" defaultValue={location} placeholder={fr ? "Localisation" : "Location"}/>
       <select name="language" defaultValue={language}><option value="">{fr ? "Toutes les langues" : "All languages"}</option>{ACCOUNTANT_LANGUAGES.map(value => <option value={value} key={value}>{accountantLanguageLabel(value, locale, true)}</option>)}</select>
@@ -80,17 +82,17 @@ export default async function StandaloneAccountantsPage({ searchParams }: { sear
       {(q || language || specialty || location) ? <Link href="/accountants/directory">{fr ? "Effacer" : "Clear"}</Link> : null}
     </form>
 
-    <div className={styles.resultsBar}><div><strong>{visible.length}</strong><span>{fr ? `professionnel${visible.length === 1 ? "" : "s"}` : `professional${visible.length === 1 ? "" : "s"}`}</span></div><p>{fr ? "Les profils Premium bénéficient d’un placement prioritaire, sans masquer les profils Basic pertinents." : "Premium profiles receive priority placement without hiding relevant Basic profiles."}</p></div>
+    <div className={styles.resultsBar}><div className={polish.resultCount}><strong>{visible.length}</strong><span>{fr ? `professionnel${visible.length === 1 ? "" : "s"}` : `professional${visible.length === 1 ? "" : "s"}`}</span></div><p>{fr ? "Les profils Premium bénéficient d’un placement prioritaire, sans masquer les profils Basic pertinents." : "Premium profiles receive priority placement without hiding relevant Basic profiles."}</p></div>
 
     {visible.length ? <section className={styles.grid}>{visible.map(profile => {
       const subscription = subscriptionMap.get(profile.id)!;
       const premium = subscription.tier === "premium";
-      return <Link href={`/accountants/directory/${profile.slug}`} className={`${styles.card} ${premium ? styles.premium : ""}`} key={profile.id}>
-        <div className={styles.cardVisual}>
+      return <Link href={`/accountants/directory/${profile.slug}`} className={`${styles.card} ${polish.card} ${premium ? styles.premium : ""}`} key={profile.id}>
+        <div className={`${styles.cardVisual} ${polish.cardVisual}`}>
           {premium ? <span className={styles.featured}><Sparkles size={11}/>{fr ? "Premium" : "Premium"}</span> : <span className={styles.verified}><BadgeCheck size={11}/>{fr ? "Vérifié" : "Verified"}</span>}
           <div className={styles.photoWrap}>{profile.photo_url ? <img src={profile.photo_url} alt=""/> : <span className={styles.avatar}>{accountantInitials(profile.full_name)}</span>}</div>
         </div>
-        <div className={styles.cardBody}>
+        <div className={`${styles.cardBody} ${polish.cardBody}`}>
           <div className={styles.cardIdentity}><h2>{profile.full_name}</h2><p>{profile.professional_title}</p>{profile.firm_name ? <small>{profile.firm_name}</small> : null}</div>
           {profile.accepting_new_clients ? <span className={styles.availability}><UserRoundCheck size={13}/>{fr ? "Accepte de nouveaux clients" : "Accepting new clients"}</span> : <span className={styles.availabilityMuted}>{fr ? "Disponibilité limitée" : "Limited availability"}</span>}
           <div className={styles.meta}>{profile.location ? <span><MapPin size={13}/>{profile.location}</span> : null}{profile.languages.length ? <span><Languages size={13}/>{profile.languages.slice(0,3).map(value=>accountantLanguageLabel(value,locale)).join(" · ")}</span> : null}</div>
@@ -99,7 +101,7 @@ export default async function StandaloneAccountantsPage({ searchParams }: { sear
           <div className={styles.cardFoot}><span>{fr ? "Voir le profil" : "View profile"}</span><ArrowRight size={15}/></div>
         </div>
       </Link>;
-    })}</section> : <section className={styles.empty}><BriefcaseBusiness size={28}/><h2>{fr ? "Aucun profil ne correspond encore à ces filtres." : "No profiles match these filters yet."}</h2><p>{fr ? "Élargissez votre recherche ou revenez bientôt pendant que nous développons le réseau Zuelen." : "Broaden your search or check back soon as we grow the Zuelen professional network."}</p></section>}
+    })}</section> : <section className={styles.empty}><BriefcaseBusiness size={28}/><h2>{fr ? "Aucun profil ne correspond encore à ces filtres." : "No profiles match these filters yet."}</h2><p>{fr ? "Élargissez votre recherche ou revenez bientôt pendant que nous développons le réseau Zuelen." : "Broaden your search or check back soon as we grow the Zuelen professional network."}</p>{(q || language || specialty || location) ? <Link className={polish.emptyLink} href="/accountants/directory">{fr ? "Effacer les filtres" : "Clear filters"}</Link> : null}</section>}
 
     {!ownProfile ? <section className={styles.join}><div><span>{fr ? "Vous êtes comptable ?" : "Are you an accountant?"}</span><h2>{fr ? "Rencontrez les entreprises qui ont besoin de votre expertise." : "Meet the businesses that need your expertise."}</h2><p>{fr ? "Créez votre profil professionnel. Basic à 19 €/mois ou Premium à 29 €/mois, chacun avec 30 jours d’essai gratuit." : "Create your professional listing. Basic at €19/month or Premium at €29/month, both with a 30-day free trial."}</p></div><Link href="/professional">{fr ? "Référencer mon activité" : "List my practice"}<ArrowRight size={15}/></Link></section> : null}
     <p className={styles.disclaimer}>{fr ? "Les professionnels référencés sur Zuelen exercent de manière indépendante. Zuelen ne fournit pas de conseils comptables, fiscaux ou juridiques et ne garantit pas les prestations des professionnels référencés." : "Professionals listed on Zuelen operate independently. Zuelen does not provide accounting, tax or legal advice and does not guarantee services provided by listed professionals."}</p>
