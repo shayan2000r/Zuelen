@@ -57,7 +57,13 @@ type CompanyRow = NonNullable<Workspace["company"]> & { organization_id: string;
 
 export async function getWorkspace(): Promise<Workspace> {
   const supabase = await createClient();
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  let claimsData;
+  let claimsError;
+  try {
+    ({ data: claimsData, error: claimsError } = await supabase.auth.getClaims());
+  } catch {
+    return EMPTY;
+  }
   const claims = claimsData?.claims;
   const userId = typeof claims?.sub === "string" ? claims.sub : null;
   if (claimsError || !userId) return EMPTY;
