@@ -5,6 +5,7 @@ import { normalizeLocale } from "@/lib/i18n";
 import { ACTIVE_ACCOUNTANT_SUBSCRIPTION_STATUSES, accountantTrialDaysLeft, getProfessionalWorkspace } from "@/lib/professional-workspace";
 import { createAccountantPortalAction, startAccountantTrialAction } from "@/app/accountants/manage/actions";
 import styles from "../professional.module.css";
+import polish from "./billing-polish.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +45,8 @@ export default async function ProfessionalBillingPage({ searchParams }: { search
       {params.checkout === "cancelled" ? <div className={`${styles.notice} ${styles.warning}`}>{l("Checkout was cancelled. No subscription changes were made.", "Le paiement a été annulé. Aucune modification n’a été apportée à votre abonnement.")}</div> : null}
       {params.plan === "basic" || params.plan === "premium" ? <div className={styles.notice}><Check size={15}/> {l("Plan change sent to Stripe. Your listing will update as soon as the subscription sync completes.", "La modification de formule a été envoyée à Stripe. Votre profil sera mis à jour dès la fin de la synchronisation.")}</div> : null}
 
-      <div className={styles.billingGrid}>
-        <section className={`${styles.card} ${styles.billingSummary}`}>
+      <div className={`${styles.billingGrid} ${polish.grid}`}>
+        <section className={`${styles.card} ${styles.billingSummary} ${polish.summary}`}>
           <div className={styles.sectionHead}><div><span>{l("Current subscription", "Abonnement actuel")}</span><h2>{subscription ? `${subscription.tier === "premium" ? "Premium" : "Basic"} ${l("listing", "")}`.trim() : l("No active plan", "Aucune formule active")}</h2></div><CreditCard size={19}/></div>
           <dl>
             <div><dt>{l("Status", "Statut")}</dt><dd>{statusLabel}</dd></div>
@@ -56,20 +57,20 @@ export default async function ProfessionalBillingPage({ searchParams }: { search
           {subscription?.stripe_customer_id ? <form action={createAccountantPortalAction} style={{marginTop:16}}><button className={styles.secondary} type="submit">{l("Manage payment details", "Gérer les moyens de paiement")} <ExternalLink size={14}/></button></form> : null}
         </section>
 
-        <section className={styles.card}>
-          <div className={styles.sectionHead}><div><span>{l("Directory plans", "Formules annuaire")}</span><h2>{l("Choose your visibility", "Choisissez votre visibilité")}</h2></div></div>
-          <div className={styles.plans}>
-            <article className={`${styles.plan} ${subscription?.tier === "basic" ? styles.current : ""}`}>
+        <section className={`${styles.card} ${polish.catalog}`}>
+          <div className={`${styles.sectionHead} ${polish.catalogHead}`}><div><span>{l("Directory plans", "Formules annuaire")}</span><h2>{l("Choose your visibility", "Choisissez votre visibilité")}</h2><p>{l("Both plans include a 30-day free trial for new professional listings.", "Les deux formules incluent un essai gratuit de 30 jours pour les nouveaux profils professionnels.")}</p></div></div>
+          <div className={`${styles.plans} ${polish.plans}`}>
+            <article className={`${styles.plan} ${polish.plan} ${subscription?.tier === "basic" ? styles.current : ""}`}>
               <div className={styles.planTop}><span>Basic</span><strong>€19<small>/{l("month", "mois")}</small></strong></div>
-              {subscription?.tier === "basic" ? <em className={styles.currentBadge}>{l("Current plan", "Formule actuelle")}</em> : null}
+              {subscription?.tier === "basic" ? <em className={styles.currentBadge}>{l("Current plan", "Formule actuelle")}</em> : <span className={polish.trialBadge}>{l("30-day free trial", "30 jours d’essai gratuit")}</span>}
               <p>{l("A complete professional listing with direct contact details and standard directory placement.", "Un profil professionnel complet avec coordonnées directes et visibilité standard dans l’annuaire.")}</p>
               <ul><li><Check size={14}/>{l("Full professional profile", "Profil professionnel complet")}</li><li><Check size={14}/>{l("Languages & specialties", "Langues & spécialités")}</li><li><Check size={14}/>{l("Direct contact details", "Coordonnées directes")}</li><li><Check size={14}/>{l("30-day free trial for new listings", "Essai gratuit de 30 jours pour les nouveaux profils")}</li></ul>
               <form action={startAccountantTrialAction}><input type="hidden" name="tier" value="basic"/><button disabled={!configured || (subscriptionOpen && subscription?.tier === "basic")} className={styles.secondary} type="submit">{basicLabel}</button></form>
             </article>
 
-            <article className={`${styles.plan} ${styles.premium} ${subscription?.tier === "premium" ? styles.current : ""}`}>
+            <article className={`${styles.plan} ${styles.premium} ${polish.plan} ${polish.premium} ${subscription?.tier === "premium" ? styles.current : ""}`}>
               <div className={styles.planTop}><span><Sparkles size={13}/> Premium</span><strong>€29<small>/{l("month", "mois")}</small></strong></div>
-              {subscription?.tier === "premium" ? <em className={styles.currentBadge}>{l("Current plan", "Formule actuelle")}</em> : null}
+              {subscription?.tier === "premium" ? <em className={styles.currentBadge}>{l("Current plan", "Formule actuelle")}</em> : <span className={polish.trialBadge}>{l("30-day free trial", "30 jours d’essai gratuit")}</span>}
               <p>{l("Maximum visibility plus enhanced presentation and measurable lead analytics.", "Visibilité maximale, présentation renforcée et statistiques sur les prospects.")}</p>
               <ul><li><Check size={14}/>{l("Everything in Basic", "Tout ce qui est inclus dans Basic")}</li><li><Check size={14}/>{l("Featured badge", "Badge Mis en avant")}</li><li><Check size={14}/>{l("Priority placement", "Placement prioritaire")}</li><li><Check size={14}/>{l("Profile & contact analytics", "Statistiques du profil et des contacts")}</li></ul>
               <form action={startAccountantTrialAction}><input type="hidden" name="tier" value="premium"/><button disabled={!configured || (subscriptionOpen && subscription?.tier === "premium")} className={styles.primary} type="submit">{premiumLabel}</button></form>
