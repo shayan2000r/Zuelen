@@ -16,6 +16,9 @@ function situation(overrides: Partial<CcssSituation> = {}): CcssSituation {
     incomeSource: "manual",
     aaaFactor: "1.0000",
     mdeClass: null,
+    confirmedMonthlyNormalBase: null,
+    confirmedMonthlyPensionBase: null,
+    confirmedMonthlyDependencyBase: null,
     pensionReductionStatus: "not_requested",
     insignificantIncomeExemptionStatus: "not_requested",
     assistingSpouse: { enabled: false, qualifyingRelationship: false, mainActivity: false },
@@ -83,9 +86,10 @@ test("pension reduction changes only the pension base and preserves other bases"
   assert.equal(result.principal.pensionReductionApplied, true);
 });
 
-test("pension reduction cannot go below one-third SSM", () => {
+test("requested pension reduction stays pending until CCSS approves it", () => {
   const result = monthly("500.00", { pensionReductionStatus: "requested" });
-  assert.equal(result.principal.pensionBaseCents, 92378);
+  assert.equal(result.principal.pensionBaseCents, 277133);
+  assert.equal(result.principal.pensionReductionApplied, false);
 });
 
 test("insignificant-income exemption only applies after explicit configuration", () => {
@@ -94,8 +98,26 @@ test("insignificant-income exemption only applies after explicit configuration",
   const approved = monthly("500.00", { insignificantIncomeExemptionStatus: "approved" });
   assert.ok(ordinary.combinedTotalCents > 0);
   assert.ok(ordinary.principal.warnings.includes("insignificant_exemption_may_be_available"));
-  assert.equal(requested.combinedTotalCents, 0);
+  assert.ok(requested.combinedTotalCents > 0);
+  assert.ok(requested.principal.warnings.includes("insignificant_exemption_requested"));
   assert.equal(approved.combinedTotalCents, 0);
+});
+
+test("CCSS-confirmed monthly bases reproduce the May 2026 statement without hardcoding a person", () => {
+  const result = monthly("1577.19", {
+    mdeClass: 2,
+    pensionReductionStatus: "approved",
+    confirmedMonthlyNormalBase: "2703.74",
+    confirmedMonthlyPensionBase: "901.25",
+    confirmedMonthlyDependencyBase: "901.25",
+  }, january);
+  assert.equal(result.principal.components.health.amountCents, 15141);
+  assert.equal(result.principal.components.sicknessCash.amountCents, 1352);
+  assert.equal(result.principal.components.accident.amountCents, 1757);
+  assert.equal(result.principal.components.pension.amountCents, 15321);
+  assert.equal(result.principal.components.dependency.amountCents, 1262);
+  assert.equal(result.principal.components.mde.amountCents, 2569);
+  assert.equal(result.combinedTotalCents, 37402);
 });
 
 test("MDE is zero when disabled and uses each exact class rate when enabled", () => {
