@@ -41,6 +41,15 @@ test("verified TOTP factors are challenged before protected workspace access", (
   assert.doesNotMatch(migration, /grant execute[^;]+to anon/i);
 });
 
+test("invalid or clock-skewed auth cookies fail closed without crashing public routes", () => {
+  const proxy = read("../src/lib/supabase/proxy.ts");
+  const workspace = read("../src/lib/workspace.ts");
+  assert.match(proxy, /try\s*{\s*\(\{ data: claims \} = await supabase\.auth\.getClaims\(\)\)/);
+  assert.match(proxy, /cookie\.name\.includes\("-auth-token"\)/);
+  assert.match(proxy, /NextResponse\.redirect\(new URL\("\/sign-in"/);
+  assert.match(workspace, /await supabase\.auth\.getClaims\(\)[\s\S]*catch\s*{\s*return EMPTY/);
+});
+
 test("expensive authenticated actions use the database-backed limiter", () => {
   for (const path of [
     "../src/app/app/banking/actions.ts",
