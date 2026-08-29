@@ -8,6 +8,7 @@ import { normalizeLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import styles from "../../../app/accountants/[slug]/profile.module.css";
+import polish from "./profile-polish.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -44,13 +45,12 @@ export default async function StandaloneAccountantProfilePage({ params }: { para
 
   const content = <div className={styles.page}>
     <Link href="/accountants/directory" className={styles.back}><ArrowLeft size={14}/>{fr ? "Tous les comptables" : "All accountants"}</Link>
-    <section className={`${styles.profileCard} ${premium ? styles.premium : ""}`}>
-      {premium ? <div className={styles.featured}><Sparkles size={13}/>{fr?"Professionnel mis en avant":"Featured professional"}</div> : null}
-      <div className={styles.identity}>
+    <section className={`${styles.profileCard} ${polish.hero} ${premium ? styles.premium : ""}`}>
+      <div className={`${styles.identity} ${polish.identity}`}>
         {profile.photo_url ? <img src={profile.photo_url} alt=""/> : <span className={styles.avatar}>{accountantInitials(profile.full_name)}</span>}
-        <div><div className={styles.nameLine}><h1>{profile.full_name}</h1><BadgeCheck size={19}/></div><p>{profile.professional_title}</p>{profile.firm_name ? <strong>{profile.firm_name}</strong> : null}<div className={styles.meta}>{profile.location ? <span><MapPin size={13}/>{profile.location}</span> : null}{profile.languages.length ? <span><Languages size={13}/>{profile.languages.map(value=>accountantLanguageLabel(value,locale)).join(" · ")}</span> : null}{profile.years_experience !== null ? <span><Award size={13}/>{profile.years_experience} {fr?"ans d’expérience":"years experience"}</span> : null}</div></div>
+        <div>{premium ? <div className={`${styles.featured} ${polish.featured}`}><Sparkles size={13}/>{fr?"Professionnel mis en avant":"Featured professional"}</div> : null}<div className={styles.nameLine}><h1>{profile.full_name}</h1><BadgeCheck size={19}/></div><p>{profile.professional_title}</p>{profile.firm_name ? <strong>{profile.firm_name}</strong> : null}<div className={styles.meta}>{profile.location ? <span><MapPin size={13}/>{profile.location}</span> : null}{profile.languages.length ? <span><Languages size={13}/>{profile.languages.map(value=>accountantLanguageLabel(value,locale)).join(" · ")}</span> : null}{profile.years_experience !== null ? <span><Award size={13}/>{profile.years_experience} {fr?"ans d’expérience":"years experience"}</span> : null}</div></div>
       </div>
-      <div className={styles.contactPanel}><span>{fr ? "Contacter ce professionnel" : "Contact this professional"}</span><h2>{profile.accepting_new_clients ? (fr ? "Accepte de nouveaux clients" : "Accepting new clients") : (fr ? "Disponibilité limitée" : "Limited availability")}</h2><AccountantEngagement profileId={profile.id} email={profile.email} phone={profile.phone} website={profile.website}/>{profile.portfolio_url ? <a href={profile.portfolio_url} target="_blank" rel="noreferrer" style={{marginTop:9,display:"inline-flex",alignItems:"center",gap:6,fontSize:10,color:"#356645",textDecoration:"none",fontWeight:750}}><ExternalLink size={13}/>{fr?"Profil professionnel / portfolio":"Professional profile / portfolio"}</a>:null}</div>
+      <div className={`${styles.contactPanel} ${polish.contact}`}><span>{fr ? "Contacter ce professionnel" : "Contact this professional"}</span><h2>{profile.accepting_new_clients ? (fr ? "Accepte de nouveaux clients" : "Accepting new clients") : (fr ? "Disponibilité limitée" : "Limited availability")}</h2><AccountantEngagement profileId={profile.id} email={profile.email} phone={profile.phone} website={profile.website}/>{profile.portfolio_url ? <a href={profile.portfolio_url} target="_blank" rel="noreferrer" className={polish.portfolio}><ExternalLink size={13}/>{fr?"Profil professionnel / portfolio":"Professional profile / portfolio"}</a>:null}</div>
     </section>
 
     <section className={styles.contentGrid}>
