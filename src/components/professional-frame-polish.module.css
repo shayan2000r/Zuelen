@@ -1,0 +1,49 @@
+.accountMenuHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.accountMenuHead > div:first-child {
+  min-width: 0;
+}
+
+.accountBadges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
+.accountBadges b,
+.menuStatus {
+  display: inline-flex !important;
+  width: max-content;
+  margin: 0 !important;
+  padding: 4px 7px;
+  border-radius: var(--z-radius-pill);
+  background: var(--z-brand-soft);
+  color: var(--z-brand);
+  font-size: 7px !important;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.menuStatus {
+  background: var(--z-warning-soft);
+  color: var(--z-warning);
+}
+
+.approved {
+  background: var(--z-success-soft);
+  color: var(--z-success);
+}
+
+.rejected {
+  background: var(--z-danger-soft);
+  color: var(--z-danger);
+}
