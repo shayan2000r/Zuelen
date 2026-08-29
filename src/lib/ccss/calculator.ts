@@ -45,7 +45,7 @@ function personCalculation(actualIncome: bigint, situation: CcssSituation, param
   const secondaryMinimum = cents(parameters.secondaryActivityMinimum);
   const normalMaximum = cents(parameters.maximumContributionBase);
   const ordinaryMinimum = situation.affiliationType === "secondary" ? secondaryMinimum : ssm;
-  const explicitExemption = situation.insignificantIncomeExemptionStatus !== "not_requested" && actualIncome < secondaryMinimum;
+  const explicitExemption = situation.insignificantIncomeExemptionStatus === "approved" && actualIncome < secondaryMinimum;
   const warnings: string[] = [];
 
   if (explicitExemption) {
@@ -58,14 +58,22 @@ function personCalculation(actualIncome: bigint, situation: CcssSituation, param
     };
   }
 
-  const normalBase = clampMoney(actualIncome, ordinaryMinimum, normalMaximum);
-  const pensionReductionApplied = situation.pensionReductionStatus !== "not_requested" && actualIncome < ssm;
-  const pensionBase = pensionReductionApplied ? clampMoney(actualIncome, secondaryMinimum, normalMaximum) : normalBase;
-  const dependencyBase = actualIncome > cents(parameters.dependencyAllowance) ? actualIncome - cents(parameters.dependencyAllowance) : 0n;
+  const confirmedNormalBase = situation.confirmedMonthlyNormalBase ? cents(situation.confirmedMonthlyNormalBase) : null;
+  const confirmedPensionBase = situation.confirmedMonthlyPensionBase ? cents(situation.confirmedMonthlyPensionBase) : null;
+  const confirmedDependencyBase = situation.confirmedMonthlyDependencyBase ? cents(situation.confirmedMonthlyDependencyBase) : null;
+  const normalBase = confirmedNormalBase === null ? clampMoney(actualIncome, ordinaryMinimum, normalMaximum) : clampMoney(confirmedNormalBase, 0n, normalMaximum);
+  const pensionReductionApplied = situation.pensionReductionStatus === "approved" && (confirmedPensionBase !== null || actualIncome < ssm);
+  const pensionBase = confirmedPensionBase !== null
+    ? clampMoney(confirmedPensionBase, secondaryMinimum, normalMaximum)
+    : pensionReductionApplied ? clampMoney(actualIncome, secondaryMinimum, normalMaximum) : normalBase;
+  const dependencyBase = confirmedDependencyBase === null
+    ? actualIncome > cents(parameters.dependencyAllowance) ? actualIncome - cents(parameters.dependencyAllowance) : 0n
+    : confirmedDependencyBase;
   const selectedMdeRate = mdeRate(parameters, situation.mdeClass);
 
   if (actualIncome < secondaryMinimum && situation.insignificantIncomeExemptionStatus === "not_requested") warnings.push("insignificant_exemption_may_be_available");
   if (situation.pensionReductionStatus === "requested") warnings.push("pension_reduction_requested");
+  if (situation.insignificantIncomeExemptionStatus === "requested") warnings.push("insignificant_exemption_requested");
 
   const component = (key: ContributionKey, base: bigint, rate: string, amount: bigint, factor?: string): ContributionComponent => ({
     key, baseCents: centsToNumber(base), rate, amountCents: centsToNumber(amount), ...(factor ? { factor } : {}),

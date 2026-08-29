@@ -11,7 +11,7 @@ import { getWorkspace } from "@/lib/workspace";
 export const dynamic="force-dynamic";
 function money(v:number,c:string,locale:Locale){return new Intl.NumberFormat(intlLocale(locale),{style:"currency",currency:c,minimumFractionDigits:2}).format(v)}
 function canonicalSource(raw:string|null,fr=false){const value=(raw||(fr?"Autres produits":"Other revenue")).trim()||(fr?"Autres produits":"Other revenue"),n=value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();if(n.includes("upwork")||n.includes("payment escrow"))return"Upwork";if(n.includes("wix"))return"Wix";if(n.includes("wolt"))return"Wolt";if(n.includes("stripe"))return"Stripe";return value}
-const chartColors=["#4e8c61","#6f7f73","#8b7966","#647487","#9a8e79","#7f8d83"];
+const chartColors=["#155d27","#2dc653","#70c982","#b3de01","#557a62","#9bbd79"];
 function donut(items:{value:number}[],total:number){if(total<=0)return"conic-gradient(var(--z-border) 0 100%)";let cursor=0;const stops=items.map((item,index)=>{const start=cursor,end=cursor+item.value/total*100;cursor=end;return`${chartColors[index%chartColors.length]} ${start}% ${end}%`});if(cursor<100)stops.push(`var(--z-border) ${cursor}% 100%`);return`conic-gradient(${stops.join(",")})`}
 
 export default async function ReportsPage(){

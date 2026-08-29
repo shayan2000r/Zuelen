@@ -25,7 +25,7 @@ export default async function TransactionsPage({searchParams}:{searchParams:Sear
  const postedIds=rows.map(r=>r.posted_journal_entry_id).filter((id):id is string=>Boolean(id)),entryNumbers=new Map<string,number>();if(postedIds.length){const{data:entries}=await supabase.from("journal_entries").select("id,entry_number").in("id",postedIds);for(const e of entries??[])entryNumbers.set(e.id,Number(e.entry_number))}
  const pendingRows=rows.filter(r=>["unclassified","review","classified"].includes(r.classification_status)),nextReview=pendingRows[0]??null,suggestedCount=pendingRows.filter(r=>r.suggested_account_id&&Number(r.suggestion_confidence??0)>=.7).length,unresolvedCount=pendingRows.length-suggestedCount,postedCount=rows.filter(r=>r.classification_status==="posted").length;
  const visibleRows=rows.filter(r=>{const statusMatch=status==="all"||(status==="posted"?r.classification_status==="posted":status==="review"?r.classification_status!=="posted":true);if(!statusMatch)return false;if(!q)return true;return[r.counterparty_name,r.description,r.currency,r.classification_status,r.vat_treatment,r.counterparty_country].filter(Boolean).join(" ").toLowerCase().includes(q)}).map(row=>{const suggested=row.suggested_account_id?accounts.find(a=>a.id===row.suggested_account_id):undefined;return{...row,entry_number:row.posted_journal_entry_id?entryNumbers.get(row.posted_journal_entry_id)??null:null,suggested_code:suggested?.code??null,suggested_label:suggested?.label??null}});
- const noResults=rows.length>0&&visibleRows.length===0;
+ const noResults=rows.length>0&&visibleRows.length===0,reviewComplete=status==="review"&&pendingRows.length===0;
 
  return <V2Page>
   <PageHeader
@@ -62,10 +62,10 @@ export default async function TransactionsPage({searchParams}:{searchParams:Sear
     </DataToolbar>
 
     {visibleRows.length===0?<DataEmptyState
-      icon={noResults?Search:ListChecks}
-      title={noResults?(fr?"Aucun résultat":"No matching transactions"):(fr?"Aucune transaction pour le moment":"No transactions yet")}
-      description={noResults?(fr?"Aucune transaction ne correspond à votre recherche ou à vos filtres. Essayez de les modifier ou de les réinitialiser.":"No transactions match your current search or filters. Try changing or clearing them."):(editable?(fr?"Ajoutez une transaction ou importez un relevé bancaire pour commencer à suivre votre activité financière.":"Add a transaction or import a bank statement to start tracking your financial activity."):(fr?`Aucune transaction n'est disponible pour l'exercice ${year}.`:`No transactions are available for financial year ${year}.`))}
-      action={noResults?<V2Button label={fr?"Réinitialiser les filtres":"Clear filters"} href="/app/transactions" variant="secondary"/>:editable?<div className={styles.emptyActions}><V2Button label={fr?"Ajouter une transaction":"Add transaction"} href="#add-transaction" variant="primary"/><V2Button label={fr?"Importer un relevé":"Import statement"} href="/app/banking" variant="secondary"/></div>:undefined}
+      icon={reviewComplete?CheckCircle2:noResults?Search:ListChecks}
+      title={reviewComplete?(fr?"Rien à vérifier":"Nothing to review"):noResults?(fr?"Aucun résultat":"No matching transactions"):(fr?"Aucune transaction pour le moment":"No transactions yet")}
+      description={reviewComplete?(fr?"Toutes les transactions sont actuellement vérifiées.":"All transactions are currently reviewed."):noResults?(fr?"Aucune transaction ne correspond à votre recherche ou à vos filtres. Essayez de les modifier ou de les réinitialiser.":"No transactions match your current search or filters. Try changing or clearing them."):(editable?(fr?"Ajoutez une transaction ou importez un relevé bancaire pour commencer à suivre votre activité financière.":"Add a transaction or import a bank statement to start tracking your financial activity."):(fr?`Aucune transaction n'est disponible pour l'exercice ${year}.`:`No transactions are available for financial year ${year}.`))}
+      action={reviewComplete||noResults?<V2Button label={reviewComplete?(fr?"Voir toutes les transactions":"View all transactions"):(fr?"Réinitialiser les filtres":"Clear filters")} href="/app/transactions" variant="secondary"/>:editable?<div className={styles.emptyActions}><V2Button label={fr?"Ajouter une transaction":"Add transaction"} href="#add-transaction" variant="primary"/><V2Button label={fr?"Importer un relevé":"Import statement"} href="/app/banking" variant="secondary"/></div>:undefined}
     />:<TransactionTable rows={visibleRows} accounts={accounts} readOnly={!editable}/>} 
    </DataPanel>
   </div>

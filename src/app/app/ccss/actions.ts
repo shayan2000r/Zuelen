@@ -67,6 +67,9 @@ export async function saveCcssConfiguration(_previous: CcssActionState, formData
   const aaaFactor = text(formData, "aaa_factor");
   const mdeMembership = text(formData, "mde_membership");
   const mdeClassRaw = text(formData, "mde_class");
+  const confirmedNormalBase = text(formData, "confirmed_monthly_normal_base");
+  const confirmedPensionBase = text(formData, "confirmed_monthly_pension_base");
+  const confirmedDependencyBase = text(formData, "confirmed_monthly_dependency_base");
   const pensionReductionStatus = text(formData, "pension_reduction_status");
   const exemptionStatus = text(formData, "insignificant_income_exemption_status");
   const manualOverrideRaw = text(formData, "manual_tax_class_override");
@@ -93,6 +96,13 @@ export async function saveCcssConfiguration(_previous: CcssActionState, formData
   const mdeClass = mdeMembership === "affiliated" ? Number(mdeClassRaw) : null;
   if (mdeMembership === "affiliated" && (![1, 2, 3, 4].includes(mdeClass ?? 0))) {
     return { status: "error", message: localized(workspace, "Confirm the MDE class shown by CCSS.", "Confirmez la classe MDE indiquée par le CCSS.") };
+  }
+  const confirmedBases = [confirmedNormalBase, confirmedPensionBase, confirmedDependencyBase];
+  if (confirmedBases.some(Boolean) && (!confirmedBases.every(Boolean) || confirmedBases.some(value => !validMoney(value)))) {
+    return { status: "error", message: localized(workspace, "Enter all three monthly bases exactly as confirmed on the same CCSS statement.", "Saisissez les trois assiettes mensuelles exactement comme elles figurent sur le même extrait CCSS.") };
+  }
+  if (confirmedPensionBase && pensionReductionStatus !== "approved") {
+    return { status: "error", message: localized(workspace, "A confirmed reduced pension base requires CCSS-approved status.", "Une assiette pension réduite confirmée exige le statut approuvé par le CCSS.") };
   }
   const manualOverride = manualOverrideRaw ? manualOverrideRaw : null;
   if (manualOverride && !["1", "1a", "2"].includes(manualOverride) || manualOverride && !overrideSource) {
@@ -156,6 +166,9 @@ export async function saveCcssConfiguration(_previous: CcssActionState, formData
     aaa_factor: aaaFactor,
     mde_membership: mdeMembership,
     mde_class: mdeClass,
+    confirmed_monthly_normal_base: confirmedNormalBase || null,
+    confirmed_monthly_pension_base: confirmedPensionBase || null,
+    confirmed_monthly_dependency_base: confirmedDependencyBase || null,
     pension_reduction_status: pensionReductionStatus,
     insignificant_income_exemption_status: exemptionStatus,
     assisting_spouse_enabled: assistingEnabled,
@@ -221,4 +234,3 @@ export async function saveCcssStatement(_previous: CcssActionState, formData: Fo
   refresh();
   return { status: "success", message: localized(workspace, "CCSS statement recorded with its official payment deadline.", "L’extrait CCSS et son échéance officielle ont été enregistrés.") };
 }
-

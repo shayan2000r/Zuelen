@@ -127,6 +127,9 @@ export default async function CcssPage() {
       incomeSource: ccssProfile.income_source as CcssSituation["incomeSource"],
       aaaFactor: asExact(ccssProfile.aaa_factor),
       mdeClass: ccssProfile.mde_membership === "affiliated" ? ccssProfile.mde_class as MdeClass : null,
+      confirmedMonthlyNormalBase: ccssProfile.confirmed_monthly_normal_base == null ? null : asExact(ccssProfile.confirmed_monthly_normal_base),
+      confirmedMonthlyPensionBase: ccssProfile.confirmed_monthly_pension_base == null ? null : asExact(ccssProfile.confirmed_monthly_pension_base),
+      confirmedMonthlyDependencyBase: ccssProfile.confirmed_monthly_dependency_base == null ? null : asExact(ccssProfile.confirmed_monthly_dependency_base),
       pensionReductionStatus: ccssProfile.pension_reduction_status as CcssSituation["pensionReductionStatus"],
       insignificantIncomeExemptionStatus: ccssProfile.insignificant_income_exemption_status as CcssSituation["insignificantIncomeExemptionStatus"],
       assistingSpouse: {

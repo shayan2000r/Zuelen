@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
 export type ComplianceState={status:"idle"|"success"|"error";message:string;upgradeRequired?:boolean};
-const allowed=["upcoming","preparing","ready","filed","paid","not_applicable"];
+const allowed=["upcoming","action_required","ready","filed","paid","overdue","not_applicable"];
 
 function refresh(){revalidatePath("/app");revalidatePath("/app/taxes");revalidatePath("/app/compliance");revalidatePath("/app/year-end");}
 

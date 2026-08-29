@@ -1,9 +1,44 @@
 "use client";
-import { LoaderCircle } from "lucide-react";
-import { useActionState } from "react";
+
+import { Check, LoaderCircle } from "lucide-react";
+import { useActionState, useRef, useState } from "react";
 import { updateComplianceStatus, type ComplianceState } from "@/app/app/compliance/actions";
 import { useI18n } from "@/components/locale-context";
 import { useRolePermissions } from "@/components/role-context";
-const initial:ComplianceState={status:"idle",message:""};
-function label(status:string,fr:boolean){if(!fr)return status.replaceAll("_"," ");const labels:Record<string,string>={upcoming:"à venir",preparing:"en préparation",ready:"prêt",filed:"déposé",paid:"payé",not_applicable:"non applicable"};return labels[status]??status.replaceAll("_"," ")}
-export function ComplianceStatusControl({id,status}:{id:string;status:string}){const{canAccount}=useRolePermissions(),{locale}=useI18n(),fr=locale==="fr",[state,action,pending]=useActionState(updateComplianceStatus,initial);if(!canAccount)return <span style={{height:28,display:"inline-flex",alignItems:"center",padding:"0 8px",border:"1px solid var(--z-border)",borderRadius:8,fontSize:10,textTransform:"capitalize",color:"var(--z-text-secondary)"}}>{label(status,fr)}</span>;return <form action={action} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}><input type="hidden" name="obligation_id" value={id}/><select name="status" defaultValue={status} style={{height:28,border:"1px solid var(--z-border)",borderRadius:8,background:"var(--z-surface-1)",color:"var(--z-text)",fontSize:10,padding:"0 6px"}}><option value="upcoming">{label("upcoming",fr)}</option><option value="preparing">{label("preparing",fr)}</option><option value="ready">{label("ready",fr)}</option><option value="filed">{label("filed",fr)}</option><option value="paid">{label("paid",fr)}</option><option value="not_applicable">{label("not_applicable",fr)}</option></select><button type="submit" disabled={pending} style={{height:28,border:0,borderRadius:8,background:"#1a7431",color:"#fff",fontSize:10,fontWeight:700,padding:"0 8px"}}>{pending?<LoaderCircle size={11}/>:fr?"Enregistrer":"Save"}</button>{state.status==="error"?<span style={{fontSize:9,color:"#a65340"}}>{state.message}</span>:null}</form>}
+import { UpgradeWall } from "@/components/upgrade-wall";
+import styles from "./compliance-status-control.module.css";
+
+const initial: ComplianceState = { status: "idle", message: "" };
+const statuses = ["upcoming", "action_required", "ready", "filed", "paid", "not_applicable"] as const;
+
+function label(status: string, fr: boolean) {
+  const labels: Record<string, [string, string]> = {
+    upcoming: ["Upcoming", "À venir"], action_required: ["Action required", "Action requise"], ready: ["Ready", "Prêt"],
+    filed: ["Filed", "Déposé"], paid: ["Paid", "Payé"], overdue: ["Overdue", "En retard"], not_applicable: ["Not applicable", "Non applicable"],
+  };
+  return labels[status]?.[fr ? 1 : 0] ?? status.replaceAll("_", " ");
+}
+
+export function ComplianceStatusControl({ id, status }: { id: string; status: string }) {
+  const { canAccount } = useRolePermissions();
+  const { locale } = useI18n();
+  const fr = locale === "fr";
+  const formRef = useRef<HTMLFormElement>(null);
+  const [state, action, pending] = useActionState(updateComplianceStatus, initial);
+  const [upgradeDismissed, setUpgradeDismissed] = useState(false);
+
+  if (!canAccount) return <span className={styles.readOnly}><i />{label(status, fr)}</span>;
+
+  return <>
+    <form ref={formRef} action={action} className={styles.control}>
+      <input type="hidden" name="obligation_id" value={id}/><span className={styles.statusDot}/>
+      <select key={status} name="status" defaultValue={status} disabled={pending} aria-label={fr ? "Modifier le statut — enregistrement automatique" : "Change status — saves automatically"} onChange={() => { setUpgradeDismissed(false); formRef.current?.requestSubmit(); }}>
+        {status === "overdue" ? <option value="overdue">{label("overdue", fr)}</option> : null}
+        {statuses.map(value => <option key={value} value={value}>{label(value, fr)}</option>)}
+      </select>
+      <span className={styles.saveState} aria-live="polite">{pending ? <LoaderCircle className={styles.spin} size={12}/> : state.status === "success" ? <Check size={12}/> : null}</span>
+      {state.status === "error" && !state.upgradeRequired ? <span className={styles.error}>{state.message}</span> : null}
+    </form>
+    <UpgradeWall open={Boolean(state.upgradeRequired) && !upgradeDismissed} message={state.message} locale={locale} onClose={() => setUpgradeDismissed(true)}/>
+  </>;
+}

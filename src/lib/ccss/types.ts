@@ -35,6 +35,9 @@ export type CcssSituation = {
   incomeSource: IncomeSource;
   aaaFactor: string;
   mdeClass: MdeClass | null;
+  confirmedMonthlyNormalBase: string | null;
+  confirmedMonthlyPensionBase: string | null;
+  confirmedMonthlyDependencyBase: string | null;
   pensionReductionStatus: ExplicitReliefStatus;
   insignificantIncomeExemptionStatus: ExplicitReliefStatus;
   assistingSpouse: {
@@ -87,4 +90,3 @@ export type AnnualCcssResult = {
   totalCents: number;
   parameterChanges: string[];
 };
-
