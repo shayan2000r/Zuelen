@@ -4,13 +4,13 @@ import { ArrowRight, ArrowUp, BarChart3, FolderClock, Landmark, LoaderCircle, Me
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { askCopilot, type CopilotState } from "@/app/app/copilot/actions";
+import { askGatedCopilot, type GatedCopilotState } from "@/app/app/copilot/gated-actions";
 import { useI18n } from "@/components/locale-context";
 import { useRolePermissions } from "@/components/role-context";
 import { UpgradeWall } from "@/components/upgrade-wall";
 import styles from "./copilot.module.css";
 
-const initial: CopilotState = { status: "idle", message: "" };
+const initial: GatedCopilotState = { status: "idle", message: "" };
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Message = { id: string; role: string; content: string; created_at: string };
 
@@ -19,7 +19,7 @@ export function CopilotPanel({ premium, initialQuestion = "", conversations, act
   const { locale, intlLocale } = useI18n();
   const fr = locale === "fr";
   const router = useRouter();
-  const [state, action, pending] = useActionState(askCopilot, initial);
+  const [state, action, pending] = useActionState(askGatedCopilot, initial);
   const [question, setQuestion] = useState(initialQuestion);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
