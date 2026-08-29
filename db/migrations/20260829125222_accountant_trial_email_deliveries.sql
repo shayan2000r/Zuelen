@@ -23,4 +23,4 @@ create index if not exists transactional_email_deliveries_status_started_idx
   on public.transactional_email_deliveries(status, processing_started_at);
 
 comment on table public.transactional_email_deliveries is
-  'Server-only idempotency ledger for transactional email delivery. Recipient and message bodies are deliberately not retained.';
+  'Server-only delivery ledger for retry-safe transactional email. Recipient and message bodies are deliberately not retained.';
