@@ -5,6 +5,14 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const pathname = request.nextUrl.pathname;
+  const protectedPath = pathname === "/app" || pathname.startsWith("/app/")
+    || pathname === "/professional" || pathname.startsWith("/professional/")
+    || pathname === "/contexts" || pathname.startsWith("/contexts/")
+    || pathname === "/setup" || pathname.startsWith("/setup/")
+    || pathname === "/admin" || pathname.startsWith("/admin/")
+    || pathname === "/account" || pathname.startsWith("/account/")
+    || pathname === "/accountants/manage" || pathname.startsWith("/accountants/manage/");
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
@@ -24,15 +32,20 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const { data: claims } = await supabase.auth.getClaims();
-  const pathname = request.nextUrl.pathname;
-  const protectedPath = pathname === "/app" || pathname.startsWith("/app/")
-    || pathname === "/professional" || pathname.startsWith("/professional/")
-    || pathname === "/contexts" || pathname.startsWith("/contexts/")
-    || pathname === "/setup" || pathname.startsWith("/setup/")
-    || pathname === "/admin" || pathname.startsWith("/admin/")
-    || pathname === "/account" || pathname.startsWith("/account/")
-    || pathname === "/accountants/manage" || pathname.startsWith("/accountants/manage/");
+  let claims;
+  try {
+    ({ data: claims } = await supabase.auth.getClaims());
+  } catch {
+    const invalidSessionResponse = protectedPath
+      ? NextResponse.redirect(new URL("/sign-in", request.url))
+      : response;
+    for (const cookie of request.cookies.getAll()) {
+      if (cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token")) {
+        invalidSessionResponse.cookies.delete(cookie.name);
+      }
+    }
+    return invalidSessionResponse;
+  }
 
   if (claims?.claims?.sub && protectedPath && pathname !== "/auth/mfa") {
     if (await currentUserRequiresMfa(supabase)) {
