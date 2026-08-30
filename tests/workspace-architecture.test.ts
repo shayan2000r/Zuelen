@@ -68,6 +68,18 @@ test("migration backfills Company and creates explicit transactional workspace R
   assert.match(sql, /'company'/);
 });
 
+test("CCSS is a valid compliance authority and complete Independent onboarding is covered", () => {
+  const migration = readFileSync(new URL("../db/migrations/20260830082851_compliance_authority_ccss.sql", import.meta.url), "utf8");
+  const regression = readFileSync(new URL("../db/tests/independent_workspace_ccss.sql", import.meta.url), "utf8");
+  for (const authority of ["AED", "ACD", "LBR", "RCS", "RBE", "ECDF", "CCSS", "OTHER"]) {
+    assert.match(migration, new RegExp(`'${authority}'`));
+  }
+  assert.match(regression, /create_independent_workspace_v1\(/);
+  assert.match(regression, /authority = 'CCSS'/);
+  assert.match(regression, /rule_key = 'ccss_initial_affiliation'/);
+  assert.match(regression, /rollback;/i);
+});
+
 test("normal authentication is neutral and setup exposes all three paths with visible examples", () => {
   const auth = readFileSync(new URL("../src/components/sign-in-form.tsx", import.meta.url), "utf8");
   const setup = readFileSync(new URL("../src/app/setup/page.tsx", import.meta.url), "utf8");
