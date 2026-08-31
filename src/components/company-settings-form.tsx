@@ -4,12 +4,13 @@ import { Check, LoaderCircle } from "lucide-react";
 import { useActionState } from "react";
 import { saveCompanySettings, type SettingsState } from "@/app/app/settings/actions";
 import { useI18n } from "@/components/locale-context";
-import { FieldGroup, FormSection, SelectField, TextareaField, TextField, ToggleField } from "@/components/zuelen-form-ui-v2";
+import { FieldGroup, FormSection, SelectField, TextareaField, TextField } from "@/components/zuelen-form-ui-v2";
 import styles from "@/app/app/settings/settings.module.css";
 
 const initial: SettingsState = { status: "idle", message: "" };
 type Company = { legal_name: string; trading_name: string | null; legal_form: string; entity_kind: "independent"|"company"; rcs_number: string | null; vat_number: string | null; tax_number: string | null; business_permit_number: string | null; municipality: string | null; activity: string | null; fiscal_year_start_month: number; base_currency: string; vat_registered: boolean; vat_filing_frequency: string | null; registered_address: Record<string, unknown> };
 function address(company: Company, key: string) { const value = company.registered_address?.[key]; return typeof value === "string" ? value : ""; }
+function turnoverBracket(frequency:string|null){return frequency==="monthly"?"over_620k":frequency==="quarterly"?"112k_to_620k":"up_to_112k"}
 
 type IndependentProfile = { activity_category:string; activity_start_date:string; accounting_start_date:string } | null;
 type TaxProfile = { icc_multiplier:number|null; icc_multiplier_year:number|null; prior_closing_balance_total:number|null } | null;
@@ -21,7 +22,7 @@ export function CompanySettingsForm({ company, independentProfile=null, taxProfi
 
   return <form action={action} className={styles.form}>
     <input type="hidden" name="legal_form" value={company.legal_form}/>
-    <FormSection title={independent ? (fr ? "Profil de l’activité" : "Activity profile") : (fr ? "Informations légales" : "Legal details")} description={independent ? (fr ? "Identité utilisée pour l’activité exercée en votre nom propre." : "Identity used for the activity operated in your own name.") : (fr ? "Identité utilisée sur les factures et documents de l’entreprise." : "Company identity used on invoices and official records.")}>
+    <FormSection title={independent ? (fr ? "Profil de l’activité" : "Activity Profile") : (fr ? "Informations légales" : "Legal Details")} description={independent ? (fr ? "Identité utilisée pour l’activité exercée en votre nom propre." : "Identity used for the activity operated in your own name.") : (fr ? "Identité utilisée sur les factures et documents de l’entreprise." : "Company identity used on invoices and official records.")}>
       <FieldGroup columns={1}>
         <TextField label={independent ? (fr ? "Nom légal personnel" : "Personal legal name") : (fr ? "Dénomination légale" : "Legal company name")} name="legal_name" defaultValue={company.legal_name} required />
       </FieldGroup>
@@ -38,9 +39,9 @@ export function CompanySettingsForm({ company, independentProfile=null, taxProfi
       </FieldGroup>
     </FormSection>
 
-    {independent?<FormSection title={fr ? "Cadre de l’activité" : "Activity basis"} description={fr ? "Informations factuelles utilisées pour adapter les parcours de l’activité." : "Factual information used to adapt this activity’s workflows."}><FieldGroup columns={2}><SelectField label={fr ? "Catégorie pratique" : "Practical category"} name="activity_category" defaultValue={independentProfile?.activity_category??"other"}><option value="consultant_freelancer">{fr?"Consultant / freelance":"Consultant / freelancer"}</option><option value="liberal_profession">{fr?"Profession libérale":"Liberal profession"}</option><option value="commercial">{fr?"Activité commerciale":"Commercial / trading"}</option><option value="craft">{fr?"Artisanat":"Craft / artisan"}</option><option value="other">{fr?"Autre":"Other"}</option></SelectField><TextField label={fr?"Date de début d’activité":"Activity start date"} name="activity_start_date" type="date" defaultValue={independentProfile?.activity_start_date??""} required/><TextField label={fr?"Début de la comptabilité":"Accounting start date"} name="accounting_start_date" type="date" defaultValue={independentProfile?.accounting_start_date??""} required/></FieldGroup></FormSection>:null}
+    {independent?<FormSection title={fr ? "Cadre de l’activité" : "Activity Basis"} description={fr ? "Informations factuelles utilisées pour adapter les parcours de l’activité." : "Factual information used to adapt this activity’s workflows."}><FieldGroup columns={2}><SelectField label={fr ? "Catégorie pratique" : "Practical category"} name="activity_category" defaultValue={independentProfile?.activity_category??"other"}><option value="consultant_freelancer">{fr?"Consultant / freelance":"Consultant / freelancer"}</option><option value="liberal_profession">{fr?"Profession libérale":"Liberal profession"}</option><option value="commercial">{fr?"Activité commerciale":"Commercial / trading"}</option><option value="craft">{fr?"Artisanat":"Craft / artisan"}</option><option value="other">{fr?"Autre":"Other"}</option></SelectField><TextField label={fr?"Date de début d’activité":"Activity start date"} name="activity_start_date" type="date" defaultValue={independentProfile?.activity_start_date??""} required/><TextField label={fr?"Début de la comptabilité":"Accounting start date"} name="accounting_start_date" type="date" defaultValue={independentProfile?.accounting_start_date??""} required/></FieldGroup></FormSection>:null}
 
-    <FormSection title={fr ? "Adresse" : "Address"} description={independent ? (fr ? "Adresse de contact ou d’établissement de l’activité." : "Contact or establishment address for the activity.") : (fr ? "Siège social officiel de l’entreprise." : "Official registered office for the company.")}>
+    <FormSection title={fr ? "Adresse et commune" : "Address & Municipality"} description={independent ? (fr ? "Adresse de contact ou d’établissement de l’activité. La commune est aussi utilisée pour les paramètres fiscaux applicables." : "Contact or establishment address for the activity. The municipality is also used for applicable tax settings.") : (fr ? "Siège social officiel. La commune est utilisée pour les paramètres fiscaux locaux." : "Official registered office. The municipality is used for local tax settings.")}>
       <FieldGroup columns={1}><TextField label={fr ? "Rue" : "Street"} name="street" defaultValue={address(company, "street")} placeholder="12 rue du Commerce" /></FieldGroup>
       <FieldGroup columns={2}>
         <TextField label={fr ? "Code postal" : "Postal code"} name="postal_code" defaultValue={address(company, "postal_code")} placeholder="L-1234" />
@@ -50,16 +51,16 @@ export function CompanySettingsForm({ company, independentProfile=null, taxProfi
       </FieldGroup>
     </FormSection>
 
-    <FormSection title={fr ? "Paramètres financiers" : "Financial settings"} description={fr ? "Valeurs par défaut pour la TVA, l’exercice et les rapports." : "Defaults for VAT, the financial year and reporting."}>
+    <FormSection title={fr ? "Paramètres financiers" : "Financial Settings"} description={fr ? "Zuelen déduit automatiquement le statut TVA du numéro de TVA et la périodicité indicative du chiffre d’affaires annuel attendu. L’AED reste compétente pour déterminer la périodicité applicable." : "Zuelen automatically infers VAT registration from the VAT number and suggests filing cadence from expected annual turnover. The AED remains competent to determine the applicable cadence."}>
       <FieldGroup columns={2}>
         <SelectField label={fr ? "Devise de base" : "Base currency"} name="base_currency" defaultValue={company.base_currency}><option value="EUR">EUR · Euro</option><option value="USD">USD · {fr ? "Dollar américain" : "US Dollar"}</option><option value="GBP">GBP · {fr ? "Livre sterling" : "Pound sterling"}</option><option value="CHF">CHF · {fr ? "Franc suisse" : "Swiss franc"}</option></SelectField>
         <SelectField label={fr ? "Début de l’exercice" : "Fiscal year starts"} name="fiscal_year_start_month" defaultValue={String(company.fiscal_year_start_month)}>{Array.from({ length: 12 }, (_, index) => <option value={index + 1} key={index}>{new Date(2026, index, 1).toLocaleDateString(intlLocale, { month: "long" })}</option>)}</SelectField>
-        <SelectField label={fr ? "Fréquence des déclarations TVA" : "VAT filing frequency"} name="vat_filing_frequency" defaultValue={company.vat_filing_frequency ?? "annual"}><option value="annual">{fr ? "Annuelle" : "Annual"}</option><option value="quarterly">{fr ? "Trimestrielle" : "Quarterly"}</option><option value="monthly">{fr ? "Mensuelle" : "Monthly"}</option></SelectField>
+        <SelectField label={fr ? "Chiffre d’affaires annuel HT attendu" : "Expected annual turnover excl. VAT"} name="turnover_bracket" defaultValue={turnoverBracket(company.vat_filing_frequency)} disabled={!company.vat_number}><option value="up_to_112k">≤ €112,000 · {fr?"déclaration annuelle":"annual return"}</option><option value="112k_to_620k">€112,000.01 – €620,000 · {fr?"trimestrielle + annuelle":"quarterly + annual"}</option><option value="over_620k">&gt; €620,000 · {fr?"mensuelle + annuelle":"monthly + annual"}</option></SelectField>
       </FieldGroup>
-      <ToggleField title={fr ? "Assujetti à la TVA" : "VAT registered"} description={fr ? "Active les workflows de comptabilité et de déclaration TVA." : "Enable VAT accounting and filing workflows."} name="vat_registered" defaultChecked={company.vat_registered} />
+      {!company.vat_number?<p className={styles.formHint}>{fr?"Ajoutez un numéro de TVA pour activer la configuration de périodicité. Aucun interrupteur d’assujettissement séparé n’est nécessaire.":"Add a VAT number to enable cadence configuration. No separate VAT-registration toggle is required."}</p>:null}
     </FormSection>
 
-    {!independent ? <FormSection title={fr ? "Profil fiscal direct" : "Direct-tax profile"} description={fr ? "Données de configuration utilisées pour calculer les estimations affichées dans Fiscalité." : "Configuration inputs used to calculate the estimates shown in Taxes."}>
+    {!independent ? <FormSection title={fr ? "Profil fiscal direct" : "Direct-Tax Profile"} description={fr ? "Configuration conservée dans Paramètres afin que la page Fiscalité reste centrée sur les résultats, estimations et échéances." : "Configuration lives in Settings so the Taxes page can stay focused on results, estimates and deadlines."}>
       <FieldGroup columns={2}>
         <TextField label={fr ? "Multiplicateur communal ICC (%)" : "Municipal ICC multiplier (%)"} name="icc_multiplier_percent" type="number" min="0.01" max="1000" step="0.01" defaultValue={taxProfile?.icc_multiplier == null ? "" : String(Number(taxProfile.icc_multiplier) * 100)} placeholder="225" />
         <TextField label={fr ? "Année du multiplicateur" : "Multiplier year"} name="icc_multiplier_year" type="number" min="2025" max="2100" step="1" defaultValue={taxProfile?.icc_multiplier_year == null ? String(new Date().getFullYear()) : String(taxProfile.icc_multiplier_year)} />
