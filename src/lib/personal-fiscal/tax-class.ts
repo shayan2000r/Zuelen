@@ -71,4 +71,3 @@ export function resolveDisplayedTaxClass(input: {
   if (input.derived.taxClass === "needs_confirmation" && input.acdTaxRatePercent) return { value: input.acdTaxRatePercent, source: "acd_rate" as const };
   return { value: input.derived.taxClass, source: "derived" as const };
 }
-

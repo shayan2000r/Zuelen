@@ -18,7 +18,7 @@ type Account={id:string;code:string;label:string;label_en:string|null;label_fr:s
 type SourceTransaction={id:string;occurred_on:string;direction:string;amount_gross:number|string;vat_amount:number|string|null;counterparty_name:string|null;description:string|null;classification_status:string;posted_journal_entry_id:string|null};
 type Invoice={id:string;status:string;payment_status:string};
 type Payment={id:string;invoice_id:string;amount:number|string;paid_on:string;reference:string|null;bank_transaction_id:string|null;journal_entry_id:string};
-type Params=Promise<{q?:string;kind?:string;from?:string;to?:string}>;
+type Params=Promise<{q?:string;kind?:string;from?:string;to?:string;opening?:string}>;
 function money(value:number,currency:string,locale:Locale){return new Intl.NumberFormat(intlLocale(locale),{style:"currency",currency,minimumFractionDigits:2}).format(value)}
 function validDate(value:string|undefined){return value&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value:""}function within(value:string,bounds:{start:string;end:string},fallback:string){return value&&value>=bounds.start&&value<=bounds.end?value:fallback}
 
@@ -41,7 +41,7 @@ export default async function AccountingPage({searchParams}:{searchParams:Params
    meta={<StatusBadge tone={editable ? "info" : "neutral"}>{editable ? <LockKeyhole size={13}/> : <Eye size={13}/>} {editable ? (fr ? entries.length + " écritures · " + from + " → " + to : entries.length + " entries · " + from + " → " + to) : (fr ? "Lecteur · " + entries.length + " écritures" : "Viewer · " + entries.length + " entries")}</StatusBadge>}
   />
 
-  {editable ? <AccountingYearControls year={year} currency={currency} legalName={workspace.company.legal_name} accounts={openingAccounts} openingPosted={openingPosted}/> : null}
+  {editable ? <AccountingYearControls year={year} currency={currency} legalName={workspace.company.legal_name} accounts={openingAccounts} openingPosted={openingPosted} initialOpeningMode={params.opening==="upload"||params.opening==="manual"?params.opening:null}/> : null}
 
   <DataSummary
    label={fr ? "Résumé du grand livre" : "Ledger summary"}

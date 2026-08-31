@@ -12,7 +12,8 @@ type Company = { legal_name: string; trading_name: string | null; legal_form: st
 function address(company: Company, key: string) { const value = company.registered_address?.[key]; return typeof value === "string" ? value : ""; }
 
 type IndependentProfile = { activity_category:string; activity_start_date:string; accounting_start_date:string } | null;
-export function CompanySettingsForm({ company, independentProfile=null }: { company: Company; independentProfile?:IndependentProfile }) {
+type TaxProfile = { icc_multiplier:number|null; icc_multiplier_year:number|null; prior_closing_balance_total:number|null } | null;
+export function CompanySettingsForm({ company, independentProfile=null, taxProfile=null }: { company: Company; independentProfile?:IndependentProfile; taxProfile?:TaxProfile }) {
   const [state, action, pending] = useActionState(saveCompanySettings, initial);
   const { locale, intlLocale } = useI18n();
   const fr = locale === "fr";
@@ -57,6 +58,14 @@ export function CompanySettingsForm({ company, independentProfile=null }: { comp
       </FieldGroup>
       <ToggleField title={fr ? "Assujetti à la TVA" : "VAT registered"} description={fr ? "Active les workflows de comptabilité et de déclaration TVA." : "Enable VAT accounting and filing workflows."} name="vat_registered" defaultChecked={company.vat_registered} />
     </FormSection>
+
+    {!independent ? <FormSection title={fr ? "Profil fiscal direct" : "Direct-tax profile"} description={fr ? "Données de configuration utilisées pour calculer les estimations affichées dans Fiscalité." : "Configuration inputs used to calculate the estimates shown in Taxes."}>
+      <FieldGroup columns={2}>
+        <TextField label={fr ? "Multiplicateur communal ICC (%)" : "Municipal ICC multiplier (%)"} name="icc_multiplier_percent" type="number" min="0.01" max="1000" step="0.01" defaultValue={taxProfile?.icc_multiplier == null ? "" : String(Number(taxProfile.icc_multiplier) * 100)} placeholder="225" />
+        <TextField label={fr ? "Année du multiplicateur" : "Multiplier year"} name="icc_multiplier_year" type="number" min="2025" max="2100" step="1" defaultValue={taxProfile?.icc_multiplier_year == null ? String(new Date().getFullYear()) : String(taxProfile.icc_multiplier_year)} />
+        <TextField label={fr ? "Total du bilan de clôture précédent" : "Prior closing balance total"} name="prior_balance_total" type="number" min="0" step="0.01" defaultValue={taxProfile?.prior_closing_balance_total == null ? "" : String(taxProfile.prior_closing_balance_total)} placeholder="0.00" />
+      </FieldGroup>
+    </FormSection> : null}
 
     <div className={styles.saveBar}>{state.message ? <span className={state.status === "error" ? styles.error : styles.success}>{state.message}</span> : <span>{independent ? (fr ? "Les modifications mettent à jour le profil de l’activité dans Zuelen." : "Changes update the activity profile across Zuelen.") : (fr ? "Les modifications mettent à jour le profil de l’entreprise dans Zuelen." : "Changes update the company profile across Zuelen.")}</span>}<button type="submit" disabled={pending}>{pending ? <LoaderCircle className={styles.spin} size={15} /> : <Check size={15} />} {pending ? (fr ? "Enregistrement…" : "Saving…") : (fr ? "Enregistrer les modifications" : "Save changes")}</button></div>
   </form>;

@@ -1,12 +1,26 @@
 "use client";
 
-import { CheckCircle2, LoaderCircle, Settings2 } from "lucide-react";
-import { useActionState } from "react";
-import { saveVatProfile,type VatProfileState } from "@/app/app/taxes/actions";
+import Link from "next/link";
+import { ArrowRight, Settings2 } from "lucide-react";
+import { useI18n } from "@/components/locale-context";
 import styles from "./taxes.module.css";
 
-const initial:VatProfileState={status:"idle",message:""};
-export function VatProfileCard({frequency,year}:{frequency:string|null;year:number}){
-  const[state,action,pending]=useActionState(saveVatProfile,initial);
-  return <article className={styles.profileCard}><div className={styles.profileHead}><div><p>Filing profile</p><h2>AED cadence</h2></div><Settings2 size={18}/></div><p className={styles.profileLead}>Use the frequency assigned to your company. Turnover thresholds guide the standard regime, but the AED can decide otherwise.</p><form action={action}><input type="hidden" name="year" value={year}/><label><span>VAT return frequency</span><select name="frequency" defaultValue={frequency??""} required><option value="" disabled>Select assigned frequency</option><option value="annual">Annual only</option><option value="quarterly">Quarterly + annual</option><option value="monthly">Monthly + annual</option></select></label><div className={styles.thresholds}><div><strong>&lt; €112k</strong><span>normally annual</span></div><div><strong>€112k–€620k</strong><span>normally quarterly</span></div><div><strong>&gt; €620k</strong><span>normally monthly</span></div></div>{state.message?<div className={state.status==="error"?styles.formError:styles.formSuccess}>{state.status==="success"?<CheckCircle2 size={13}/>:null}{state.message}</div>:null}<button type="submit" disabled={pending}>{pending?<LoaderCircle className={styles.spin} size={14}/>:<CheckCircle2 size={14}/>}Save & sync calendar</button></form></article>;
+export function VatProfileCard({ frequency }: { frequency: string | null; year: number }) {
+  const { locale } = useI18n();
+  const fr = locale === "fr";
+  const frequencyLabel = frequency === "monthly"
+    ? (fr ? "Mensuelle + annuelle" : "Monthly + annual")
+    : frequency === "quarterly"
+      ? (fr ? "Trimestrielle + annuelle" : "Quarterly + annual")
+      : frequency === "annual"
+        ? (fr ? "Annuelle" : "Annual")
+        : (fr ? "À confirmer" : "To confirm");
+
+  return <article className={styles.profileCard}>
+    <div className={styles.profileHead}><div><p>{fr ? "Profil de déclaration" : "Filing profile"}</p><h2>{fr ? "Cadence AED" : "AED cadence"}</h2></div><Settings2 size={18}/></div>
+    <p className={styles.profileLead}>{fr ? "La cadence enregistrée est utilisée pour organiser le calendrier TVA. Les seuils de chiffre d’affaires guident le régime standard, mais l’AED peut en décider autrement." : "The saved cadence organizes the VAT calendar. Revenue thresholds guide the standard regime, but the AED can decide otherwise."}</p>
+    <div className={styles.thresholds}><div><strong>&lt; €112k</strong><span>{fr ? "normalement annuelle" : "normally annual"}</span></div><div><strong>€112k–€620k</strong><span>{fr ? "normalement trimestrielle" : "normally quarterly"}</span></div><div><strong>&gt; €620k</strong><span>{fr ? "normalement mensuelle" : "normally monthly"}</span></div></div>
+    <div className={styles.profileLead}><strong>{fr ? "Cadence actuelle :" : "Current cadence:"} {frequencyLabel}</strong></div>
+    <Link href="/app/settings">{fr ? "Modifier dans Paramètres" : "Change in Settings"} <ArrowRight size={14}/></Link>
+  </article>;
 }

@@ -15,10 +15,7 @@ export function UpgradeWall({ open, message, onClose, locale = "en" }: { open: b
         <span className={styles.eyebrow}>{l("Basic limit reached", "Limite Basic atteinte")}</span>
         <h2>{l("Keep going with Premium", "Continuez avec Premium")}</h2>
         <p>{message}</p>
-        <div className={styles.actions}>
-          <Link href="/app/settings/billing" className={styles.primary}>{l("Upgrade — €39/month", "Passer à Premium — 39 €/mois")} <ArrowRight size={14} /></Link>
-          <Link href="/app/settings/usage" className={styles.secondary}>{l("View usage", "Voir l’utilisation")}</Link>
-        </div>
+        <div className={styles.actions}><Link href="/app/settings/billing" className={styles.primary}>{l("Upgrade to Premium", "Passer à Premium")} <ArrowRight size={14}/></Link></div>
       </section>
     </div>
   );

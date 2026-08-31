@@ -13,7 +13,7 @@ import { getWorkspace } from "@/lib/workspace";
 import { canBookkeep } from "@/lib/permissions";
 
 export const dynamic="force-dynamic";
-type SearchParams=Promise<{q?:string;status?:string}>;
+type SearchParams=Promise<{q?:string;status?:string;import?:string}>;
 
 export default async function BankingPage({searchParams}:{searchParams:SearchParams}){
  const params=await searchParams,q=(params.q??"").trim().toLowerCase(),status=params.status??"all",workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");
@@ -35,7 +35,7 @@ export default async function BankingPage({searchParams}:{searchParams:SearchPar
    eyebrow={fr?`Trésorerie → comptabilité · ${year}`:`Cash → books · ${year}`}
    title={fr?"Banque":"Banking"}
    description={editable?(fr?`Importez les relevés ${year}, rapprochez les mouvements et gardez l'exercice sélectionné aligné avec le grand livre.`:`Import ${year} statements, reconcile movements and keep the selected financial year aligned with the ledger.`):(fr?`Accès en lecture seule aux relevés, mouvements et historique de rapprochement ${year}.`:`Read-only access to ${year} bank statements, movements and reconciliation history.`)}
-   actions={editable?[{label:fr?"Importer un relevé":"Import statement",href:"#bank-import",icon:FileUp,variant:"primary"},{label:fr?"Voir les transactions":"View transactions",href:"/app/transactions",icon:ArrowRight,variant:"secondary"}]:[{label:fr?"Voir les transactions":"View transactions",href:"/app/transactions",icon:ArrowRight,variant:"secondary"}]}
+   actions={editable?[{label:fr?"Importer":"Import",href:"/app/banking?import=1",icon:FileUp,variant:"primary"},{label:fr?"Voir les transactions":"View transactions",href:"/app/transactions",icon:ArrowRight,variant:"secondary"}]:[{label:fr?"Voir les transactions":"View transactions",href:"/app/transactions",icon:ArrowRight,variant:"secondary"}]}
   />
 
   <DataSummary items={[
@@ -48,7 +48,7 @@ export default async function BankingPage({searchParams}:{searchParams:SearchPar
   <div style={{height:"var(--z-space-6)"}}/>
   <section className={styles.layout}>
    <div id="bank-import">
-    {editable?<BankImporter defaultCurrency={currency}/>:<Panel><div className={styles.importHistory}><div><p>{fr?"Imports de relevés bancaires":"Bank statement imports"}</p><h2>{fr?"Accès en lecture seule":"Read-only access"}</h2></div><span>{fr?"Seuls les propriétaires, administrateurs, comptables et aides-comptables peuvent importer ou supprimer des justificatifs bancaires.":"Only Owners, Admins, Accountants and Bookkeepers can import or remove bank evidence."}</span></div></Panel>}
+    {editable?<BankImporter defaultCurrency={currency} initialOpen={params.import==="1"}/>:<Panel><div className={styles.importHistory}><div><p>{fr?"Imports de relevés bancaires":"Bank statement imports"}</p><h2>{fr?"Accès en lecture seule":"Read-only access"}</h2></div><span>{fr?"Seuls les propriétaires, administrateurs, comptables et aides-comptables peuvent importer ou supprimer des justificatifs bancaires.":"Only Owners, Admins, Accountants and Bookkeepers can import or remove bank evidence."}</span></div></Panel>}
    </div>
    <div className={styles.right}>
     <DataPanel>

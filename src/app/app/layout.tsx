@@ -6,6 +6,7 @@ import { normalizeLocale, type AccountTranslation } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import "./v2-rollout.css";
+import "./final-ux-cleanup.css";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function ProtectedAppLayout({ children }: { children: React
   const bounds = fiscalYearBounds(fiscalYear, workspace.company.fiscal_year_start_month);
   const fiscalYears = availableFiscalYears(fiscalYear, workspace.company.fiscal_year_start_month);
   const supabase = await createClient();
-  const [billing, { count }, brandResult, avatarResult, accountsResult] = await Promise.all([
+  const [billing, { count }, brandResult, avatarResult, accountsResult, professionalResult] = await Promise.all([
     getBillingSnapshot(workspace.organization.id),
     supabase
       .from("source_transactions")
@@ -38,8 +39,12 @@ export default async function ProtectedAppLayout({ children }: { children: React
       .select("code,label,label_en,label_fr")
       .eq("company_id", workspace.company.id)
       .order("code", { ascending: true }),
+    workspace.userId
+      ? supabase.from("accountant_profiles").select("id").eq("user_id", workspace.userId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
   if (accountsResult.error) throw new Error(accountsResult.error.message);
+  if (professionalResult.error) throw new Error(professionalResult.error.message);
 
   return (
     <AppFrame
@@ -59,6 +64,7 @@ export default async function ProtectedAppLayout({ children }: { children: React
       capabilities={workspace.capabilities!}
       workspaces={workspace.workspaces}
       activeWorkspaceId={workspace.company.id}
+      hasProfessionalWorkspace={Boolean(professionalResult.data)}
     >
       {children}
     </AppFrame>
