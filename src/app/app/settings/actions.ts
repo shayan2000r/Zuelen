@@ -7,6 +7,12 @@ import { canManageOrganization } from "@/lib/permissions";
 
 export type SettingsState = { status: "idle" | "success" | "error"; message: string };
 function text(formData: FormData, key: string) { return String(formData.get(key) ?? "").trim(); }
+function vatFrequencyFromTurnover(bracket:string){
+  if(bracket==="up_to_112k") return "annual";
+  if(bracket==="112k_to_620k") return "quarterly";
+  if(bracket==="over_620k") return "monthly";
+  return null;
+}
 
 export async function saveCompanySettings(_previous: SettingsState, formData: FormData): Promise<SettingsState> {
   const workspace = await getWorkspace();
@@ -19,7 +25,7 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
   const legalForm = workspace.company.entity_kind === "independent" ? workspace.company.legal_form : text(formData, "legal_form");
   const tradingName = text(formData, "trading_name");
   const rcs = text(formData, "rcs_number");
-  const vat = text(formData, "vat_number");
+  const vat = text(formData, "vat_number").toUpperCase();
   const tax = text(formData, "tax_number");
   const permit = text(formData, "business_permit_number");
   const municipality = text(formData, "municipality");
@@ -29,17 +35,19 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
   const city = text(formData, "city");
   const country = text(formData, "country_code").toUpperCase() || "LU";
   const currency = text(formData, "base_currency").toUpperCase() || "EUR";
-  const frequency = text(formData, "vat_filing_frequency");
+  const turnoverBracket = text(formData, "turnover_bracket");
+  const frequency = vatFrequencyFromTurnover(turnoverBracket);
   const fiscalMonth = Number(formData.get("fiscal_year_start_month") ?? 1);
-  const vatRegistered = formData.get("vat_registered") === "on";
+  const vatRegistered = Boolean(vat);
 
   if (legalName.length < 2) return { status: "error", message: m("Enter the legal name.", "Saisissez le nom légal.") };
   if (!legalForm) return { status: "error", message: m("Choose the legal form.", "Choisissez la forme juridique.") };
   if (!Number.isInteger(fiscalMonth) || fiscalMonth < 1 || fiscalMonth > 12) return { status: "error", message: m("Choose a valid fiscal-year start month.", "Choisissez un mois de début d’exercice valide.") };
   if (!/^[A-Z]{3}$/.test(currency)) return { status: "error", message: m("Use a valid 3-letter base currency.", "Utilisez un code devise valide à trois lettres.") };
-  if (vatRegistered && !vat) return { status: "error", message: m("Enter the VAT number or turn off VAT registration.", "Saisissez le numéro de TVA ou désactivez l’assujettissement.") };
-  if (frequency && !["annual", "quarterly", "monthly"].includes(frequency)) return { status: "error", message: m("Choose a valid VAT filing frequency.", "Choisissez une fréquence de déclaration TVA valide.") };
+  if (vat && !/^LU\d{8}$/.test(vat)) return { status: "error", message: m("A Luxembourg VAT number must use the format LU12345678.", "Un numéro de TVA luxembourgeois doit respecter le format LU12345678.") };
+  if (vatRegistered && !frequency) return { status: "error", message: m("Choose the expected annual turnover bracket so Zuelen can determine the VAT filing cadence.", "Choisissez la tranche de chiffre d’affaires annuel prévue afin que Zuelen détermine la périodicité TVA.") };
   if (!/^[A-Z]{2}$/.test(country)) return { status: "error", message: m("Use a two-letter country code.", "Utilisez un code pays à deux lettres.") };
+  if (country === "LU" && postal && !/^(?:L-|LU-)?\d{4}$/.test(postal)) return { status: "error", message: m("Luxembourg postal codes must contain exactly 4 digits.", "Les codes postaux luxembourgeois doivent contenir exactement 4 chiffres.") };
 
   const independent = workspace.company.entity_kind === "independent";
   const category = text(formData, "activity_category");
@@ -60,6 +68,7 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
   if (hasTaxProfile && (!Number.isInteger(multiplierYear) || multiplierYear < 2025 || multiplierYear > 2100)) return { status: "error", message: m("Choose a valid multiplier year.", "Choisissez une année de multiplicateur valide.") };
   if (hasTaxProfile && priorBalance !== null && (!Number.isFinite(priorBalance) || priorBalance < 0)) return { status: "error", message: m("Prior closing balance total must be zero or greater.", "Le total du bilan de clôture précédent doit être positif ou nul.") };
 
+  const normalizedPostal = country === "LU" && postal ? `L-${postal.replace(/\D/g,"").slice(0,4)}` : postal;
   const supabase = await createClient();
   const companyResult = await supabase.from("companies").update({
     legal_name: legalName,
@@ -74,8 +83,8 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
     fiscal_year_start_month: fiscalMonth,
     base_currency: currency,
     vat_registered: vatRegistered,
-    vat_filing_frequency: vatRegistered ? (frequency || null) : null,
-    registered_address: { street, postal_code: postal, city, country_code: country },
+    vat_filing_frequency: vatRegistered ? frequency : null,
+    registered_address: { street, postal_code: normalizedPostal, city, country_code: country },
     updated_at: new Date().toISOString(),
   }).eq("id", workspace.company.id);
   if (companyResult.error) return { status: "error", message: companyResult.error.message };
