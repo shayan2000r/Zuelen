@@ -1,20 +1,23 @@
 "use client";
 
-import { AlertTriangle, CalendarRange, CheckCircle2, LoaderCircle, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { AlertTriangle, CalendarRange, CheckCircle2, FileUp, LoaderCircle, PenLine, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { resetBookkeepingAction, resetFinancialYearAction, saveOpeningBalancesAction, type AccountingActionState } from "@/app/app/accounting/actions";
 import styles from "./accounting-year-controls.module.css";
+import choiceStyles from "./transaction-entry-choice.module.css";
 
 type Account={id:string;code:string;label:string;account_type:string};
 type OpeningLine={id:number;account_id:string;debit:string;credit:string};
 const initial:AccountingActionState={status:"idle",message:""};
 function money(value:number,currency:string){return new Intl.NumberFormat("en-LU",{style:"currency",currency,minimumFractionDigits:2}).format(value||0)}
 
-export function AccountingYearControls({year,currency,legalName,accounts,openingPosted}:{year:number;currency:string;legalName:string;accounts:Account[];openingPosted:boolean}){
+export function AccountingYearControls({year,currency,legalName,accounts,openingPosted,initialOpeningMode=null}:{year:number;currency:string;legalName:string;accounts:Account[];openingPosted:boolean;initialOpeningMode?:"upload"|"manual"|null}){
  const router=useRouter(),openingDialog=useRef<HTMLDialogElement>(null),yearDialog=useRef<HTMLDialogElement>(null),allDialog=useRef<HTMLDialogElement>(null);
  const[openingState,openingAction,openingPending]=useActionState(saveOpeningBalancesAction,initial),[yearState,yearAction,yearPending]=useActionState(resetFinancialYearAction,initial),[allState,allAction,allPending]=useActionState(resetBookkeepingAction,initial);
  const[lines,setLines]=useState<OpeningLine[]>([{id:1,account_id:"",debit:"",credit:""},{id:2,account_id:"",debit:"",credit:""}]);
+ const[openingMode,setOpeningMode]=useState<"choose"|"manual">(initialOpeningMode==="manual"?"manual":"choose");
  const totals=useMemo(()=>lines.reduce((acc,line)=>({debit:acc.debit+(Number(line.debit)||0),credit:acc.credit+(Number(line.credit)||0)}),{debit:0,credit:0}),[lines]),balanced=totals.debit>0&&Math.abs(totals.debit-totals.credit)<.005;
  function update(id:number,patch:Partial<OpeningLine>){setLines(current=>current.map(line=>line.id===id?{...line,...patch}:line))}
  function add(){setLines(current=>[...current,{id:Date.now(),account_id:"",debit:"",credit:""}])}
@@ -22,6 +25,7 @@ export function AccountingYearControls({year,currency,legalName,accounts,opening
  useEffect(()=>{if(openingState.status==="success"){openingDialog.current?.close();router.refresh()}},[openingState.status,router]);
  useEffect(()=>{if(yearState.status==="success"){yearDialog.current?.close();router.refresh()}},[yearState.status,router]);
  useEffect(()=>{if(allState.status==="success"){allDialog.current?.close();router.refresh()}},[allState.status,router]);
+ useEffect(()=>{if(initialOpeningMode){setOpeningMode(initialOpeningMode==="manual"?"manual":"choose");openingDialog.current?.showModal()}},[initialOpeningMode]);
  const payload=lines.filter(line=>line.account_id&&(Number(line.debit)>0||Number(line.credit)>0)).map(line=>({account_id:line.account_id,debit:Number(line.debit)||0,credit:Number(line.credit)||0}));
  return <>
   <section className={styles.panel}>
@@ -32,13 +36,13 @@ export function AccountingYearControls({year,currency,legalName,accounts,opening
   <dialog ref={openingDialog} className={styles.dialog}>
    <form action={openingAction} className={styles.card}>
     <div className={styles.head}><div><p>Opening position · {year}</p><h3>Enter the prior closing balances.</h3></div><button className={styles.close} type="button" onClick={()=>openingDialog.current?.close()} aria-label="Close"><X size={16}/></button></div>
-    <p className={styles.lead}>For {year}, enter the balance-sheet position carried forward from the previous financial year. Use debit balances for assets and credit balances for liabilities/equity. Zuelen will only post the entry when total debits equal total credits.</p>
+    {openingMode==="choose"?<><p className={styles.lead}>Start from your prior accounting records or enter the opening PCN balances yourself.</p><div className={choiceStyles.choices}><Link href="/app/documents?create=upload"><span><FileUp size={20}/></span><div><strong>Upload document</strong><small>Upload a prior PCN, Profit & Loss, annual accounts or filing document using the secure document workflow.</small></div></Link><button type="button" onClick={()=>setOpeningMode("manual")}><span><PenLine size={20}/></span><div><strong>Enter manually</strong><small>Enter debit and credit balances by PCN account.</small></div></button></div></>:<><button type="button" className={choiceStyles.back} onClick={()=>setOpeningMode("choose")}>← Back</button><p className={styles.lead}>For {year}, enter the balance-sheet position carried forward from the previous financial year. Use debit balances for assets and credit balances for liabilities/equity. Zuelen will only post the entry when total debits equal total credits.</p>
     <div className={styles.openingList}>{lines.map((line,index)=><div className={styles.openingRow} key={line.id}><label><span>Balance-sheet account</span><select value={line.account_id} onChange={e=>update(line.id,{account_id:e.target.value})} required><option value="">Choose account…</option>{accounts.map(account=><option value={account.id} key={account.id}>{account.code} · {account.label} · {account.account_type}</option>)}</select></label><label><span>Debit</span><input type="number" min="0" step="0.01" value={line.debit} onChange={e=>update(line.id,{debit:e.target.value,credit:e.target.value&&Number(e.target.value)>0?"":line.credit})} placeholder="0.00"/></label><label><span>Credit</span><input type="number" min="0" step="0.01" value={line.credit} onChange={e=>update(line.id,{credit:e.target.value,debit:e.target.value&&Number(e.target.value)>0?"":line.debit})} placeholder="0.00"/></label><button type="button" className={styles.remove} disabled={lines.length<=2} onClick={()=>remove(line.id)} aria-label={`Remove line ${index+1}`}><Trash2 size={14}/></button></div>)}</div>
     <button className={styles.add} type="button" onClick={add}><Plus size={12}/>Add account</button>
     <div className={styles.totals}><div><span>Total debit</span><strong>{money(totals.debit,currency)}</strong></div><div><span>Total credit</span><strong>{money(totals.credit,currency)}</strong></div><span className={balanced?styles.balanced:styles.unbalanced}>{balanced?<CheckCircle2 size={12}/>:<AlertTriangle size={12}/>} {balanced?"Balanced":"Must balance"}</span></div>
     <input type="hidden" name="lines_json" value={JSON.stringify(payload)}/>
     {openingState.message?<div className={`${styles.message} ${openingState.status==="error"?styles.error:""}`}>{openingState.message}</div>:null}
-    <div className={styles.footer}><button type="button" className={styles.secondary} onClick={()=>openingDialog.current?.close()}>Cancel</button><button type="submit" className={styles.primary} disabled={!balanced||payload.length<2||openingPending}>{openingPending?<LoaderCircle className={styles.spin} size={13}/>:<CheckCircle2 size={13}/>}Post opening position</button></div>
+    <div className={styles.footer}><button type="button" className={styles.secondary} onClick={()=>openingDialog.current?.close()}>Cancel</button><button type="submit" className={styles.primary} disabled={!balanced||payload.length<2||openingPending}>{openingPending?<LoaderCircle className={styles.spin} size={13}/>:<CheckCircle2 size={13}/>}Post opening position</button></div></>}
    </form>
   </dialog>
 

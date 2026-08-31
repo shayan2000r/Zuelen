@@ -21,6 +21,8 @@ html[data-zuelen-theme="dark"] .themeToggle{background:rgba(255,255,255,.035)}ht
 .accountPreferences>label,.accountPreferences>div{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:8px;border-radius:11px;background:var(--z-surface-1);border:1px solid var(--z-border)}
 .accountPreferences span{font-size:8px;font-weight:750;color:var(--z-text-secondary)}
 .accountPreferences>label{width:100%}.accountPreferences>div{display:none}.accountPreferences select{height:34px;min-width:0;width:100%;border:1px solid var(--z-border);border-radius:9px;background:var(--z-surface-2);color:var(--z-text);padding:0 10px;font:inherit;font-size:10px;font-weight:700}
+.workspaceName{display:flex!important;align-items:center;gap:6px}.workspaceName svg{flex:none;color:var(--z-brand-strong)!important}
+.accountPreferences>label{display:grid;grid-template-columns:max-content minmax(0,1fr)}.accountPreferences>label>span{white-space:nowrap}.accountPreferences select{justify-self:stretch}
 .accountPreferences .themeToggle{padding:2px}
 .accountPreferences .themeToggle button{width:27px;height:27px}
 @media(max-width:650px){.businessAccountButton{min-width:0;width:44px;padding:5px}.businessAccountButton>div,.businessAccountButton>svg{display:none}.businessAccountMenu{position:fixed;right:14px;top:66px;max-height:calc(100vh - 80px);overflow:auto}.accountPreferences{grid-template-columns:1fr}}

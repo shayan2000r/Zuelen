@@ -58,4 +58,3 @@ test("ACD class or rate confirmation takes display precedence without changing d
   assert.deepEqual(resolveDisplayedTaxClass({ derived, manualOverride: "2" }), { value: "2", source: "acd_override" });
   assert.deepEqual(resolveDisplayedTaxClass({ derived, acdTaxRatePercent: "12.5000" }), { value: "12.5000", source: "acd_rate" });
 });
-

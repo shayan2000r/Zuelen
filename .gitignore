@@ -7,5 +7,6 @@ out
 .env.local
 .env.*.local
 .vercel
+supabase/.temp/
 coverage
 *.tsbuildinfo

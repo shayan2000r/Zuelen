@@ -26,14 +26,14 @@ export default async function InvoicesPage(){
    eyebrow={fr?`Ventes et créances · ${year}`:`Sales & receivables · ${year}`}
    title={fr?"Factures":"Invoices"}
    description={editable?(fr?"Créez des brouillons, émettez des factures et suivez les créances de l'exercice sélectionné.":"Create drafts, issue invoices and inspect receivables in the selected financial year."):(fr?"Accès en lecture seule aux factures, brouillons et créances de l'exercice sélectionné.":"Read-only access to invoices, drafts and receivables in the selected financial year.")}
-   actions={editable?[{label:fr?"Nouvelle facture":"New invoice",href:"/app/invoices/new",icon:Plus,variant:"primary"}]:[]}
+   actions={editable?[{label:fr?"Créer":"Create",href:"/app/invoices/new",icon:Plus,variant:"primary"}]:[]}
   />
 
   <DataSummary items={[
-   {label:fr?"Encours à la clôture":"Outstanding at period end",value:money(outstanding,currency,locale),description:fr?`Paiements après le ${date(bounds.end)} exclus`:`Payments after ${bounds.end} excluded`,icon:ReceiptText,tone:outstanding>0?"info":"neutral"},
+   {label:fr?"Encours":"Outstanding",value:money(outstanding,currency,locale),description:fr?`Paiements après le ${date(bounds.end)} exclus`:`Payments after ${bounds.end} excluded`,icon:ReceiptText,tone:outstanding>0?"info":"neutral"},
    {label:fr?"En retard":"Overdue",value:overdue,description:overdue===0?(fr?"Aucun retard":"Nothing past due"):(fr?"Non réglées à la clôture sélectionnée":"Unsettled by the selected year-end"),icon:Clock3,tone:overdue?"warning":"success"},
    {label:fr?"Brouillons":"Drafts",value:drafts.length,description:editable?(fr?"Modifiables · non comptabilisés":"Editable · not posted"):(fr?"Visibles · lecture seule":"Visible · read only"),icon:Pencil},
-   {label:fr?"Réglées":"Settled",value:paid,description:fr?`Paiements datés jusqu’au ${date(bounds.end)}`:`Payments dated through ${bounds.end}`,icon:CircleCheck,tone:"success"}
+   {label:fr?"Payées":"Paid",value:paid,description:fr?`Paiements datés jusqu’au ${date(bounds.end)}`:`Payments dated through ${bounds.end}`,icon:CircleCheck,tone:"success"}
   ]}/>
 
   <div style={{height:"var(--z-space-6)"}}/>

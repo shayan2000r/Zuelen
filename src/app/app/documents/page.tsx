@@ -6,7 +6,7 @@ import { GeneratedDocumentDelete } from "@/components/generated-document-delete"
 import { DocumentRowActions } from "@/components/document-row-actions";
 import { DocumentExtractionButton } from "@/components/document-extraction-button";
 import { DocumentMatchActions, TaxNoticeAction } from "@/components/document-workflow-actions";
-import { DataEmptyState, DataPanel, DataPanelHeader, DataSummary, DataToolbar } from "@/components/zuelen-data-ui-v2";
+import { DataEmptyState, DataPanel, DataPanelHeader, DataToolbar } from "@/components/zuelen-data-ui-v2";
 import { PageHeader, V2Button, V2Page } from "@/components/zuelen-ui-v2";
 import styles from "@/components/documents.module.css";
 import { financialDocumentName, intlLocale, normalizeLocale, type Locale } from "@/lib/i18n";
@@ -23,7 +23,7 @@ function extractionSummary(raw:unknown,locale:Locale){if(!raw||typeof raw!=="obj
 function archivedBatchId(raw:unknown){if(!raw||typeof raw!=="object")return null;const value=(raw as Record<string,unknown>).bank_import_batch_id;return typeof value==="string"?value:null}
 function customerName(raw:unknown,fr=false){if(!raw||typeof raw!=="object")return fr?"Client":"Customer";const value=(raw as Record<string,unknown>).name;return typeof value==="string"&&value?value:(fr?"Client":"Customer")}
 function dateLabel(value:string,locale:Locale){return new Date(value.length===10?`${value}T12:00:00`:value).toLocaleDateString(intlLocale(locale),{day:"2-digit",month:"short",year:"numeric"})}
-type Params=Promise<{category?:string;q?:string}>;
+type Params=Promise<{category?:string;q?:string;create?:string}>;
 type LibraryItem={kind:"document"|"statement"|"invoice"|"report";date:string;data:any};
 
 export default async function DocumentsPage({searchParams}:{searchParams:Params}){
@@ -53,14 +53,7 @@ export default async function DocumentsPage({searchParams}:{searchParams:Params}
  return <V2Page>
   <PageHeader eyebrow={fr?"Centre documentaire":"Document centre"} title="Documents" description={editable?(fr?"Factures, relevés bancaires, rapports financiers et justificatifs réunis dans une bibliothèque unique et consultable.":"Invoices, bank statements, financial reports and source evidence in one searchable library."):(fr?"Accès en lecture seule aux factures, relevés bancaires, rapports financiers et justificatifs.":"Read-only access to invoices, bank statements, financial reports and source evidence.")} actions={[{label:fr?"Créer une facture":"Create invoice",href:"/app/invoices/new",icon:ReceiptText,variant:"secondary"},{label:fr?"Importer un relevé":"Import statement",href:"/app/banking#bank-import",icon:Landmark,variant:"secondary"}]}/>
 
-  <DataSummary items={[
-   {label:fr?"Bibliothèque totale":"Total library",value:totalCount,description:fr?"Tous les éléments consultables":"All searchable items",icon:FileArchive},
-   {label:fr?"Factures":"Invoices",value:invoiceRows.length,description:fr?"Brouillons et factures émises":"Drafts and issued invoices",icon:ReceiptText},
-   {label:fr?"Relevés bancaires":"Bank statements",value:bankCount,description:fr?"Imports et justificatifs bancaires":"Imported statements and bank evidence",icon:Landmark},
-   {label:fr?"Rapports":"Financial reports",value:reportRows.length,description:fr?"Sorties de clôture générées":"Generated closing outputs",icon:FileSpreadsheet}
-  ]}/>
-
-  {editable?<><div style={{height:"var(--z-space-6)"}}/><div id="document-upload"><DocumentUploader organizationId={workspace.organization.id} companyId={workspace.company.id}/></div></>:null}
+  {editable?<div id="document-upload"><DocumentUploader organizationId={workspace.organization.id} companyId={workspace.company.id} autoOpen={params.create==="upload"||params.create==="scan"}/></div>:null}
   <div style={{height:"var(--z-space-6)"}}/>
 
   <section className={styles.folderGrid}>{folders.map(folder=><Link href={`/app/documents?category=${folder.key}`} className={`${styles.folderCard} ${category===folder.key?styles.folderActive:""}`} key={folder.key}><span><folder.icon size={18}/></span><div><strong>{folder.label}</strong><small>{folder.count} {fr?`document${folder.count===1?"":"s"}`:`document${folder.count===1?"":"s"}`}</small></div></Link>)}</section>

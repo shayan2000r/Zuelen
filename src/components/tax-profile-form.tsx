@@ -1,8 +1,19 @@
 "use client";
-import { LoaderCircle, Save } from "lucide-react";
-import { useActionState } from "react";
-import { saveTaxProfile, type TaxProfileState } from "@/app/app/tax-reserve/actions";
-import { useRolePermissions } from "@/components/role-context";
+
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { useI18n } from "@/components/locale-context";
 import styles from "./tax-reserve.module.css";
-const initial:TaxProfileState={status:"idle",message:""};
-export function TaxProfileForm({municipality,multiplier,year,priorBalance}:{municipality:string|null;multiplier:number|null;year:number;priorBalance:number|null}){const{canAccount}=useRolePermissions(),[state,action,pending]=useActionState(saveTaxProfile,initial);if(!canAccount)return <div className={styles.profileForm}><div><span>Municipality</span><strong>{municipality||"Not set"}</strong></div><div><span>ICC multiplier</span><strong>{multiplier!==null?`${(multiplier*100).toFixed(2)}%`:"Not confirmed"}</strong></div><div><span>Rate year</span><strong>{year}</strong></div><div><span>Prior closing balance</span><strong>{priorBalance==null?"Not set":new Intl.NumberFormat("en-LU",{style:"currency",currency:"EUR"}).format(priorBalance)}</strong></div></div>;return <form action={action} className={styles.profileForm}><div><span>Municipality</span><strong>{municipality||"Not set"}</strong></div><label><span>ICC multiplier (%)</span><input name="icc_multiplier_percent" type="number" min="1" max="1000" step="0.01" defaultValue={multiplier!==null?multiplier*100:""} placeholder="e.g. 225" required/></label><label><span>Rate year</span><input name="icc_multiplier_year" type="number" min="2025" max="2100" defaultValue={year}/></label><label><span>Prior closing balance total <em>optional</em></span><input name="prior_balance_total" type="number" min="0" step="0.01" defaultValue={priorBalance??""} placeholder="For minimum IF context"/></label><button type="submit" disabled={pending}>{pending?<LoaderCircle className={styles.spin}/>:<Save/>}{pending?"Saving…":"Update tax profile"}</button>{state.message?<p className={state.status==="error"?styles.error:styles.success}>{state.message}</p>:null}</form>}
+
+export function TaxProfileForm({ municipality, multiplier, year, priorBalance }: { municipality: string | null; multiplier: number | null; year: number; priorBalance: number | null }) {
+  const { locale } = useI18n();
+  const fr = locale === "fr";
+  const money = new Intl.NumberFormat(fr ? "fr-LU" : "en-LU", { style: "currency", currency: "EUR" });
+  return <div className={styles.profileForm}>
+    <div><span>{fr ? "Commune" : "Municipality"}</span><strong>{municipality || (fr ? "Non renseignée" : "Not set")}</strong></div>
+    <div><span>{fr ? "Multiplicateur ICC" : "ICC multiplier"}</span><strong>{multiplier !== null ? `${(multiplier * 100).toFixed(2)}%` : (fr ? "Non confirmé" : "Not confirmed")}</strong></div>
+    <div><span>{fr ? "Année du taux" : "Rate year"}</span><strong>{year}</strong></div>
+    <div><span>{fr ? "Total du bilan précédent" : "Prior closing balance"}</span><strong>{priorBalance == null ? (fr ? "Non renseigné" : "Not set") : money.format(priorBalance)}</strong></div>
+    <Link href="/app/settings">{fr ? "Modifier dans Paramètres" : "Change in Settings"} <ArrowRight size={14}/></Link>
+  </div>;
+}

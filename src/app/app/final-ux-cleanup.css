@@ -1,0 +1,15 @@
+/* Final launch QA overrides. Keep brand green as an accent, not a page tint. */
+html[data-zuelen-theme="dark"]{--z-bg:#0f1010;--z-bg-subtle:#121313;--z-surface-1:#171818;--z-surface-2:#1d1f1e;--z-surface-3:#242625;--z-surface-elevated:rgba(23,24,24,.96);--z-text:#f2f3f2;--z-text-secondary:#b4b8b5;--z-text-tertiary:#8a8f8b;--z-border:#303331;--z-border-strong:#3b3f3c;--z-border-hover:#505551}
+html[data-zuelen-theme="dark"] .app-shell{--page:#0f1010;--card:#171818;--card-strong:#1d1f1e;--text:#f2f3f2;--muted:#b4b8b5;--border:rgba(242,243,242,.10);--border-strong:rgba(242,243,242,.16);--glass:rgba(15,16,16,.90)}
+html[data-zuelen-theme="dark"] .workspace{background:radial-gradient(circle at 94% 0%,rgba(45,198,83,.025),transparent 24%),#0f1010!important}
+html[data-zuelen-theme="dark"] .sidebar{background:#141616!important}
+html[data-zuelen-theme="dark"] .workspace :where(input,select,textarea){background:#1d1f1e!important;border-color:#343735!important}
+html[data-zuelen-theme="dark"] .workspace table tbody tr{background:#171818!important}
+.topbar-left .mobile-only{display:none!important}.sidebar .brand-row>.mobile-only{display:none!important}
+.sidebar .nav-item{text-decoration:none!important}.sidebar [class*="premiumNavBadge"]{color:#dff7e5!important;background:#275b35!important;border:1px solid rgba(151,226,169,.18)!important}
+.topbar-left{min-width:0!important}.topbar{padding-left:20px!important}
+@media(max-width:880px){.topbar-left .mobile-only{display:grid!important}.sidebar .brand-row>.mobile-only{display:grid!important}.topbar{padding-left:12px!important}.sidebar .brand-row{min-height:44px;align-items:center}.sidebar .brand-row>.mobile-only{margin-left:auto;flex:none}.sidebar{padding-top:12px!important}}
+@media(max-width:620px){.topbar{left:8px!important;right:8px!important;width:auto!important}.topbar-actions{gap:4px!important}}
+/* Keep service descriptions readable beside compact invoice amount controls. */
+[class*="invoice"] [class*="editorLine"]{grid-template-columns:minmax(190px,2.5fr) 68px 100px 76px 30px}
+@media(max-width:700px){[class*="invoice"] [class*="editorLine"]{grid-template-columns:minmax(0,1fr) 72px 90px}}

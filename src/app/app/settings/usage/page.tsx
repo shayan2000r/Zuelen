@@ -58,7 +58,7 @@ export default async function UsagePage() {
           {snapshot.plan === "basic" ? <div className={styles.actions}><Link className={styles.cta} href="/app/settings/billing">{l("Upgrade for unlimited", "Passer à Premium")} <ArrowUpRight size={14} /></Link></div> : null}
         </section>
 
-        <section className={styles.card}>
+        <section className={`${styles.card} ${styles.full}`}>
           <h2>{l("Team seats", "Sièges d’équipe")}</h2>
           <p className={styles.cardLead}>{l("One owner/admin and one accountant or bookkeeper seat are included. Additional users are €9.99/month each.", "Un propriétaire/administrateur et un comptable ou aide-comptable sont inclus. Chaque utilisateur supplémentaire coûte 9,99 € / mois.")}</p>
           <div className={styles.seatNumber}><UsersRound size={20} style={{ verticalAlign: "-2px", marginRight: 8 }} />{snapshot.billing_source === "internal" ? snapshot.billable_seats : snapshot.additional_seats} <small>{snapshot.billing_source === "internal" ? l("pre-launch additional seats", "sièges supplémentaires pré-lancement") : l("paid additional seats", "sièges supplémentaires payants")}</small></div>
@@ -70,15 +70,6 @@ export default async function UsagePage() {
           <div className={styles.actions}><Link className={styles.secondary} href="/app/settings/team">{l("Manage team", "Gérer l’équipe")}</Link><Link className={styles.secondary} href="/app/settings/billing">{l("Manage seats", "Gérer les sièges")}</Link></div>
         </section>
 
-        <section className={styles.card}>
-          <h2>{l("How limits work", "Fonctionnement des limites")}</h2>
-          <p className={styles.cardLead}>{l("When a Basic allowance is reached, existing data stays available. Only the next gated action is blocked until the allowance renews or you upgrade.", "Lorsqu’un quota Basic est atteint, vos données restent accessibles. Seule la prochaine action limitée est bloquée jusqu’au renouvellement du quota ou au passage à Premium.")}</p>
-          <div className={styles.summary}>
-            <div className={styles.summaryRow}><span>{l("Transactions", "Transactions")}</span><strong>{l("Manual + bank-imported combined", "Manuelles + imports bancaires combinés")}</strong></div>
-            <div className={styles.summaryRow}><span>{l("Data access", "Accès aux données")}</span><strong>{l("Never removed by a limit", "Jamais supprimé par une limite")}</strong></div>
-            <div className={styles.summaryRow}><span>{l("Reset cadence", "Cadence de renouvellement")}</span><strong>{l("Monthly anniversary", "Anniversaire mensuel")}</strong></div>
-          </div>
-        </section>
       </div>
     </V2Page>
   );

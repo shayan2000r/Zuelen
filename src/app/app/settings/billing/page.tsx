@@ -62,7 +62,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           </div> : !canManage ? <p className={styles.muted}>{l("Only an owner or admin can change billing.", "Seul un propriétaire ou administrateur peut modifier la facturation.")}</p> : null}
         </section>
 
-        {snapshot.plan === "basic" ? <section className={`${styles.card} ${styles.full}`}>
+        {snapshot.plan === "basic" ? <section className={`${styles.card} ${styles.full} ${styles.featured}`}>
           <h2>{l("Upgrade to Premium", "Passer à Premium")}</h2>
           <p className={styles.cardLead}>{l("Unlock the complete Zuelen workflow and remove Basic activity limits.", "Débloquez l’ensemble des fonctionnalités Zuelen et supprimez les limites d’activité de Basic.")}</p>
           <ul className={styles.features}>

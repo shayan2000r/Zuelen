@@ -9,6 +9,7 @@ import { currentUserRequiresMfa } from "@/lib/mfa-assurance";
 import { safeInternalDestination } from "@/lib/safe-navigation";
 import styles from "./auth.module.css";
 import extra from "./auth-security.module.css";
+import mobile from "./auth-mobile.module.css";
 
 export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
   const router = useRouter();
@@ -74,7 +75,7 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
       } else {
         const next = destination ?? "/setup";
         const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callback } });
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callback, data: { locale } } });
         if (error) throw error;
         if (data.session) {
           router.push(next);
@@ -90,10 +91,10 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
     }
   }
 
-  return <main className={styles.shell}>
-    <section className={styles.storyPanel}>
-      <div className={styles.storyTop}><Image className={styles.logoMark} src="/zuelen-icon.png" alt="Zuelen" width={34} height={34}/><span>Zuelen</span></div>
-      <div className={styles.storyContent}>
+  return <main className={`${styles.shell} ${mobile.authShell}`}>
+    <section className={`${styles.storyPanel} ${mobile.storyPanel}`}>
+      <div className={`${styles.storyTop} ${mobile.storyTop}`}><Image className={styles.logoMark} src="/zuelen-icon.png" alt="Zuelen" width={34} height={34}/><span>Zuelen</span></div>
+      <div className={`${styles.storyContent} ${mobile.storyContent}`}>
         <p className={styles.overline}>{l("Luxembourg business, under control.", "Votre activité luxembourgeoise, sous contrôle.")}</p>
         <h1>{l("One secure account for every way you work.", "Un compte sécurisé pour toutes vos activités.")}</h1>
         <p className={styles.storyLead}>{l("Manage an Independent activity, a company, or your accounting-professional presence without separate credentials.", "Gérez une activité indépendante, une société ou votre présence de professionnel comptable sans multiplier les identifiants.")}</p>
@@ -105,9 +106,10 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
       </div>
       <div className={styles.storyFooter}><LockKeyhole size={13}/>{l("Financial data is protected by organization-level row security.", "Les données financières sont protégées par une sécurité au niveau de chaque organisation.")}</div>
     </section>
-    <section className={styles.formPanel}>
-      <div className={styles.formWrap}>
-        <div className={extra.languageSwitch} aria-label={l("Language", "Langue")}><button type="button" onClick={() => setLocale("en")} aria-pressed={!fr}>EN</button><button type="button" onClick={() => setLocale("fr")} aria-pressed={fr}>FR</button></div>
+    <section className={`${styles.formPanel} ${mobile.formPanel}`}>
+      <div className={`${styles.formWrap} ${mobile.formWrap}`}>
+        <div className={mobile.mobileAuthTop}><span><Image className={styles.logoMark} src="/zuelen-icon.png" alt="" width={31} height={31}/><strong>Zuelen</strong></span><div className={extra.languageSwitch} aria-label={l("Language", "Langue")}><button type="button" onClick={() => setLocale("en")} aria-pressed={!fr}>EN</button><button type="button" onClick={() => setLocale("fr")} aria-pressed={fr}>FR</button></div></div>
+        <div className={mobile.desktopLanguage}><div className={extra.languageSwitch} aria-label={l("Language", "Langue")}><button type="button" onClick={() => setLocale("en")} aria-pressed={!fr}>EN</button><button type="button" onClick={() => setLocale("fr")} aria-pressed={fr}>FR</button></div></div>
         <div className={styles.formHeader}>
           <span className={styles.formEyebrow}>{destination ? l("Secure invitation", "Invitation sécurisée") : mode === "signin" ? l("Welcome back", "Bon retour") : l("Your Zuelen identity", "Votre identité Zuelen")}</span>
           <h2>{mode === "signin" ? l("Sign in to Zuelen", "Se connecter à Zuelen") : l("Create your Zuelen account", "Créer votre compte Zuelen")}</h2>

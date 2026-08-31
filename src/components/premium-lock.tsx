@@ -29,10 +29,7 @@ export function PremiumLock({
           <h2>{title}</h2>
           <p>{description}</p>
           <div className={styles.features}>{features.slice(0, 4).map(feature => <span key={feature}><Check size={13} />{feature}</span>)}</div>
-          <div className={styles.actions}>
-            <Link href="/app/settings/billing" className={styles.upgrade}>{l("Upgrade to Premium — €39/month", "Passer à Premium — 39 €/mois")} <ArrowRight size={14} /></Link>
-            <Link href="/app/settings/usage" className={styles.secondary}>{l("View plan usage", "Voir l’utilisation")}</Link>
-          </div>
+          <div className={styles.actions}><Link href="/app/settings/billing" className={styles.upgrade}>{l("Upgrade to Premium", "Passer à Premium")} <ArrowRight size={14}/></Link></div>
         </div>
       </div>
     </section>

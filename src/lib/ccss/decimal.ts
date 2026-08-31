@@ -58,4 +58,3 @@ export function clampMoney(value: bigint, minimum: bigint, maximum: bigint) {
   if (minimum > maximum) throw new Error("Invalid contribution-base range.");
   return value < minimum ? minimum : value > maximum ? maximum : value;
 }
-
