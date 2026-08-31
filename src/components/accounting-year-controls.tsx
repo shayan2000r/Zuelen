@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { resetBookkeepingAction, resetFinancialYearAction, saveOpeningBalancesAction, type AccountingActionState } from "@/app/app/accounting/actions";
+import { useI18n } from "@/components/locale-context";
 import type { Locale } from "@/lib/i18n";
 import styles from "./accounting-year-controls.module.css";
 import choiceStyles from "./transaction-entry-choice.module.css";
@@ -14,7 +15,8 @@ type OpeningLine={id:number;account_id:string;debit:string;credit:string};
 const initial:AccountingActionState={status:"idle",message:""};
 function money(value:number,currency:string,locale:Locale){return new Intl.NumberFormat(locale==="fr"?"fr-LU":"en-LU",{style:"currency",currency,minimumFractionDigits:2}).format(value||0)}
 
-export function AccountingYearControls({year,currency,legalName,accounts,openingPosted,initialOpeningMode=null,locale="en"}:{year:number;currency:string;legalName:string;accounts:Account[];openingPosted:boolean;initialOpeningMode?:"upload"|"manual"|null;locale?:Locale}){
+export function AccountingYearControls({year,currency,legalName,accounts,openingPosted,initialOpeningMode=null}:{year:number;currency:string;legalName:string;accounts:Account[];openingPosted:boolean;initialOpeningMode?:"upload"|"manual"|null}){
+ const {locale}=useI18n();
  const fr=locale==="fr",l=(en:string,french:string)=>fr?french:en;
  const router=useRouter(),openingDialog=useRef<HTMLDialogElement>(null),yearDialog=useRef<HTMLDialogElement>(null),allDialog=useRef<HTMLDialogElement>(null);
  const[openingState,openingAction,openingPending]=useActionState(saveOpeningBalancesAction,initial),[yearState,yearAction,yearPending]=useActionState(resetFinancialYearAction,initial),[allState,allAction,allPending]=useActionState(resetBookkeepingAction,initial);
