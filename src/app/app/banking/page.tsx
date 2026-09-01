@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, CircleHelp, FileUp, Landmark, Search, WalletCards } from "lucide-react";
+import { CheckCircle2, CircleHelp, Landmark, Search, WalletCards } from "lucide-react";
 import { redirect } from "next/navigation";
 import { BankImporter } from "@/components/bank-importer";
 import { BankMovementTable } from "@/components/bank-movement-table";
@@ -34,8 +34,7 @@ export default async function BankingPage({searchParams}:{searchParams:SearchPar
   <PageHeader
    eyebrow={fr?`Trésorerie → comptabilité · ${year}`:`Cash → books · ${year}`}
    title={fr?"Banque":"Banking"}
-   description={editable?(fr?`Importez les relevés ${year}, rapprochez les mouvements et gardez l'exercice sélectionné aligné avec le grand livre.`:`Import ${year} statements, reconcile movements and keep the selected financial year aligned with the ledger.`):(fr?`Accès en lecture seule aux relevés, mouvements et historique de rapprochement ${year}.`:`Read-only access to ${year} bank statements, movements and reconciliation history.`)}
-   actions={editable?[{label:fr?"Importer":"Import",href:"/app/banking?import=1",icon:FileUp,variant:"primary"},{label:fr?"Voir les transactions":"View transactions",href:"/app/transactions",icon:ArrowRight,variant:"secondary"}]:[{label:fr?"Voir les transactions":"View transactions",href:"/app/transactions",icon:ArrowRight,variant:"secondary"}]}
+   description={editable?(fr?`Importez les relevés ${year} et rapprochez-les avec le grand livre.`:`Import ${year} statements and reconcile them with the ledger.`):(fr?`Accès en lecture seule aux relevés et rapprochements ${year}.`:`Read-only access to ${year} statements and reconciliation history.`)}
   />
 
   <DataSummary items={[
