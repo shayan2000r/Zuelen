@@ -4,6 +4,7 @@ import { BriefcaseBusiness, Building2, CheckCircle2, Plus, UserRound } from "luc
 import { redirect } from "next/navigation";
 import { SetupToolbar } from "@/components/setup-toolbar";
 import { normalizeLocale } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import styles from "./setup.module.css";
 
@@ -21,7 +22,12 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
   const l = (en: string, french: string) => fr ? french : en;
   const hasIndependent = workspace.workspaces.some(item => item.entityKind === "independent");
   const hasCompany = workspace.workspaces.some(item => item.entityKind === "company");
-  const hasProfessional = workspace.hasProfessionalWorkspace;
+  const supabase = await createClient();
+  const professionalResult = workspace.userId
+    ? await supabase.from("accountant_profiles").select("id").eq("user_id", workspace.userId).maybeSingle()
+    : { data: null, error: null };
+  if (professionalResult.error) throw new Error(professionalResult.error.message);
+  const hasProfessional = Boolean(professionalResult.data);
   const cards = [
     !hasIndependent ? { icon:UserRound, title:l("Independent", "Indépendant"), description:l("Manage an activity you operate in your own name.", "Gérez une activité exercée en votre nom propre."), examples:l("Freelancer · Sole trader · Consultant · Liberal profession", "Freelance · Entreprise individuelle · Consultant · Profession libérale"), detail:l("For people who invoice or run a professional activity personally rather than through a separate company.", "Pour les personnes qui facturent ou exercent personnellement une activité professionnelle, sans société distincte."), cta:l("Set up independent activity", "Configurer une activité indépendante"), href:"/setup/independent" } : null,
     !hasCompany ? { icon:Building2, title:l("Company", "Société"), description:l("Manage the accounting and obligations of a Luxembourg company.", "Gérez la comptabilité et les obligations d’une société luxembourgeoise."), examples:"SARL · SARL-S · SA · SAS · SCA", detail:l("For incorporated businesses with their own legal entity.", "Pour les entreprises constituées avec leur propre personnalité juridique."), cta:l("Set up company", "Configurer une société"), href:"/setup/company" } : null,
