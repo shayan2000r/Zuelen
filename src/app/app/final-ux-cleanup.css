@@ -1,15 +1,48 @@
-/* Final launch QA overrides. Keep brand green as an accent, not a page tint. */
-html[data-zuelen-theme="dark"]{--z-bg:#0f1010;--z-bg-subtle:#121313;--z-surface-1:#171818;--z-surface-2:#1d1f1e;--z-surface-3:#242625;--z-surface-elevated:rgba(23,24,24,.96);--z-text:#f2f3f2;--z-text-secondary:#b4b8b5;--z-text-tertiary:#8a8f8b;--z-border:#303331;--z-border-strong:#3b3f3c;--z-border-hover:#505551}
-html[data-zuelen-theme="dark"] .app-shell{--page:#0f1010;--card:#171818;--card-strong:#1d1f1e;--text:#f2f3f2;--muted:#b4b8b5;--border:rgba(242,243,242,.10);--border-strong:rgba(242,243,242,.16);--glass:rgba(15,16,16,.90)}
-html[data-zuelen-theme="dark"] .workspace{background:radial-gradient(circle at 94% 0%,rgba(45,198,83,.025),transparent 24%),#0f1010!important}
-html[data-zuelen-theme="dark"] .sidebar{background:#141616!important}
-html[data-zuelen-theme="dark"] .workspace :where(input,select,textarea){background:#1d1f1e!important;border-color:#343735!important}
-html[data-zuelen-theme="dark"] .workspace table tbody tr{background:#171818!important}
-.topbar-left .mobile-only{display:none!important}.sidebar .brand-row>.mobile-only{display:none!important}
-.sidebar .nav-item{text-decoration:none!important}.sidebar [class*="premiumNavBadge"]{color:#dff7e5!important;background:#275b35!important;border:1px solid rgba(151,226,169,.18)!important}
-.topbar-left{min-width:0!important}.topbar{padding-left:20px!important}
-@media(max-width:880px){.topbar-left .mobile-only{display:grid!important}.sidebar .brand-row>.mobile-only{display:grid!important}.topbar{padding-left:12px!important}.sidebar .brand-row{min-height:44px;align-items:center}.sidebar .brand-row>.mobile-only{margin-left:auto;flex:none}.sidebar{padding-top:12px!important}}
+/* Final launch QA overrides. Brand green is an accent; neutral surfaces carry the UI. */
+html[data-zuelen-theme="dark"]{--z-bg:#0d0f0e;--z-bg-subtle:#111312;--z-surface-1:#151817;--z-surface-2:#1b1e1c;--z-surface-3:#222523;--z-surface-elevated:rgba(22,24,23,.98);--z-text:#f3f5f3;--z-text-secondary:#b5bbb7;--z-text-tertiary:#89908b;--z-border:#2e3330;--z-border-strong:#404642;--z-border-hover:#555d58}
+html[data-zuelen-theme="dark"] .app-shell{--page:#0d0f0e;--card:#151817;--card-strong:#1b1e1c;--text:#f3f5f3;--muted:#b5bbb7;--border:rgba(243,245,243,.10);--border-strong:rgba(243,245,243,.17);--glass:rgba(13,15,14,.94)}
+html[data-zuelen-theme="dark"] body,html[data-zuelen-theme="dark"] .workspace{background:#0d0f0e!important}
+html[data-zuelen-theme="dark"] .workspace{background-image:radial-gradient(circle at 95% -10%,rgba(45,198,83,.018),transparent 26%)!important}
+html[data-zuelen-theme="dark"] .sidebar{background:#111412!important;border-color:#292e2b!important}
+html[data-zuelen-theme="dark"] .topbar{background:rgba(13,15,14,.92)!important;border-color:#292e2b!important}
+html[data-zuelen-theme="dark"] .workspace :where(input,select,textarea){background:#1b1e1c!important;border-color:#343a36!important;color:#f3f5f3!important}
+html[data-zuelen-theme="dark"] .workspace table tbody tr{background:#151817!important}
+html[data-zuelen-theme="dark"] [class*="folderActive"]{background:#1c2b20!important;border-color:#3e6b49!important;color:#f3f5f3!important}
+html[data-zuelen-theme="dark"] [class*="folderActive"] strong,html[data-zuelen-theme="dark"] [class*="folderActive"] small{color:#f3f5f3!important}
+
+/* Desktop header: no inert hamburger. Mobile keeps the drawer trigger. */
+.topbar-left .mobile-only{display:none!important}.sidebar .brand-row>.mobile-only{display:none!important}.topbar-left{min-width:0!important}.topbar{padding-left:20px!important}
+
+/* Sidebar labels and premium markers stay readable and on one line. */
+.sidebar .nav-item,.sidebar [class*="nestedNavItem"],.sidebar [class*="groupButton"]{text-decoration:none!important;white-space:nowrap!important}
+.sidebar .nav-item>span,.sidebar [class*="nestedNavItem"]>span{min-width:0;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
+.sidebar [class*="premiumNavBadge"]{flex:none!important;color:#e9fff0!important;background:#1d6132!important;border:1px solid rgba(189,244,203,.25)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+html[data-zuelen-theme="dark"] .sidebar [class*="premiumNavBadge"]{color:#eaffef!important;background:#225d33!important;border-color:#397d4c!important}
+
+/* Workspace/account menu: current item communicates selection beside the name. */
+[class*="workspaceName"]{display:flex!important;align-items:center!important;gap:6px!important;min-width:0}
+[class*="workspaceName"] svg{flex:none!important;color:var(--z-brand-strong)!important}
+[class*="accountPreferences"]>label{display:grid!important;grid-template-columns:max-content minmax(100px,1fr)!important;align-items:center!important;gap:10px!important}
+[class*="accountPreferences"]>label>span{white-space:nowrap!important;line-height:1!important}
+[class*="accountPreferences"] select{width:100%!important;min-width:100px!important}
+
+/* Filters must never render as clipped/native broken-looking controls. */
+.workspace :where(select){text-overflow:ellipsis}
+[class*="tools"] select,[class*="toolbar"] select,[class*="filters"] select{min-height:40px!important;border-radius:11px!important;padding-left:12px!important;padding-right:34px!important;line-height:1.2!important}
+
+/* Bank import primary action remains legible even before a file is selected. */
+[class*="importButton"]{background:#2b8a46!important;color:#fff!important;border:1px solid #3da35b!important;text-shadow:none!important}
+[class*="importButton"]:disabled{opacity:.72!important;background:#31543a!important;color:#dce9df!important;border-color:#456a4d!important}
+
+/* Invoice line editor: description is the primary field. */
+[class*="invoice"] [class*="editorLine"]{grid-template-columns:minmax(250px,3fr) 72px 112px 82px 32px!important}
+button[name="intent"][value="issue"] span{font-size:0!important}
+button[name="intent"][value="issue"] span::after{content:"Create";font-size:11px!important}
+.app-shell[data-locale="fr"] button[name="intent"][value="issue"] span::after{content:"Créer"}
+
+/* Small form notes added by the final QA pass. */
+[class*="formHint"]{margin:10px 0 0;color:var(--z-text-secondary);font-size:12px;line-height:1.55}
+
+@media(max-width:880px){.topbar-left .mobile-only{display:grid!important}.sidebar .brand-row>.mobile-only{display:grid!important}.topbar{padding-left:12px!important}.sidebar .brand-row{min-height:52px;align-items:center;position:relative;z-index:3;background:inherit}.sidebar .brand-row>.mobile-only{margin-left:auto;flex:none}.sidebar{padding-top:10px!important}.sidebar .brand-row img{display:block!important;visibility:visible!important;opacity:1!important}}
+@media(max-width:700px){[class*="invoice"] [class*="editorLine"]{grid-template-columns:minmax(0,1fr) 72px 94px!important}}
 @media(max-width:620px){.topbar{left:8px!important;right:8px!important;width:auto!important}.topbar-actions{gap:4px!important}}
-/* Keep service descriptions readable beside compact invoice amount controls. */
-[class*="invoice"] [class*="editorLine"]{grid-template-columns:minmax(190px,2.5fr) 68px 100px 76px 30px}
-@media(max-width:700px){[class*="invoice"] [class*="editorLine"]{grid-template-columns:minmax(0,1fr) 72px 90px}}

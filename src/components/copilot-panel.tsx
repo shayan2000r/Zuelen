@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, ArrowUp, BarChart3, FolderClock, Landmark, LoaderCircle, MessageSquarePlus, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUp, BarChart3, FolderClock, Landmark, LoaderCircle, MessageSquarePlus, ShieldCheck, Sparkles, WalletCards } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -55,10 +56,16 @@ export function CopilotPanel({ premium, initialQuestion = "", conversations, act
     </aside>
 
     <main className={styles.chat}>
-      <header className={styles.chatHead}><div className={styles.chatIdentity}><span className={styles.logo}><Sparkles size={18}/></span><div><p>Zuelen Copilot</p><h1>{activeConversationId ? conversations.find(c => c.id === activeConversationId)?.title || (fr ? "Conversation" : "Conversation") : (fr ? "Votre copilote financier" : "Your financial copilot")}</h1></div></div>{premium ? <span className={styles.premiumBadge}><ShieldCheck size={13}/>Premium</span> : <Link href="/app/settings/billing" className={styles.upgradeCallout}><Sparkles size={14}/><span><strong>{fr ? "Débloquer Copilot" : "Unlock Copilot"}</strong><small>{fr ? "Passer à Premium" : "Upgrade plan"}</small></span><ArrowRight size={14}/></Link>}</header>
+      <header className={styles.chatHead}><div className={styles.chatIdentity}><span className={styles.logo}><Image src="/zuelen-icon.png" alt="Zuelen" width={30} height={30}/></span><div><p>Zuelen Copilot</p><h1>{activeConversationId ? conversations.find(c => c.id === activeConversationId)?.title || (fr ? "Conversation" : "Conversation") : (fr ? "Votre copilote financier" : "Your financial copilot")}</h1></div></div>{premium ? <span className={styles.premiumBadge}><ShieldCheck size={13}/>Premium</span> : <Link href="/app/settings/billing" className={styles.upgradeCallout}><Sparkles size={15}/><span><strong>{fr ? "Débloquer Copilot" : "Unlock Copilot"}</strong><small>{fr ? "Passer à Premium" : "Upgrade to Premium"}</small></span><ArrowRight size={15}/></Link>}</header>
 
       <div className={styles.messages}>{messages.length ? messages.map(message => <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} key={message.id}><div className={styles.messageMeta}><span>{message.role === "user" ? (fr ? "Vous" : "You") : "Zuelen"}</span><small>{new Date(message.created_at).toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Luxembourg" })}</small></div><div className={styles.messageBody}>{message.content}</div></article>) : <div className={styles.emptyState}>
-        <div className={styles.orb} aria-hidden="true"><span/><Sparkles size={27}/></div>
+        <div className={styles.copilotVisual} aria-hidden="true">
+          <div className={styles.visualPrompt}><Sparkles size={14}/><span>{fr ? "Que dois-je surveiller ce mois-ci ?" : "What should I watch this month?"}</span></div>
+          <div className={styles.visualAnswer}><span className={styles.visualBrand}><Image src="/zuelen-icon.png" alt="" width={32} height={32}/></span><div><strong>{fr ? "Vos chiffres, expliqués clairement." : "Your numbers, explained clearly."}</strong><i/><i/><i/></div></div>
+          <div className={`${styles.visualMetric} ${styles.visualMetricLeft}`}><Landmark size={15}/><span>TVA</span><strong>€ —</strong></div>
+          <div className={`${styles.visualMetric} ${styles.visualMetricRight}`}><WalletCards size={15}/><span>{fr ? "Trésorerie" : "Cash"}</span><strong>€ —</strong></div>
+          <div className={styles.visualCore}><Image src="/zuelen-icon.png" alt="" width={46} height={46}/><Sparkles size={16}/></div>
+        </div>
         <span className={styles.eyebrow}>{fr ? "VOS CHIFFRES, EN LANGAGE CLAIR" : "YOUR NUMBERS, IN PLAIN LANGUAGE"}</span>
         <h2>{fr ? "Posez une question à votre comptabilité." : "Ask your books a business question."}</h2>
         <p>{canBookkeep ? (fr ? "Copilot explique les données déjà présentes dans votre espace et distingue les faits comptabilisés, les justificatifs et les estimations." : "Copilot explains the data already in your workspace and separates posted facts, evidence and estimates.") : (fr ? "Votre rôle Lecteur peut consulter les données, mais ne peut pas créer de conversation." : "Your Viewer role can inspect data, but cannot create a conversation.")}</p>
