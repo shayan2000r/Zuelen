@@ -29,13 +29,13 @@ export function AccountingYearControls({year,currency,legalName,accounts,opening
  useEffect(()=>{if(openingState.status==="success"){openingDialog.current?.close();router.refresh()}},[openingState.status,router]);
  useEffect(()=>{if(yearState.status==="success"){yearDialog.current?.close();router.refresh()}},[yearState.status,router]);
  useEffect(()=>{if(allState.status==="success"){allDialog.current?.close();router.refresh()}},[allState.status,router]);
- useEffect(()=>{if(initialOpeningMode){setOpeningMode(initialOpeningMode==="manual"?"manual":"choose");openingDialog.current?.showModal()}},[initialOpeningMode]);
+ useEffect(()=>{if(initialOpeningMode&&!openingPosted){setOpeningMode(initialOpeningMode==="manual"?"manual":"choose");openingDialog.current?.showModal()}},[initialOpeningMode,openingPosted]);
  const payload=lines.filter(line=>line.account_id&&(Number(line.debit)>0||Number(line.credit)>0)).map(line=>({account_id:line.account_id,debit:Number(line.debit)||0,credit:Number(line.credit)||0}));
  const accountType=(type:string)=>fr?({asset:"actif",liability:"passif",equity:"capitaux propres",revenue:"produit",expense:"charge"}[type]??type):type;
  return <>
   <section className={styles.panel}>
    <div className={styles.copy}><span className={styles.icon}><CalendarRange size={19}/></span><div><strong>{l(`Financial year ${year}`,`Exercice ${year}`)}</strong><span>{l("Set the opening position or restart bookkeeping for this year. Protected or filed periods remain locked.","Définissez la situation d’ouverture ou recommencez la comptabilité de cet exercice. Les périodes verrouillées ou déposées restent protégées.")}</span>{openingPosted?<span className={styles.posted}><CheckCircle2 size={11}/>{l("Opening position posted","Situation d’ouverture comptabilisée")}</span>:null}</div></div>
-   <div className={styles.actions}><button type="button" className={styles.primary} disabled={openingPosted} onClick={()=>openingDialog.current?.showModal()}><Plus size={13}/>{openingPosted?l("Opening position added","Situation ajoutée"):l("Add opening position","Ajouter la situation d’ouverture")}</button><button type="button" className={styles.secondary} onClick={()=>yearDialog.current?.showModal()}><RotateCcw size={13}/>{l(`Reset ${year}`,`Réinitialiser ${year}`)}</button><button type="button" className={styles.danger} onClick={()=>allDialog.current?.showModal()}><Trash2 size={13}/>{l("Clear bookkeeping","Effacer la comptabilité")}</button></div>
+   <div className={styles.actions}>{!openingPosted?<button type="button" className={styles.primary} onClick={()=>openingDialog.current?.showModal()}><Plus size={13}/>{l("Add opening position","Ajouter la situation d’ouverture")}</button>:null}<button type="button" className={styles.secondary} onClick={()=>yearDialog.current?.showModal()}><RotateCcw size={13}/>{l(`Reset ${year}`,`Réinitialiser ${year}`)}</button><button type="button" className={styles.danger} onClick={()=>allDialog.current?.showModal()}><Trash2 size={13}/>{l("Clear bookkeeping","Effacer la comptabilité")}</button></div>
   </section>
 
   <dialog ref={openingDialog} className={styles.dialog}>
