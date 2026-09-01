@@ -24,10 +24,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const extraSeatCost = snapshot.additional_seats * 9.99;
   const currentPrice = snapshot.billing_source === "internal" ? "Premium" : snapshot.plan === "premium" && snapshot.billing_interval === "year" ? "€32.50" : snapshot.plan === "premium" ? "€39" : "€0";
   const currentPriceSuffix = snapshot.billing_source === "internal" ? l("pre-launch access", "accès pré-lancement") : snapshot.plan === "premium" && snapshot.billing_interval === "year" ? l("/ month equivalent · €390/year", "/ mois équivalent · 390 €/an") : l("/ month", "/ mois");
+  const statusLabel = snapshot.status ? snapshot.status.charAt(0).toUpperCase() + snapshot.status.slice(1).replaceAll("_", " ") : "—";
 
   return (
     <V2Page className={styles.page}>
-      <PageHeader eyebrow={l("Plan & payments", "Formule & paiements")} title={l("Subscription & billing", "Abonnement & facturation")} description={l("Manage your Zuelen plan, seats, payment details and invoices in one place.", "Gérez votre formule Zuelen, vos sièges, vos moyens de paiement et vos factures au même endroit.")} meta={<StatusBadge tone={snapshot.plan === "premium" ? "success" : "neutral"}><span className={styles.dot} />{snapshot.plan === "premium" ? "Premium" : "Basic"}</StatusBadge>} />
+      <PageHeader eyebrow={l("Plan & Payments", "Formule & paiements")} title={l("Subscription & Billing", "Abonnement & facturation")} description={l("Manage your Zuelen plan, seats, payment details and invoices in one place.", "Gérez votre formule Zuelen, vos sièges, vos moyens de paiement et vos factures au même endroit.")} meta={<StatusBadge tone={snapshot.plan === "premium" ? "success" : "neutral"}><span className={styles.dot} />{snapshot.plan === "premium" ? "Premium" : "Basic"}</StatusBadge>} />
 
       {params.checkout === "success" ? <div className={styles.notice}>{l("Payment completed. Stripe is confirming your Premium subscription; the plan updates automatically as soon as the webhook is received.", "Paiement effectué. Stripe confirme votre abonnement Premium ; la formule se met à jour automatiquement dès réception de la notification.")}</div> : null}
       {params.seat === "success" ? <div className={styles.notice}>{l("Seat checkout completed. Your paid seat count will update automatically.", "Paiement du siège effectué. Le nombre de sièges payants se mettra à jour automatiquement.")}</div> : null}
@@ -36,24 +37,24 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
       <div className={styles.grid}>
         <section className={styles.card}>
-          <h2>{l("Current plan", "Formule actuelle")}</h2>
+          <h2>{l("Current Plan", "Formule actuelle")}</h2>
           <p className={styles.cardLead}>{snapshot.plan === "premium" ? l("Run the company with Zuelen's complete accounting and compliance workflow.", "Gérez l’entreprise avec l’ensemble des flux comptables et de conformité de Zuelen.") : l("Basic gives you a genuine €0 plan with transparent monthly allowances.", "Basic est une véritable formule à 0 € avec des quotas mensuels transparents.")}</p>
           <div className={styles.seatNumber}>{currentPrice} <small>{currentPriceSuffix}</small></div>
           <div className={styles.summary}>
-            <div className={styles.summaryRow}><span>{l("Status", "Statut")}</span><strong>{snapshot.status}</strong></div>
-            <div className={styles.summaryRow}><span>{l("Billing interval", "Périodicité")}</span><strong>{snapshot.plan === "basic" ? "—" : snapshot.billing_interval === "year" ? l("Annual", "Annuel") : snapshot.billing_interval === "month" ? l("Monthly", "Mensuel") : l("Internal", "Interne")}</strong></div>
-            <div className={styles.summaryRow}><span>{snapshot.billing_source === "internal" ? l("Billing", "Facturation") : snapshot.cancel_at_period_end ? l("Access until", "Accès jusqu’au") : snapshot.plan === "basic" ? l("Allowance reset", "Renouvellement du quota") : l("Next renewal", "Prochain renouvellement")}</span><strong>{snapshot.billing_source === "internal" ? l("Not billed during pre-launch", "Non facturé pendant le pré-lancement") : renewal}</strong></div>
+            <div className={styles.summaryRow}><span>{l("Status", "Statut")}</span><strong>{statusLabel}</strong></div>
+            <div className={styles.summaryRow}><span>{l("Billing Interval", "Périodicité")}</span><strong>{snapshot.plan === "basic" ? "—" : snapshot.billing_interval === "year" ? l("Annual", "Annuel") : snapshot.billing_interval === "month" ? l("Monthly", "Mensuel") : l("Internal", "Interne")}</strong></div>
+            <div className={styles.summaryRow}><span>{snapshot.billing_source === "internal" ? l("Billing", "Facturation") : snapshot.cancel_at_period_end ? l("Access Until", "Accès jusqu’au") : snapshot.plan === "basic" ? l("Allowance Reset", "Renouvellement du quota") : l("Next Renewal", "Prochain renouvellement")}</span><strong>{snapshot.billing_source === "internal" ? l("Not billed during pre-launch", "Non facturé pendant le pré-lancement") : renewal}</strong></div>
           </div>
           {snapshot.stripe_customer_id && canManage ? <form action={createBillingPortalAction} className={styles.actions}><button className={styles.secondary} type="submit">{l("Manage payment & invoices", "Gérer paiement & factures")} <ExternalLink size={13} /></button></form> : null}
         </section>
 
         <section className={styles.card}>
-          <h2>{l("Team seats", "Sièges d’équipe")}</h2>
+          <h2>{l("Team Seats", "Sièges d’équipe")}</h2>
           <p className={styles.cardLead}>{l("One accountant/bookkeeper seat is included on both plans. Every additional user is €9.99/month.", "Un siège comptable/aide-comptable est inclus dans les deux formules. Chaque utilisateur supplémentaire coûte 9,99 € / mois.")}</p>
           <div className={styles.seatNumber}><UsersRound size={20} style={{ verticalAlign: "-2px", marginRight: 8 }} />{snapshot.billing_source === "internal" ? snapshot.billable_seats : snapshot.additional_seats} <small>{snapshot.billing_source === "internal" ? l("pre-launch additional seats", "sièges supplémentaires pré-lancement") : l("additional paid seats", "sièges payants supplémentaires")}</small></div>
           <div className={styles.summary}>
-            <div className={styles.summaryRow}><span>{l("Included professional seat", "Siège professionnel inclus")}</span><strong>€0</strong></div>
-            <div className={styles.summaryRow}><span>{snapshot.billing_source === "internal" ? l("Pre-launch additional seats", "Sièges supplémentaires pré-lancement") : l("Additional seats", "Sièges supplémentaires")}</span><strong>{snapshot.billing_source === "internal" ? l("Included", "Inclus") : `€${extraSeatCost.toFixed(2)}/mo`}</strong></div>
+            <div className={styles.summaryRow}><span>{l("Included Professional Seat", "Siège professionnel inclus")}</span><strong>€0</strong></div>
+            <div className={styles.summaryRow}><span>{snapshot.billing_source === "internal" ? l("Pre-launch Additional Seats", "Sièges supplémentaires pré-lancement") : l("Additional Seats", "Sièges supplémentaires")}</span><strong>{snapshot.billing_source === "internal" ? l("Included", "Inclus") : `€${extraSeatCost.toFixed(2)}/mo`}</strong></div>
           </div>
           {canManage && snapshot.billing_source !== "internal" ? <div className={styles.actions}>
             {snapshot.stripe_seat_subscription_id
@@ -83,7 +84,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             </div>
           </div>
         </section> : <section className={`${styles.card} ${styles.full}`}>
-          <h2>{l("Premium is active", "Premium est actif")}</h2>
+          <h2>{l("Premium Is Active", "Premium est actif")}</h2>
           <p className={styles.cardLead}>{l("Your company has full access to Zuelen. Existing data remains yours if you ever cancel; only Premium actions become unavailable after the paid period ends.", "Votre entreprise bénéficie de l’accès complet à Zuelen. Vos données restent accessibles en cas de résiliation ; seules les actions Premium deviennent indisponibles à la fin de la période payée.")}</p>
           <div className={styles.actions}><span className={styles.planPill}><ShieldCheck size={13} />{l("Full product access", "Accès complet au produit")}</span><span className={styles.planPill}><CreditCard size={13} />{snapshot.billing_source === "stripe" ? "Stripe" : l("Internal preview", "Prévisualisation interne")}</span></div>
         </section>}
