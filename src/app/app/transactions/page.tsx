@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleHelp, Eye, FileUp, ListChecks, Search, Sparkles, WalletCards } from "lucide-react";
+import { CheckCircle2, CircleHelp, Eye, FileUp, ListChecks, Plus, Search, Sparkles, WalletCards } from "lucide-react";
 import { redirect } from "next/navigation";
 import { SourceTransactionForm } from "@/components/source-transaction-form";
 import { TransactionReviewCard } from "@/components/transaction-review-card";
@@ -32,10 +32,6 @@ export default async function TransactionsPage({searchParams}:{searchParams:Sear
    eyebrow={fr?`Source comptable · ${year}`:`Bookkeeping source · ${year}`}
    title="Transactions"
    description={editable?(fr?`Vérifiez, classez et gérez l'activité ${year} sans perdre la piste d'audit.`:`Review, classify and manage ${year} activity without losing the audit trail.`):(fr?`Accès en lecture seule à l'activité transactionnelle ${year} et à l'historique de comptabilisation.`:`Read-only access to ${year} transaction activity and posting history.`)}
-   actions={editable?[
-    {label:fr?"Importer un relevé":"Import statement",href:"/app/banking",icon:FileUp,variant:"secondary"},
-    {label:fr?"Ajouter":"Add",href:"/app/transactions?create=1",icon:WalletCards,variant:"primary"}
-   ]:[]}
   />
 
   <DataSummary items={[
@@ -46,7 +42,7 @@ export default async function TransactionsPage({searchParams}:{searchParams:Sear
   ]}/>
 
   <div className={styles.flow}>
-   {editable?<div id="add-transaction"><SourceTransactionForm defaultDate={defaultDate} initialOpen={params.create==="1"} locale={locale}/></div>:<div className={styles.reviewBanner}><span><Eye size={16}/></span><div><strong>{fr?"Accès lecteur · lecture seule":"Viewer access · read only"}</strong><small>{fr?"Vous pouvez consulter les transactions et les références de journal, mais pas créer, modifier, comptabiliser ou supprimer une activité.":"You can inspect transactions and journal references, but you cannot create, edit, post or delete activity."}</small></div></div>}
+   {editable?<div id="add-transaction"><SourceTransactionForm key={params.create==="1"?"open":"closed"} defaultDate={defaultDate} initialOpen={params.create==="1"} locale={locale}/></div>:<div className={styles.reviewBanner}><span><Eye size={16}/></span><div><strong>{fr?"Accès lecteur · lecture seule":"Viewer access · read only"}</strong><small>{fr?"Vous pouvez consulter les transactions et les références de journal, mais pas créer, modifier, comptabiliser ou supprimer une activité.":"You can inspect transactions and journal references, but you cannot create, edit, post or delete activity."}</small></div></div>}
 
    {editable&&pendingRows.length?<TransactionBulkActions suggestedCount={suggestedCount} unresolvedCount={unresolvedCount}/>:null}
    {editable&&nextReview?<TransactionReviewCard transaction={nextReview} accounts={accounts}/>:editable&&!nextReview&&rows.length?<div className={styles.reviewBanner}><span><CheckCircle2 size={16}/></span><div><strong>{fr?`Boîte comptable ${year} traitée`:`${year} accounting inbox cleared`}</strong><small>{fr?"Toutes les transactions actives de cet exercice ont été classées et comptabilisées.":"Every active transaction in this financial year has been classified and posted."}</small></div></div>:null}
@@ -65,7 +61,7 @@ export default async function TransactionsPage({searchParams}:{searchParams:Sear
       icon={reviewComplete?CheckCircle2:noResults?Search:ListChecks}
       title={reviewComplete?(fr?"Rien à vérifier":"Nothing to review"):noResults?(fr?"Aucun résultat":"No matching transactions"):(fr?"Aucune transaction pour le moment":"No transactions yet")}
       description={reviewComplete?(fr?"Toutes les transactions sont actuellement vérifiées.":"All transactions are currently reviewed."):noResults?(fr?"Aucune transaction ne correspond à votre recherche ou à vos filtres. Essayez de les modifier ou de les réinitialiser.":"No transactions match your current search or filters. Try changing or clearing them."):(editable?(fr?"Ajoutez une transaction ou importez un relevé bancaire pour commencer à suivre votre activité financière.":"Add a transaction or import a bank statement to start tracking your financial activity."):(fr?`Aucune transaction n'est disponible pour l'exercice ${year}.`:`No transactions are available for financial year ${year}.`))}
-      action={reviewComplete||noResults?<V2Button label={reviewComplete?(fr?"Voir toutes les transactions":"View all transactions"):(fr?"Réinitialiser les filtres":"Clear filters")} href="/app/transactions" variant="secondary"/>:editable?<div className={styles.emptyActions}><V2Button label={fr?"Ajouter":"Add"} href="/app/transactions?create=1" variant="primary"/><V2Button label={fr?"Importer un relevé":"Import statement"} href="/app/banking" variant="secondary"/></div>:undefined}
+      action={reviewComplete||noResults?<V2Button label={reviewComplete?(fr?"Voir toutes les transactions":"View all transactions"):(fr?"Réinitialiser les filtres":"Clear filters")} href="/app/transactions" variant="secondary"/>:editable?<div className="transaction-empty-actions"><V2Button label={fr?"Ajouter":"Add"} href="/app/transactions?create=1" icon={Plus} variant="primary"/><V2Button label={fr?"Importer un relevé":"Import statement"} href="/app/banking" icon={FileUp} variant="secondary"/></div>:undefined}
     />:<TransactionTable rows={visibleRows} accounts={accounts} readOnly={!editable}/>} 
    </DataPanel>
   </div>

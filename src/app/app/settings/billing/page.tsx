@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ArrowRight, Check, CreditCard, ExternalLink, ShieldCheck, UsersRound } from "lucide-react";
+import { ArrowRight, Check, CreditCard, ExternalLink, ShieldCheck, Sparkles, UsersRound, X } from "lucide-react";
 import { getWorkspace } from "@/lib/workspace";
 import { getBillingSnapshot } from "@/lib/billing";
 import { canManageOrganization } from "@/lib/permissions";
@@ -25,6 +25,25 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const currentPrice = snapshot.billing_source === "internal" ? "Premium" : snapshot.plan === "premium" && snapshot.billing_interval === "year" ? "€32.50" : snapshot.plan === "premium" ? "€39" : "€0";
   const currentPriceSuffix = snapshot.billing_source === "internal" ? l("pre-launch access", "accès pré-lancement") : snapshot.plan === "premium" && snapshot.billing_interval === "year" ? l("/ month equivalent · €390/year", "/ mois équivalent · 390 €/an") : l("/ month", "/ mois");
   const statusLabel = snapshot.status ? snapshot.status.charAt(0).toUpperCase() + snapshot.status.slice(1).replaceAll("_", " ") : "—";
+
+  const basicFeatures = [
+    { included: true, label: l("15 transactions / month", "15 transactions / mois") },
+    { included: true, label: l("3 documents / month", "3 documents / mois") },
+    { included: true, label: l("3 invoices / month", "3 factures / mois") },
+    { included: true, label: l("1 bank statement import / month", "1 import de relevé bancaire / mois") },
+    { included: false, label: l("Reports not included", "Rapports non inclus") },
+    { included: false, label: l("Document generation not included", "Génération de documents non incluse") },
+    { included: false, label: l("Zuelen Copilot not included", "Zuelen Copilot non inclus") },
+  ];
+  const premiumFeatures = [
+    l("Unlimited transactions", "Transactions illimitées"),
+    l("Unlimited documents", "Documents illimités"),
+    l("Unlimited invoices", "Factures illimitées"),
+    l("Unlimited bank statement imports", "Imports de relevés bancaires illimités"),
+    l("Reports included", "Rapports inclus"),
+    l("Document generation included", "Génération de documents incluse"),
+    l("Zuelen Copilot included", "Zuelen Copilot inclus"),
+  ];
 
   return (
     <V2Page className={styles.page}>
@@ -63,25 +82,32 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           </div> : !canManage ? <p className={styles.muted}>{l("Only an owner or admin can change billing.", "Seul un propriétaire ou administrateur peut modifier la facturation.")}</p> : null}
         </section>
 
-        {snapshot.plan === "basic" ? <section className={`${styles.card} ${styles.full} ${styles.featured}`}>
-          <h2>{l("Upgrade to Premium", "Passer à Premium")}</h2>
-          <p className={styles.cardLead}>{l("Unlock the complete Zuelen workflow and remove Basic activity limits.", "Débloquez l’ensemble des fonctionnalités Zuelen et supprimez les limites d’activité de Basic.")}</p>
-          <ul className={styles.features}>
-            {[l("Unlimited transactions, invoices, document uploads and bank imports", "Transactions, factures, documents et imports bancaires illimités"), l("Full VAT and tax workflows", "Flux TVA et fiscaux complets"), l("Reports, annual accounts and eCDF", "Rapports, comptes annuels et eCDF"), l("Zuelen Copilot", "Zuelen Copilot"), l("Filing-ready documents and full compliance tracking", "Documents prêts au dépôt et suivi complet de conformité")].map(feature => <li key={feature}><Check size={14} />{feature}</li>)}
-          </ul>
-          <div className={styles.pricing}>
-            <div className={styles.priceOption}>
-              <strong>{l("Monthly", "Mensuel")}</strong>
-              <div className={styles.price}>€39 <small>/ {l("month", "mois")}</small></div>
-              {canManage ? <form action={createPremiumCheckoutAction}><input type="hidden" name="interval" value="month" /><button className={`${styles.cta} ${!stripeReady ? styles.disabled : ""}`} disabled={!stripeReady} type="submit">{l("Choose monthly", "Choisir mensuel")} <ArrowRight size={14} /></button></form> : null}
-            </div>
-            <div className={styles.priceOption}>
-              <strong>{l("Annual", "Annuel")}</strong>
-              <span className={styles.save}>{l("2 months free", "2 mois offerts")}</span>
-              <div className={styles.price}>€390 <small>/ {l("year", "an")}</small></div>
-              <p className={styles.muted}>€32.50 / {l("month equivalent", "mois équivalent")}</p>
-              {canManage ? <form action={createPremiumCheckoutAction}><input type="hidden" name="interval" value="year" /><button className={`${styles.cta} ${!stripeReady ? styles.disabled : ""}`} disabled={!stripeReady} type="submit">{l("Choose annual", "Choisir annuel")} <ArrowRight size={14} /></button></form> : null}
-            </div>
+        {snapshot.plan === "basic" ? <section className="billing-plan-showcase">
+          <div className="billing-plan-showcase-head">
+            <div><span>{l("Plans", "Formules")}</span><h2>{l("Choose the plan that fits your workflow.", "Choisissez la formule adaptée à votre activité.")}</h2></div>
+            <div className="billing-cycle-note" aria-label={l("Monthly and annual Premium billing options", "Options de facturation Premium mensuelle et annuelle")}><span>{l("Monthly", "Mensuel")}</span><span>{l("Annual", "Annuel")}</span><b>{l("2 months free", "2 mois offerts")}</b></div>
+          </div>
+          <div className="billing-plan-grid">
+            <article className="billing-plan-card billing-plan-basic">
+              <div className="billing-plan-label"><CreditCard size={14}/> BASIC</div>
+              <div className="billing-plan-price">€0 <small>/ {l("month", "mois")}</small></div>
+              <div className="billing-plan-strip"><strong>{l("Free, every month", "Gratuit, chaque mois")}</strong><span>{l("No annual commitment · No card required", "Sans engagement annuel · Aucune carte requise")}</span></div>
+              <p className="billing-plan-copy">{l("A practical starting point for keeping everyday finances together in one clear system.", "Un point de départ pratique pour réunir les finances quotidiennes dans un système clair.")}</p>
+              <ul className="billing-feature-list">{basicFeatures.map(feature=><li key={feature.label} className={feature.included?"included":"excluded"}>{feature.included?<Check size={14}/>:<X size={14}/>}<span>{feature.label}</span></li>)}</ul>
+              <div className="billing-current-plan">{l("Current Plan", "Formule actuelle")}</div>
+            </article>
+
+            <article className="billing-plan-card billing-plan-premium">
+              <div className="billing-plan-top"><div className="billing-plan-label"><Sparkles size={14}/> PREMIUM</div><span className="billing-most-chosen">{l("MOST CHOSEN", "LE PLUS CHOISI")}</span></div>
+              <div className="billing-plan-price">€39 <small>/ {l("month", "mois")}</small></div>
+              <div className="billing-plan-strip"><strong>{l("Or €390 billed annually", "Ou 390 € facturés annuellement")}</strong><span>{l("€78 saved with the annual plan", "78 € économisés avec la formule annuelle")}</span></div>
+              <p className="billing-plan-copy">{l("The complete Zuelen workspace for managing your finances without Basic's monthly limits.", "L’espace Zuelen complet pour gérer vos finances sans les limites mensuelles de la formule Basic.")}</p>
+              <ul className="billing-feature-list">{premiumFeatures.map(feature=><li key={feature} className="included"><Check size={14}/><span>{feature}</span></li>)}</ul>
+              {canManage ? <div className="billing-premium-actions">
+                <form action={createPremiumCheckoutAction}><input type="hidden" name="interval" value="month"/><button className="billing-premium-cta" disabled={!stripeReady} type="submit">{l("Choose Premium", "Choisir Premium")} <ArrowRight size={14}/></button></form>
+                <form action={createPremiumCheckoutAction}><input type="hidden" name="interval" value="year"/><button className="billing-premium-annual" disabled={!stripeReady} type="submit">{l("Annual · €390", "Annuel · 390 €")}</button></form>
+              </div> : <div className="billing-current-plan">{l("Only an owner or admin can upgrade", "Seul un propriétaire ou administrateur peut changer de formule")}</div>}
+            </article>
           </div>
         </section> : <section className={`${styles.card} ${styles.full}`}>
           <h2>{l("Premium Is Active", "Premium est actif")}</h2>
