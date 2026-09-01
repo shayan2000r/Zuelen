@@ -2,7 +2,8 @@
 
 import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Landmark, LoaderCircle, LockKeyhole, Search, Sparkles, X } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
-import { postSourceTransaction, type TransactionActionState } from "@/app/app/transactions/actions";
+import { type TransactionActionState } from "@/app/app/transactions/actions";
+import { postSmartSourceTransaction } from "@/app/app/transactions/smart-actions";
 import styles from "./transaction-review-card.module.css";
 
 type Account={id:string;code:string;label:string;account_type:string};
@@ -13,7 +14,7 @@ function money(value:number,currency:string){return new Intl.NumberFormat("en-LU
 function normalize(value:string){return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
 function aliases(account:PcnAccount){const code=account.code;const terms:string[]=[];if(code==="6132")terms.push("software saas cloud hosting website web wix hostinger chatgpt openai it informatique logiciel abonnement subscription digital service");if(code.startsWith("6151"))terms.push("marketing advertising ads facebook meta google ads campaign publicity publicite promotion social media");if(code==="61333"||code==="61338")terms.push("bank fee bank charge banking commission post finance frais bancaire frais compte commission");if(code==="61532")terms.push("phone mobile internet telecom telephone telecommunications");if(code==="61348"||code==="6138")terms.push("professional fee consultant freelancer contractor honoraires consulting service provider");if(code==="6413")terms.push("software licence license subscription app saas");if(code.startsWith("703"))terms.push("client payment service revenue sales invoice upwork freelance web design development customer income chiffre affaires prestation");if(code.startsWith("611"))terms.push("rent rental lease office coworking loyer location");if(code.startsWith("612"))terms.push("maintenance repair entretien reparation");if(code.startsWith("614"))terms.push("insurance assurance");if(code.startsWith("616"))terms.push("travel transport hotel restaurant meal deplacement voyage");return terms.join(" ")}
 function groupLabel(account:PcnAccount,fr:boolean){if(account.account_type==="expense")return fr?"Charges":"Expenses";if(account.account_type==="revenue")return fr?"Produits":"Revenue";if(account.account_type==="asset")return fr?"Actifs":"Assets";if(account.account_type==="liability")return fr?"Passifs":"Liabilities";if(account.account_type==="equity")return fr?"Capitaux propres":"Equity";return fr?"Autres":"Other"}
-function scoreAccount(account:PcnAccount,query:string,context:string){const q=normalize(query),tokens=q.split(" ").filter(Boolean),label=normalize(`${account.code} ${account.label} ${aliases(account)}`),contextNorm=normalize(context);let score=0;if(!q)return 0;if(account.code===q)score+=180;else if(account.code.startsWith(q))score+=120;if(label.includes(q))score+=80;for(const token of tokens){if(label.includes(token))score+=28;if(contextNorm.includes(token))score+=4}if(tokens.length&&tokens.every(token=>label.includes(token)))score+=35;return score}
+function scoreAccount(account:PcnAccount,query:string,context:string){const q=normalize(query),tokens=q.split(" ").filter(Boolean),label=normalize(`${account.code} ${account.label} ${aliases(account)}`),contextNorm=normalize(context);let score=0;if(!q)return 0;if(account.code===q)score+=180;else if(account.code.startsWith(q))score+=120;if(label.includes(q))score+=80;for(const token of tokens){if(label.includes(token))score+=28;if(contextNorm.includes(token)&&label.includes(token))score+=8}if(tokens.length&&tokens.every(token=>label.includes(token)))score+=35;return score}
 
 export function TransactionReviewCard({transaction,accounts,pcnAccounts,locale="en"}:{transaction:Transaction;accounts:Account[];pcnAccounts:PcnAccount[];locale?:"en"|"fr"}){
   const fr=locale==="fr",income=transaction.direction==="income";
@@ -21,7 +22,7 @@ export function TransactionReviewCard({transaction,accounts,pcnAccounts,locale="
   const suggested=pcnAccounts.find(account=>account.code===suggestedCompany?.code);
   const[accountCode,setAccountCode]=useState(suggested?.code??"");
   const[purpose,setPurpose]=useState("");
-  const[state,formAction,pending]=useActionState(postSourceTransaction,initialTransactionState);
+  const[state,formAction,pending]=useActionState(postSmartSourceTransaction,initialTransactionState);
   const eligible=useMemo(()=>pcnAccounts.filter(account=>{if(["5131","421611","461411"].includes(account.code))return false;return income?["revenue","asset","liability","expense"].includes(account.account_type):["expense","asset","liability"].includes(account.account_type)}),[pcnAccounts,income]);
   const selected=eligible.find(account=>account.code===accountCode);
   const context=`${transaction.display_name??""} ${transaction.counterparty_name??""} ${transaction.description??""} ${transaction.bank_evidence??""}`;
