@@ -74,7 +74,7 @@ export function CompanySetup({ locale }: { locale: Locale }) {
   }
 
   return <main className={styles.setupShell}>
-    <header className={styles.setupTop}><button type="button" className={styles.setupBrand} onClick={()=>router.push("/setup")}><Image className={styles.logoMark} src="/zuelen-icon.png" alt="" width={34} height={34}/><span>Zuelen</span></button><SetupToolbar locale={locale}/></header>
+    <header className={styles.setupTop}><button type="button" className={styles.setupBrand} style={{border:0,background:"transparent",padding:0,color:"inherit",font:"inherit",cursor:"pointer"}} onClick={()=>router.push("/setup")} aria-label={l("Back to workspace setup","Retour à la configuration des espaces")}><Image className={styles.logoMark} src="/zuelen-icon.png" alt="" width={34} height={34}/><span>Zuelen</span></button><SetupToolbar locale={locale}/></header>
     <div className={styles.setupGrid}>
       <aside className={styles.setupAside}>
         <p className={styles.overline}>{l("Company · Setup", "Société · Configuration")}</p><h1>{l("Tell Zuelen about your company.", "Présentez votre société à Zuelen.")}</h1><p>{l("Enter the official details used on invoices, RCS records and government portals. Zuelen uses them to configure the right accounting and compliance workflows.", "Saisissez les informations officielles utilisées sur les factures, au RCS et sur les portails publics. Zuelen configure ensuite les bons parcours comptables et réglementaires.")}</p>
