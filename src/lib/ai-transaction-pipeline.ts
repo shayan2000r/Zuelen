@@ -12,7 +12,7 @@ function validCode(code:string|null,accounts:Map<string,{id:string;code:string;l
 async function postOne(supabase:SupabaseClient,id:string,code:string){const{error}=await supabase.rpc("classify_and_post_source_transaction",{p_source_transaction_id:id,p_account_code:code});return error?.message??null}
 
 export async function runAiTransactionPipeline({supabase,company,start,end,sourceIds,maxTransactions=180}:PipelineOptions){
- if(!sourceIds?.length)await supabase.rpc("reanalyze_pending_source_transactions",{p_company_id:company.id});
+ if(sourceIds?.length){for(const id of sourceIds){const{error}=await supabase.rpc("apply_source_transaction_suggestion",{p_source_transaction_id:id});if(error)throw new Error(error.message)}}else await supabase.rpc("reanalyze_pending_source_transactions",{p_company_id:company.id});
  let query=supabase.from("source_transactions").select("id,occurred_on,direction,amount_gross,currency,counterparty_name,description,source_type,source_id,classification_status,suggested_account_id,suggestion_confidence,suggestion_reason,suggestion_kind,counterparty_country").eq("company_id",company.id).in("classification_status",pendingStatuses).order("occurred_on",{ascending:true}).order("created_at",{ascending:true}).limit(maxTransactions);
  if(start)query=query.gte("occurred_on",start);if(end)query=query.lte("occurred_on",end);if(sourceIds?.length)query=query.in("id",sourceIds);
  const{data:initial,error:sourceError}=await query;if(sourceError)throw new Error(sourceError.message);let rows=(initial??[]) as SourceRow[];
