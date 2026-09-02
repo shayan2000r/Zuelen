@@ -1,0 +1,7 @@
+-- Historical migration marker.
+-- Production briefly introduced balance-aware switching between PCN 4212 and 4712
+-- while the April shareholder-current-account QA was being reconciled.
+-- The final policy is defined by the immediately following migration
+-- 20260902094204_standardize_shareholder_current_account_running_ledger.sql,
+-- which keeps shareholder current-account movements on the running 4712 ledger
+-- and relies on balance-sheet presentation reclassification when required.
