@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, FileSpreadsheet, Landmark, LoaderCircle, Plus, UploadCloud, X } from "lucide-react";
+import { FileSpreadsheet, Landmark, LoaderCircle, Plus, UploadCloud, X } from "lucide-react";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { importBankRows, type BankImportState } from "@/app/app/banking/actions";
 import { FloatingActionPortal } from "@/components/floating-action-portal";
@@ -23,7 +23,6 @@ export function BankImporter({defaultCurrency,initialOpen=false}:{defaultCurrenc
  async function choose(file:File|null){if(!file)return;setFileName(file.name);setBank(null);setPdfReady(false);if(file.size>15*1024*1024){setRows([]);return setMsg(l("Keep statement files under 15 MB per import.","Limitez chaque relevé à 15 Mo."))}if(file.type==="application/pdf"||/\.pdf$/i.test(file.name)){setRows([]);setPdfReady(true);setBank("PDF");setMsg(null);return}try{const r=await parseFile(file);setRows(r.rows);setMsg(r.rows.length?r.message:l("No bank movements were found.","Aucun mouvement bancaire n’a été trouvé."));setBank(r.detectedBank||null);if(r.detectedBank&&["Main bank account","Compte bancaire principal"].includes(accountName))setAccountName(`${r.detectedBank}`);if(r.detectedIban)setIban(r.detectedIban)}catch{setRows([]);setMsg(l("Zuelen couldn't read this statement. Try CSV, XLSX or the original PDF statement.","Zuelen n’a pas pu lire ce relevé. Essayez le fichier CSV, XLSX ou le PDF original."))}}
  const fileReady=pdfReady||rows.length>0;
  const format=bank||(!fileName?"CSV / XLSX / PDF":pdfReady?"PDF":/\.xlsx$/i.test(fileName)?"XLSX":"CSV");
- const steps=[{label:l("Account","Compte"),ready:Boolean(accountName.trim()||iban.trim())},{label:l("Statement","Relevé"),ready:Boolean(fileName)},{label:l("Import","Import"),ready:false}];
  return <>
   <FloatingActionPortal><button className={styles.fab} type="button" onClick={()=>setOpen(true)}><Plus size={17}/>{l("Import statement","Importer un relevé")}</button></FloatingActionPortal>
   {open?<div className={styles.drawerOverlay} role="presentation" onMouseDown={e=>{if(e.currentTarget===e.target&&!pending)setOpen(false)}}><div className={styles.drawerShell}>
@@ -31,7 +30,6 @@ export function BankImporter({defaultCurrency,initialOpen=false}:{defaultCurrenc
    <aside className={`${styles.importCard} ${styles.drawerCard}`} role="dialog" aria-modal="true" aria-labelledby="bank-import-title">
     <div className={styles.importHead}><div><p>{l("Banking","Banque")}</p><h2 id="bank-import-title">{l("Import bank statement","Importer un relevé bancaire")}</h2></div><span><FileSpreadsheet size={14}/>{format}</span></div>
     <p className={styles.lead}>{l("Add your statement and Zuelen will import the bank movements. The original file is kept in Documents.","Ajoutez votre relevé et Zuelen importera les mouvements bancaires. Le fichier original sera conservé dans Documents.")}</p>
-    <div className={styles.importSteps}>{steps.map((step,index)=><div className={`${styles.importStep} ${step.ready?styles.importStepReady:""} ${pending&&index===2?styles.importStepActive:""}`} key={step.label}><span>{step.ready?<Check size={13}/>:index+1}</span><strong>{step.label}</strong></div>)}</div>
     <form action={action} className={styles.importForm}>
      <div className={styles.accountGrid}><label><span>{l("Account name","Nom du compte")}</span><input name="account_name" value={accountName} onChange={e=>setAccountName(e.target.value)} required disabled={pending}/></label><label><span>IBAN <em>{l("optional","facultatif")}</em></span><input name="iban" value={iban} onChange={e=>setIban(e.target.value)} placeholder="LU00 0000 0000 0000 0000" disabled={pending}/></label><label><span>{l("Currency","Devise")}</span><input name="currency" defaultValue={defaultCurrency||"EUR"} maxLength={3} disabled={pending}/></label></div>
      <button type="button" className={`${styles.dropzone} ${fileName?styles.dropzoneReady:""}`} onClick={()=>input.current?.click()} disabled={pending}><input ref={input} hidden name="statement_file" type="file" accept=".csv,.xlsx,.pdf,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e=>choose(e.target.files?.[0]??null)}/><UploadCloud size={22}/><strong>{fileName||l("Choose a bank statement","Choisir un relevé bancaire")}</strong><small>{fileName?(pdfReady?l("PDF ready to import","PDF prêt à importer"):rows.length?l(`${rows.length} movements ready`,`${rows.length} mouvements prêts`):msg||l("Reading file…","Lecture du fichier…")):l("CSV, XLSX or PDF · max 15 MB","CSV, XLSX ou PDF · 15 Mo max")}</small></button>
