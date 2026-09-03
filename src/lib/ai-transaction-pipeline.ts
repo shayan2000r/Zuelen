@@ -6,8 +6,8 @@ type PipelineOptions={supabase:SupabaseClient;company:Company;start?:string;end?
 type SourceRow={id:string;occurred_on:string;direction:string;amount_gross:number|string;currency:string;counterparty_name:string|null;description:string|null;source_type:string;source_id:string|null;classification_status:string;suggested_account_id:string|null;suggestion_confidence:number|string|null;suggestion_reason:string|null;suggestion_kind:string|null;counterparty_country:string|null};
 const pendingStatuses=["unclassified","review","classified"];
 const safeKinds=new Set(["operating","bank_fee","payment_processor_fee","ai_software_subscription","ai_advertising","ai_professional_service","ai_bank_fee","ai_fuel","ai_insurance","ai_telecom","ai_service_revenue","ai_sales_revenue"]);
-const protectedSuggestionKinds=new Set(["shareholder_transfer","tax_advance","tax_payment","payment_processor_fee","refund_candidate","penalty","registry_payment","bank_transfer_unknown"]);
-const riskyType=/tax|shareholder|loan|asset|vehicle|personal|cash|transfer_unknown|registry|capital|refund/i;
+const protectedSuggestionKinds=new Set(["shareholder_transfer","tax_advance","tax_payment","payment_processor_fee","refund_candidate","platform_payout","penalty","registry_payment","bank_transfer_unknown"]);
+const riskyType=/tax|shareholder|loan|asset|vehicle|personal|cash|transfer_unknown|registry|capital|refund|payout/i;
 function validCode(code:string|null,accounts:Map<string,{id:string;code:string;label:string;account_type:string}>){return code?accounts.get(code)??null:null}
 async function postOne(supabase:SupabaseClient,id:string,code:string){const{error}=await supabase.rpc("classify_and_post_source_transaction",{p_source_transaction_id:id,p_account_code:code});return error?.message??null}
 
