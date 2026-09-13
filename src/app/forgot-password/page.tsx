@@ -1,15 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { PasswordResetForm } from "@/components/password-reset-form";
+import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import styles from "@/components/security-settings.module.css";
 
 export const dynamic = "force-dynamic";
 
-type PasswordResetPageProps = {
+type ForgotPasswordPageProps = {
   searchParams: Promise<{ lang?: string | string[] }>;
 };
 
-export default async function PasswordResetPage({ searchParams }: PasswordResetPageProps) {
+export default async function ForgotPasswordPage({ searchParams }: ForgotPasswordPageProps) {
   const params = await searchParams;
   const locale = params.lang === "fr" ? "fr" : "en";
 
@@ -19,7 +19,7 @@ export default async function PasswordResetPage({ searchParams }: PasswordResetP
         <Image src="/zuelen-icon.png" alt="" width={30} height={30} />
         <strong>Zuelen</strong>
       </Link>
-      <PasswordResetForm locale={locale} />
+      <ForgotPasswordForm locale={locale} />
     </main>
   );
 }
