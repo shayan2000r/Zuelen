@@ -35,6 +35,13 @@ export function AuthComplete({nextPath}:{nextPath:string}){
      }
     }
     if(!session)throw new Error("The invitation link could not create a secure session.");
+    const accessResponse=await fetch("/api/early-access/activate",{method:"POST"});
+    if(!accessResponse.ok){
+     const accessData=await accessResponse.json().catch(()=>({})) as {redirect?:string};
+     await supabase.auth.signOut();
+     if(accessData.redirect){window.location.assign(accessData.redirect);return;}
+     throw new Error("Your access could not be verified.");
+    }
     if(!active)return;
     window.history.replaceState({},"",`/auth/complete?next=${encodeURIComponent(nextPath)}`);
     setMessage("Email confirmed. Preparing your access…");
