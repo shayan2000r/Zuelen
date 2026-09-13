@@ -39,27 +39,6 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
     }
   }
 
-  async function requestPasswordReset() {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setMessage(l("Enter your email address first.", "Saisissez d’abord votre adresse e-mail."));
-      return;
-    }
-    setLoading(true);
-    setMessage(null);
-    const neutralMessage = l("If an account exists for that address, a secure reset link is on its way.", "Si un compte correspond à cette adresse, un lien de réinitialisation sécurisé vient d’être envoyé.");
-    try {
-      await fetch("/api/auth/password-recovery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, locale }),
-      });
-      setMessage(neutralMessage);
-    } catch {
-      setMessage(neutralMessage);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -124,7 +103,7 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
         <div className={extra.authDivider}><span>{l("or use email", "ou utiliser l’e-mail")}</span></div>
         <form className={styles.form} onSubmit={handleSubmit}>
           <label><span>{l("Email address", "Adresse e-mail")}</span><input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.lu" required/></label>
-          <label><span>{l("Password", "Mot de passe")}</span><div className={styles.passwordWrap}><input type={showPassword ? "text" : "password"} value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === "signin" ? "current-password" : "new-password"} minLength={8} placeholder={l("At least 8 characters", "Au moins 8 caractères")} required/><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? l("Hide password", "Masquer le mot de passe") : l("Show password", "Afficher le mot de passe")}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div>{mode === "signin" ? <button className={extra.forgotButton} type="button" onClick={requestPasswordReset} disabled={loading}>{l("Forgot your password?", "Mot de passe oublié ?")}</button> : null}</label>
+          <label><span>{l("Password", "Mot de passe")}</span><div className={styles.passwordWrap}><input type={showPassword ? "text" : "password"} value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === "signin" ? "current-password" : "new-password"} minLength={8} placeholder={l("At least 8 characters", "Au moins 8 caractères")} required/><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? l("Hide password", "Masquer le mot de passe") : l("Show password", "Afficher le mot de passe")}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div>{mode === "signin" ? <a className={extra.forgotButton} href={`/forgot-password?lang=${locale}`} target="_blank" rel="noopener noreferrer">{l("Forgot your password?", "Mot de passe oublié ?")}</a> : null}</label>
           {message ? <div className={styles.message} role="status">{message}</div> : null}
           <button className={styles.submit} type="submit" disabled={loading}>{loading ? <LoaderCircle className={styles.spin} size={17}/> : null}<span>{mode === "signin" ? l("Sign in", "Se connecter") : l("Create account", "Créer un compte")}</span>{!loading ? <ArrowRight size={16}/> : null}</button>
         </form>
