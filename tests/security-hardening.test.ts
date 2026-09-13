@@ -105,7 +105,7 @@ test("password recovery uses a one-time server token and keeps the reset page se
   const recovery = read("../src/app/api/auth/password-recovery/route.ts");
   const confirm = read("../src/app/auth/confirm/route.ts");
   const resetPage = read("../src/app/account/password-reset/page.tsx");
-  const migration = read("../db/migrations/20260913173000_password_recovery_rate_limit.sql");
+  const migration = read("../db/migrations/20260913152401_password_recovery_rate_limit.sql");
 
   assert.match(signIn, /fetch\("\/api\/auth\/password-recovery"/);
   assert.doesNotMatch(signIn, /resetPasswordForEmail/);
