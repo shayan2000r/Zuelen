@@ -99,3 +99,25 @@ test("CI validates lint, types, tests, and the production build", () => {
   for (const command of ["pnpm lint", "pnpm typecheck", "pnpm test", "pnpm build"]) assert.match(workflow, new RegExp(command));
   assert.match(workflow, /pnpm install --frozen-lockfile/);
 });
+
+test("password recovery uses a one-time server token and keeps the reset page session-protected", () => {
+  const signIn = read("../src/components/sign-in-form.tsx");
+  const recovery = read("../src/app/api/auth/password-recovery/route.ts");
+  const confirm = read("../src/app/auth/confirm/route.ts");
+  const resetPage = read("../src/app/account/password-reset/page.tsx");
+  const migration = read("../db/migrations/20260913152401_password_recovery_rate_limit.sql");
+
+  assert.match(signIn, /fetch\("\/api\/auth\/password-recovery"/);
+  assert.doesNotMatch(signIn, /resetPasswordForEmail/);
+  assert.match(recovery, /auth\.admin\.generateLink/);
+  assert.match(recovery, /type:\s*"recovery"/);
+  assert.match(recovery, /properties\?\.hashed_token/);
+  assert.match(recovery, /consume_password_recovery_rate_limit/);
+  assert.match(recovery, /https:\/\/api\.resend\.com\/emails/);
+  assert.match(recovery, /new URL\("\/auth\/confirm"/);
+  assert.match(confirm, /verifyOtp\(\{ token_hash: tokenHash, type \}\)/);
+  assert.match(resetPage, /if \(!workspace\.authenticated\) redirect\("\/sign-in"\)/);
+  assert.match(migration, /grant execute on function public\.consume_password_recovery_rate_limit\([^;]+\) to service_role/i);
+  assert.doesNotMatch(migration, /grant execute[^;]+to anon/i);
+  assert.doesNotMatch(migration, /grant execute[^;]+to authenticated/i);
+});

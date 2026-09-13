@@ -48,9 +48,11 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
     setMessage(null);
     const neutralMessage = l("If an account exists for that address, a secure reset link is on its way.", "Si un compte correspond à cette adresse, un lien de réinitialisation sécurisé vient d’être envoyé.");
     try {
-      const supabase = createClient();
-      const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/account/password-reset")}`;
-      await supabase.auth.resetPasswordForEmail(email, { redirectTo: callback });
+      await fetch("/api/auth/password-recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, locale }),
+      });
       setMessage(neutralMessage);
     } catch {
       setMessage(neutralMessage);
