@@ -126,7 +126,7 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
           {message ? <div className={styles.message} role="status">{message}</div> : null}
           <button className={styles.submit} type="submit" disabled={loading}>{loading ? <LoaderCircle className={styles.spin} size={17}/> : null}<span>{mode === "signin" ? l("Sign in", "Se connecter") : l("Create account", "Créer un compte")}</span>{!loading ? <ArrowRight size={16}/> : null}</button>
         </form>
-        <div className={styles.switchMode}><span>{mode === "signin" ? l("New to Zuelen?", "Nouveau sur Zuelen ?") : l("Already have an account?", "Vous avez déjà un compte ?")}</span><button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMessage(null); }}>{mode === "signin" ? l("Create an account", "Créer un compte") : l("Sign in", "Se connecter")}</button></div>
+        <div className={styles.switchMode}><span>{mode === "signin" ? l("New to Zuelen?", "Nouveau sur Zuelen ?") : l("Already have an account?", "Vous avez déjà un compte ?")}</span><button type="button" onClick={() => { if (mode === "signin") { window.location.assign(fr ? "https://zuelen.lu/acces-anticipe" : "https://zuelen.lu/en/early-access"); return; } setMode("signin"); setMessage(null); }}>{mode === "signin" ? l("Create an account", "Créer un compte") : l("Sign in", "Se connecter")}</button></div>
       </div>
     </section>
   </main>;
