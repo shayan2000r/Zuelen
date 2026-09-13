@@ -97,24 +97,31 @@ export async function inviteEarlyAccessAction(formData: FormData) {
   if (!actionLink) throw new Error("Supabase did not return an invitation link.");
 
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error("RESEND_API_KEY is not configured.");
-  const message = invitationMessage(locale, actionLink);
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + apiKey,
-      "Content-Type": "application/json",
-      "Idempotency-Key": "early-access-invite-" + id + "-" + Date.now(),
-    },
-    body: JSON.stringify({
-      from: process.env.ZUELEN_EARLY_ACCESS_FROM || "Zuelen <access@zuelen.lu>",
-      to: [email],
-      subject: message.subject,
-      text: message.plain,
-      html: message.html,
-    }),
-  });
-  if (!response.ok) throw new Error("Invitation email could not be delivered (" + response.status + ").");
+  if (apiKey) {
+    const message = invitationMessage(locale, actionLink);
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + apiKey,
+        "Content-Type": "application/json",
+        "Idempotency-Key": "early-access-invite-" + id + "-" + Date.now(),
+      },
+      body: JSON.stringify({
+        from: process.env.ZUELEN_EARLY_ACCESS_FROM || "Zuelen <access@zuelen.lu>",
+        to: [email],
+        subject: message.subject,
+        text: message.plain,
+        html: message.html,
+      }),
+    });
+    if (!response.ok) throw new Error("Invitation email could not be delivered (" + response.status + ").");
+  } else {
+    const { error: fallbackError } = await admin.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false, emailRedirectTo: redirectTo, data: { locale, early_access: true, audience: request.audience } },
+    });
+    if (fallbackError) throw new Error("Invitation email could not be delivered: " + fallbackError.message);
+  }
 
   const { error: invitedError } = await admin
     .from("early_access_waitlist")
