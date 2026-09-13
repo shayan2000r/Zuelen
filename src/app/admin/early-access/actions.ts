@@ -137,12 +137,28 @@ export async function rejectEarlyAccessAction(formData: FormData) {
   const id = text(formData, "id");
   if (!id) throw new Error("Missing early-access request.");
   const admin = await reviewerAdminClient();
+  const { data: request, error: requestError } = await admin
+    .from("early_access_waitlist")
+    .select("email,status")
+    .eq("id", id)
+    .maybeSingle();
+  if (requestError) throw new Error(requestError.message);
+  if (!request || request.status === "activated") redirect("/admin/early-access?result=already-active");
+
+  const email = normalizeEarlyAccessEmail(request.email);
   const { error } = await admin
     .from("early_access_waitlist")
     .update({ status: "rejected", updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .neq("status", "activated");
+    .eq("id", id);
   if (error) throw new Error(error.message);
+
+  const { error: revokeError } = await admin
+    .from("early_access_allowed_emails")
+    .delete()
+    .eq("email", email)
+    .eq("source", "waitlist_approval");
+  if (revokeError) throw new Error(revokeError.message);
+
   revalidatePath("/admin/early-access");
   redirect("/admin/early-access?result=rejected");
 }

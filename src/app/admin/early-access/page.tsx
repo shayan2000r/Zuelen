@@ -86,7 +86,7 @@ export default async function EarlyAccessAdminPage({ searchParams }: { searchPar
       <section className={styles.list}>
         {ordered.length ? ordered.map(item => {
           const Icon = audienceIcon[item.audience];
-          const canInvite = item.status !== "activated" && item.status !== "rejected";
+          const canInvite = item.status !== "activated";
           const cardClass = styles.card + (item.status === "waiting" ? " " + styles.waitingCard : "");
           const statusClass = styles.status + " " + styles[item.status];
           return <article className={cardClass} key={item.id}>
@@ -103,7 +103,7 @@ export default async function EarlyAccessAdminPage({ searchParams }: { searchPar
             </div>
 
             <div className={styles.actions}>
-              {canInvite ? <form action={inviteEarlyAccessAction}><input type="hidden" name="id" value={item.id}/><button className={styles.invite} type="submit">{item.status === "invited" ? <RefreshCw size={14}/> : <MailCheck size={14}/>} {item.status === "invited" ? "Resend invitation" : "Approve & invite"}</button></form> : <span className={styles.complete}><BadgeCheck size={14}/> Access active</span>}
+              {canInvite ? <form action={inviteEarlyAccessAction}><input type="hidden" name="id" value={item.id}/><button className={styles.invite} type="submit">{item.status === "invited" ? <RefreshCw size={14}/> : <MailCheck size={14}/>} {item.status === "invited" ? "Resend invitation" : item.status === "rejected" ? "Reopen & invite" : "Approve & invite"}</button></form> : <span className={styles.complete}><BadgeCheck size={14}/> Access active</span>}
               {item.status !== "activated" && item.status !== "rejected" ? <form action={rejectEarlyAccessAction}><input type="hidden" name="id" value={item.id}/><button className={styles.reject} type="submit"><X size={14}/> Remove from queue</button></form> : null}
               <a href={item.locale === "fr" ? "https://zuelen.lu/acces-anticipe" : "https://zuelen.lu/en/early-access"} target="_blank" rel="noreferrer">View access page <ExternalLink size={12}/></a>
             </div>
