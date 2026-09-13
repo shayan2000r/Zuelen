@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { seatLimitMessage } from "@/lib/billing";
+import { allowEarlyAccessEmail } from "@/lib/early-access";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_WORKSPACE_COOKIE, getWorkspace } from "@/lib/workspace";
 
@@ -32,6 +33,7 @@ export async function inviteTeamMemberAction(_previous:TeamActionState,formData:
   await supabase.rpc("revoke_organization_invitation",{p_organization_id:workspace.organization.id,p_invitation_id:invite.id});
   return{status:"error",message:`Invitation email could not be sent: ${mailError.message}`};
  }
+ await allowEarlyAccessEmail(email,"manual");
  refreshTeam();
  return{status:"success",message:`Invitation sent to ${email} as ${roleLabel(role)}.`};
 }

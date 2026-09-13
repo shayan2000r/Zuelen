@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { currentUserRequiresMfa } from "@/lib/mfa-assurance";
+import { earlyAccessPublicUrl, isEarlyAccessAllowed } from "@/lib/early-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config";
 
 export async function updateSession(request: NextRequest) {
@@ -48,6 +49,17 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (claims?.claims?.sub && protectedPath && pathname !== "/auth/mfa") {
+    const email = typeof claims.claims.email === "string" ? claims.claims.email : null;
+    try {
+      if (!(await isEarlyAccessAllowed(email))) {
+        const metadata = claims.claims.user_metadata as { locale?: string } | undefined;
+        return NextResponse.redirect(earlyAccessPublicUrl(metadata?.locale === "fr" ? "fr" : "en"));
+      }
+    } catch (error) {
+      console.error("Early access gate check failed", error);
+      return NextResponse.redirect(new URL("/sign-in?error=access", request.url));
+    }
+
     if (await currentUserRequiresMfa(supabase)) {
       const next = `${pathname}${request.nextUrl.search}`;
       const url = request.nextUrl.clone();
