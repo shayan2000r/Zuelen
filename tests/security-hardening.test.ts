@@ -99,3 +99,24 @@ test("CI validates lint, types, tests, and the production build", () => {
   for (const command of ["pnpm lint", "pnpm typecheck", "pnpm test", "pnpm build"]) assert.match(workflow, new RegExp(command));
   assert.match(workflow, /pnpm install --frozen-lockfile/);
 });
+
+
+test("password recovery is browser-independent and cannot update without a recovery session", () => {
+  const client = read("../src/lib/supabase/client.ts");
+  const signIn = read("../src/components/sign-in-form.tsx");
+  const resetPage = read("../src/app/account/password-reset/page.tsx");
+  const resetForm = read("../src/components/password-reset-form.tsx");
+  const proxy = read("../src/lib/supabase/proxy.ts");
+
+  assert.match(client, /createRecoveryClient/);
+  assert.match(client, /flowType:\s*"implicit"/);
+  assert.match(client, /persistSession:\s*false/);
+  assert.match(signIn, /createRecoveryClient\(\)/);
+  assert.match(signIn, /new URL\("\/account\/password-reset"/);
+  assert.doesNotMatch(signIn, /account\/password-reset"\)\}\?next=/);
+  assert.doesNotMatch(resetPage, /getWorkspace\(/);
+  assert.match(resetForm, /event === "PASSWORD_RECOVERY"/);
+  assert.match(resetForm, /if \(!ready\)/);
+  assert.match(resetForm, /updateUser\(\{ password \}\)/);
+  assert.match(proxy, /passwordRecoveryPath/);
+});
