@@ -4,7 +4,7 @@ import { ArrowRight, Check, Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck,
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, createRecoveryClient } from "@/lib/supabase/client";
 import { currentUserRequiresMfa } from "@/lib/mfa-assurance";
 import { safeInternalDestination } from "@/lib/safe-navigation";
 import styles from "./auth.module.css";
@@ -48,9 +48,10 @@ export function SignInForm({ nextPath = null }: { nextPath?: string | null }) {
     setMessage(null);
     const neutralMessage = l("If an account exists for that address, a secure reset link is on its way.", "Si un compte correspond à cette adresse, un lien de réinitialisation sécurisé vient d’être envoyé.");
     try {
-      const supabase = createClient();
-      const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/account/password-reset")}`;
-      await supabase.auth.resetPasswordForEmail(email, { redirectTo: callback });
+      const supabase = createRecoveryClient();
+      const resetUrl = new URL("/account/password-reset", window.location.origin);
+      resetUrl.searchParams.set("lang", locale);
+      await supabase.auth.resetPasswordForEmail(email, { redirectTo: resetUrl.toString() });
       setMessage(neutralMessage);
     } catch {
       setMessage(neutralMessage);
