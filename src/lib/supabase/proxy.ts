@@ -7,13 +7,12 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config";
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
-  const passwordRecoveryPath = pathname === "/account/password-reset";
   const protectedPath = pathname === "/app" || pathname.startsWith("/app/")
     || pathname === "/professional" || pathname.startsWith("/professional/")
     || pathname === "/contexts" || pathname.startsWith("/contexts/")
     || pathname === "/setup" || pathname.startsWith("/setup/")
     || pathname === "/admin" || pathname.startsWith("/admin/")
-    || ((pathname === "/account" || pathname.startsWith("/account/")) && !passwordRecoveryPath)
+    || pathname === "/account" || pathname.startsWith("/account/")
     || pathname === "/accountants/manage" || pathname.startsWith("/accountants/manage/");
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
