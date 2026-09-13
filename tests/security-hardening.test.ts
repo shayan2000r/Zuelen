@@ -100,23 +100,28 @@ test("CI validates lint, types, tests, and the production build", () => {
   assert.match(workflow, /pnpm install --frozen-lockfile/);
 });
 
-test("password recovery uses a one-time server token and keeps the reset page session-protected", () => {
+test("password recovery is isolated, browser-independent, and opened from a dedicated page", () => {
+  const client = read("../src/lib/supabase/client.ts");
   const signIn = read("../src/components/sign-in-form.tsx");
-  const recovery = read("../src/app/api/auth/password-recovery/route.ts");
-  const confirm = read("../src/app/auth/confirm/route.ts");
+  const forgot = read("../src/components/forgot-password-form.tsx");
   const resetPage = read("../src/app/account/password-reset/page.tsx");
+  const resetForm = read("../src/components/password-reset-form.tsx");
+  const proxy = read("../src/lib/supabase/proxy.ts");
   const migration = read("../db/migrations/20260913152401_password_recovery_rate_limit.sql");
 
-  assert.match(signIn, /fetch\("\/api\/auth\/password-recovery"/);
-  assert.doesNotMatch(signIn, /resetPasswordForEmail/);
-  assert.match(recovery, /auth\.admin\.generateLink/);
-  assert.match(recovery, /type:\s*"recovery"/);
-  assert.match(recovery, /properties\?\.hashed_token/);
-  assert.match(recovery, /consume_password_recovery_rate_limit/);
-  assert.match(recovery, /https:\/\/api\.resend\.com\/emails/);
-  assert.match(recovery, /new URL\("\/auth\/confirm"/);
-  assert.match(confirm, /verifyOtp\(\{ token_hash: tokenHash, type \}\)/);
-  assert.match(resetPage, /if \(!workspace\.authenticated\) redirect\("\/sign-in"\)/);
+  assert.match(client, /createRecoveryClient/);
+  assert.match(client, /flowType:\s*"implicit"/);
+  assert.match(client, /persistSession:\s*false/);
+  assert.match(signIn, /forgot-password\?lang=/);
+  assert.match(signIn, /target="_blank"/);
+  assert.doesNotMatch(signIn, /\/api\/auth\/password-recovery/);
+  assert.match(forgot, /resetPasswordForEmail\(normalized/);
+  assert.match(forgot, /new URL\("\/account\/password-reset"/);
+  assert.doesNotMatch(resetPage, /getWorkspace\(/);
+  assert.match(resetForm, /event === "PASSWORD_RECOVERY"/);
+  assert.match(resetForm, /if \(!ready\)/);
+  assert.match(resetForm, /updateUser\(\{ password \}\)/);
+  assert.match(proxy, /passwordRecoveryPath/);
   assert.match(migration, /grant execute on function public\.consume_password_recovery_rate_limit\([^;]+\) to service_role/i);
   assert.doesNotMatch(migration, /grant execute[^;]+to anon/i);
   assert.doesNotMatch(migration, /grant execute[^;]+to authenticated/i);
