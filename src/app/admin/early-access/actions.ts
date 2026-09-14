@@ -86,7 +86,9 @@ export async function inviteEarlyAccessAction(formData: FormData) {
     if (created && !created.email_confirmed_at && !created.last_sign_in_at && created.user_metadata?.early_access === true) {
       try { await admin.auth.admin.deleteUser(created.id); } catch {}
     }
-    throw new Error("Invitation email could not be delivered: " + inviteError.message);
+    console.error("Early Access invitation delivery failed", inviteError.message);
+    revalidatePath("/admin/early-access");
+    redirect("/admin/early-access?result=invite-error");
   }
 
   await allowEarlyAccessEmail(email, "waitlist_approval");
