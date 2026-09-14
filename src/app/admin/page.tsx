@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight, BadgeCheck, BriefcaseBusiness, Building2, Clock3,
-  CreditCard, ShieldCheck, UserRound, UsersRound, UserRoundCheck,
+  CreditCard, UserRound, UsersRound, UserRoundCheck,
   WalletCards, XCircle,
 } from "lucide-react";
 import { requireZuelenAdmin } from "@/lib/admin";
@@ -24,7 +24,7 @@ const audienceLabel = {
 } as const;
 
 export default async function AdminDashboardPage() {
-  const { admin, email } = await requireZuelenAdmin("/admin");
+  const { admin } = await requireZuelenAdmin("/admin");
   const data = await getAdminData(admin);
   const s = data.stats;
 
@@ -38,17 +38,6 @@ export default async function AdminDashboardPage() {
   ];
 
   return <main className={styles.shell}>
-    <header className={styles.topbar}>
-      <Link href="/admin" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Admin</span></Link>
-      <nav>
-        <Link className={styles.active} href="/admin">Overview</Link>
-        <Link href="/admin/users">Users</Link>
-        <Link href="/admin/accountants">Accountants</Link>
-        <Link href="/admin/early-access">Waitlist</Link>
-      </nav>
-      <div className={styles.identity}><ShieldCheck size={14}/><span>{email}</span></div>
-    </header>
-
     <div className={styles.page}>
       <section className={styles.hero}>
         <div>
