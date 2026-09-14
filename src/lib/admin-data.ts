@@ -113,7 +113,7 @@ export async function getAdminData(admin: AdminClient) {
         organizations: organizationNames,
         plan: firstSubscription?.plan ?? "—",
         subscriptionStatus: firstSubscription?.status ?? "—",
-        accountState: user.email_confirmed_at || user.last_sign_in_at ? "active" : "invite_pending",
+        accountState: (user.email_confirmed_at || user.last_sign_in_at ? "active" : "invite_pending") as AdminUserRow["accountState"],
         emailConfirmedAt: user.email_confirmed_at ?? null,
       };
     })
