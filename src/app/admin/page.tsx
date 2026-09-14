@@ -29,7 +29,7 @@ export default async function AdminDashboardPage() {
   const s = data.stats;
 
   const cards = [
-    { label: "Users", value: s.users, detail: "Authenticated product users", icon: UsersRound },
+    { label: "Users", value: s.users, detail: String(s.pendingUserInvites) + " invite pending", icon: UsersRound },
     { label: "Independents", value: s.independents, detail: "Independent workspaces", icon: UserRound },
     { label: "Companies", value: s.companies, detail: "Company workspaces", icon: Building2 },
     { label: "Accountants", value: s.accountants, detail: String(s.pendingAccountants) + " awaiting review", icon: BriefcaseBusiness },
@@ -98,7 +98,7 @@ export default async function AdminDashboardPage() {
             {data.recentUsers.length ? data.recentUsers.map(user => <div className={styles.row} key={user.id}>
               <div className={styles.avatar}>{(user.fullName || user.email).slice(0,1).toUpperCase()}</div>
               <div className={styles.rowMain}><strong>{user.fullName || user.email}</strong><span>{user.email}{user.types.length ? " · " + user.types.join(", ") : ""}</span></div>
-              <span className={styles.plan}>{user.plan}</span>
+              <span className={styles.plan}>{user.accountState === "invite_pending" ? "invite pending" : user.plan}</span>
               <time>{formatDate(user.createdAt)}</time>
             </div>) : <p className={styles.empty}>No product users yet.</p>}
           </div>
