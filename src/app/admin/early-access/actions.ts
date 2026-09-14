@@ -12,7 +12,7 @@ function text(formData: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-async function findUserByEmail(admin: Awaited<ReturnType<typeof requireZuelenAdmin>>["admin"], email: string) {
+async function findUserByEmail(admin: Awaited<ReturnType<typeof requireZuelenAdmin>>["admin"], email: string): Promise<any | null> {
   for (let page = 1; page <= 20; page += 1) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
     if (error) throw new Error(error.message);
