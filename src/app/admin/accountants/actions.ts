@@ -1,29 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getWorkspace } from "@/lib/workspace";
+import { requireZuelenAdmin } from "@/lib/admin";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
-}
-
-async function reviewerAdminClient() {
-  const workspace = await getWorkspace();
-  if (!workspace.authenticated || !workspace.userId) redirect("/sign-in?next=/admin/accountants");
-
-  const admin = createAdminClient();
-  const { data: reviewer, error } = await admin
-    .from("accountant_reviewers")
-    .select("user_id")
-    .eq("user_id", workspace.userId)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  if (!reviewer) throw new Error("You are not authorized to review accountant profiles.");
-  return admin;
 }
 
 export async function reviewAccountantProfileAction(formData: FormData) {
@@ -37,7 +19,7 @@ export async function reviewAccountantProfileAction(formData: FormData) {
     throw new Error("Add a short reason so the professional knows what to change.");
   }
 
-  const admin = await reviewerAdminClient();
+  const { admin } = await requireZuelenAdmin("/admin/accountants");
   const { data: profile, error: profileError } = await admin
     .from("accountant_profiles")
     .select("id")
