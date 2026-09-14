@@ -2,14 +2,16 @@
 
 import { Check, LoaderCircle, LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { createRecoveryClient } from "@/lib/supabase/client";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createClient, createRecoveryClient } from "@/lib/supabase/client";
 import styles from "./security-settings.module.css";
 
 export function PasswordResetForm({ locale }: { locale: "en" | "fr" }) {
   const fr = locale === "fr";
   const l = (en: string, french: string) => fr ? french : en;
-  const supabase = useMemo(() => createRecoveryClient(), []);
+  const appSupabase = useMemo(() => createClient(), []);
+  const recoverySupabase = useMemo(() => createRecoveryClient(), []);
+  const sessionMode = useRef<"app" | "recovery" | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,41 +22,62 @@ export function PasswordResetForm({ locale }: { locale: "en" | "fr" }) {
   useEffect(() => {
     let active = true;
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: listener } = recoverySupabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
       if (event === "PASSWORD_RECOVERY" && session) {
+        sessionMode.current = "recovery";
         setReady(true);
         setMessage(null);
       }
     });
 
-    void supabase.auth.getSession().then(({ data, error }) => {
+    void Promise.all([
+      recoverySupabase.auth.getSession(),
+      appSupabase.auth.getSession(),
+    ]).then(([recoveryResult, appResult]) => {
       if (!active) return;
-      if (error || !data.session) {
-        setMessage(l(
-          "This recovery link is invalid or has expired. Request a new link from the sign-in page.",
-          "Ce lien de récupération est invalide ou a expiré. Demandez un nouveau lien depuis la page de connexion.",
-        ));
+
+      if (recoveryResult.data.session) {
+        sessionMode.current = "recovery";
+        setReady(true);
+        setMessage(null);
         return;
       }
-      setReady(true);
-      setMessage(null);
+
+      if (appResult.data.session) {
+        sessionMode.current = "app";
+        setReady(true);
+        setMessage(null);
+        return;
+      }
+
+      setMessage(l(
+        "This password link or invitation is invalid or has expired. Request a new link from the sign-in page.",
+        "Ce lien de mot de passe ou cette invitation est invalide ou a expiré. Demandez un nouveau lien depuis la page de connexion.",
+      ));
+    }).catch(() => {
+      if (!active) return;
+      setMessage(l(
+        "This password link or invitation is invalid or has expired. Request a new link from the sign-in page.",
+        "Ce lien de mot de passe ou cette invitation est invalide ou a expiré. Demandez un nouveau lien depuis la page de connexion.",
+      ));
     });
 
     return () => {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [fr, supabase]);
+  }, [appSupabase, fr, recoverySupabase]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
 
-    if (!ready) {
+    const mode = sessionMode.current;
+    if (!ready || !mode) {
       setMessage(l(
-        "Open a fresh password-reset link from your email first.",
-        "Ouvrez d’abord un nouveau lien de réinitialisation reçu par e-mail.",
+        "Open a fresh password link from your email first.",
+        "Ouvrez d’abord un nouveau lien de mot de passe reçu par e-mail.",
       ));
       return;
     }
@@ -69,9 +92,14 @@ export function PasswordResetForm({ locale }: { locale: "en" | "fr" }) {
 
     setBusy(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const activeClient = mode === "recovery" ? recoverySupabase : appSupabase;
+      const { error } = await activeClient.auth.updateUser({ password });
       if (error) throw error;
-      await supabase.auth.signOut();
+
+      await Promise.allSettled([
+        recoverySupabase.auth.signOut(),
+        appSupabase.auth.signOut(),
+      ]);
       setComplete(true);
     } catch (error) {
       setMessage(error instanceof Error
