@@ -44,7 +44,7 @@ export default async function AccountantReviewPage({ searchParams }: { searchPar
   return <main className={styles.shell}>
     <header className={styles.topbar}>
       <Link href="/admin" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Admin · Accountants</span></Link>
-      <div className={styles.reviewer}><Link href="/admin">Overview</Link><Link href="/admin/users">Users</Link><Link href="/admin/early-access">Waitlist</Link><span><ShieldCheck size={14}/>{email}</span></div>
+      <div className={styles.reviewer}><Link href="/admin">Overview</Link><Link href="/admin/users">Users</Link><Link href="/admin/early-access">Waitlist</Link><Link href="/accountants/directory">View directory <ExternalLink size={11}/></Link><span><ShieldCheck size={14}/>{email}</span></div>
     </header>
 
     <div className={styles.page}>
