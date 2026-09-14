@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { BadgeCheck, BriefcaseBusiness, Building2, Clock3, ExternalLink, MailCheck, RefreshCw, ShieldCheck, UserRound, UsersRound, X } from "lucide-react";
-import { notFound, redirect } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getWorkspace } from "@/lib/workspace";
+import { requireZuelenAdmin } from "@/lib/admin";
 import { inviteEarlyAccessAction, rejectEarlyAccessAction } from "./actions";
 import styles from "./early-access-admin.module.css";
 
@@ -33,18 +31,8 @@ function formatDate(value: string | null) {
 }
 
 export default async function EarlyAccessAdminPage({ searchParams }: { searchParams: Promise<Params> }) {
-  const workspace = await getWorkspace();
-  if (!workspace.authenticated || !workspace.userId) redirect("/sign-in?next=/admin/early-access");
+  const { admin, email } = await requireZuelenAdmin("/admin/early-access");
   const params = await searchParams;
-  const admin = createAdminClient();
-
-  const { data: reviewer, error: reviewerError } = await admin
-    .from("early_access_reviewers")
-    .select("user_id")
-    .eq("user_id", workspace.userId)
-    .maybeSingle();
-  if (reviewerError) throw new Error(reviewerError.message);
-  if (!reviewer) notFound();
 
   const { data, error } = await admin
     .from("early_access_waitlist")
@@ -64,8 +52,8 @@ export default async function EarlyAccessAdminPage({ searchParams }: { searchPar
 
   return <main className={styles.shell}>
     <header className={styles.topbar}>
-      <Link href="/admin/early-access" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Early Access</span></Link>
-      <div className={styles.links}><Link href="/admin/accountants">Accountant reviews</Link><span><ShieldCheck size={14}/> Internal reviewer workspace</span></div>
+      <Link href="/admin" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Admin · Waitlist</span></Link>
+      <div className={styles.links}><Link href="/admin">Overview</Link><Link href="/admin/users">Users</Link><Link href="/admin/accountants">Accountants</Link><span><ShieldCheck size={14}/>{email}</span></div>
     </header>
 
     <div className={styles.page}>
