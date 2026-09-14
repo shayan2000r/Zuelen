@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { BadgeCheck, BriefcaseBusiness, Check, Clock3, ExternalLink, Languages, MapPin, ShieldCheck, Sparkles, UserRoundCheck, X } from "lucide-react";
-import { notFound, redirect } from "next/navigation";
 import { accountantInitials, accountantLanguageLabel, type AccountantListingSubscription, type AccountantProfile } from "@/lib/accountants";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getWorkspace } from "@/lib/workspace";
+import { requireZuelenAdmin } from "@/lib/admin";
 import { reviewAccountantProfileAction } from "./actions";
 import styles from "./review.module.css";
 
@@ -17,18 +15,8 @@ function formatDate(value: string | null) {
 }
 
 export default async function AccountantReviewPage({ searchParams }: { searchParams: Promise<Params> }) {
-  const workspace = await getWorkspace();
-  if (!workspace.authenticated || !workspace.userId) redirect("/sign-in?next=/admin/accountants");
+  const { admin, email } = await requireZuelenAdmin("/admin/accountants");
   const params = await searchParams;
-  const admin = createAdminClient();
-
-  const { data: reviewer, error: reviewerError } = await admin
-    .from("accountant_reviewers")
-    .select("user_id")
-    .eq("user_id", workspace.userId)
-    .maybeSingle();
-  if (reviewerError) throw new Error(reviewerError.message);
-  if (!reviewer) notFound();
 
   const { data: profileRows, error: profileError } = await admin
     .from("accountant_profiles")
@@ -55,8 +43,8 @@ export default async function AccountantReviewPage({ searchParams }: { searchPar
 
   return <main className={styles.shell}>
     <header className={styles.topbar}>
-      <Link href="/" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Review</span></Link>
-      <div className={styles.reviewer}><ShieldCheck size={14}/> Internal reviewer workspace</div>
+      <Link href="/admin" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Admin · Accountants</span></Link>
+      <div className={styles.reviewer}><Link href="/admin">Overview</Link><Link href="/admin/users">Users</Link><Link href="/admin/early-access">Waitlist</Link><Link href="/accountants/directory">View directory <ExternalLink size={11}/></Link><span><ShieldCheck size={14}/>{email}</span></div>
     </header>
 
     <div className={styles.page}>
