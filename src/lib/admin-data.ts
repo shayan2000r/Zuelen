@@ -120,6 +120,8 @@ export async function getAdminData(admin: AdminClient) {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const pendingAccountants = accountantProfiles.filter(item => item.approval_status === "pending");
+  const activeUsers = users.filter(item => item.accountState === "active");
+  const pendingUserInvites = users.filter(item => item.accountState === "invite_pending");
   const activeSubscriptions =
     subscriptions.filter(item => item.status === "active").length +
     accountantSubscriptions.filter(item => item.status === "active").length;
@@ -132,7 +134,8 @@ export async function getAdminData(admin: AdminClient) {
 
   return {
     stats: {
-      users: users.length,
+      users: activeUsers.length,
+      pendingUserInvites: pendingUserInvites.length,
       independents: companies.filter(item => item.entity_kind === "independent").length,
       companies: companies.filter(item => item.entity_kind === "company").length,
       accountants: accountantProfiles.length,
