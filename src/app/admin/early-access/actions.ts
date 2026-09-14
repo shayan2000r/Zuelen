@@ -4,29 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { allowEarlyAccessEmail, normalizeEarlyAccessEmail } from "@/lib/early-access";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getWorkspace } from "@/lib/workspace";
+import { requireZuelenAdmin } from "@/lib/admin";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.zuelen.lu";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
-}
-
-async function reviewerAdminClient() {
-  const workspace = await getWorkspace();
-  if (!workspace.authenticated || !workspace.userId) redirect("/sign-in?next=/admin/early-access");
-
-  const admin = createAdminClient();
-  const { data: reviewer, error } = await admin
-    .from("early_access_reviewers")
-    .select("user_id")
-    .eq("user_id", workspace.userId)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  if (!reviewer) throw new Error("You are not authorized to review early-access requests.");
-  return admin;
 }
 
 function invitationMessage(locale: "fr" | "en", actionLink: string) {
@@ -51,7 +35,7 @@ export async function inviteEarlyAccessAction(formData: FormData) {
   const id = text(formData, "id");
   if (!id) throw new Error("Missing early-access request.");
 
-  const admin = await reviewerAdminClient();
+  const { admin } = await requireZuelenAdmin("/admin/early-access");
   const { data: request, error: requestError } = await admin
     .from("early_access_waitlist")
     .select("id,email,audience,locale,status,approved_at")
@@ -136,7 +120,7 @@ export async function inviteEarlyAccessAction(formData: FormData) {
 export async function rejectEarlyAccessAction(formData: FormData) {
   const id = text(formData, "id");
   if (!id) throw new Error("Missing early-access request.");
-  const admin = await reviewerAdminClient();
+  const { admin } = await requireZuelenAdmin("/admin/early-access");
   const { data: request, error: requestError } = await admin
     .from("early_access_waitlist")
     .select("email,status")
