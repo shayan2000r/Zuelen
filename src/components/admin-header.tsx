@@ -26,7 +26,7 @@ export function AdminHeader({ email }: { email: string }) {
 
       <nav className={styles.nav} aria-label="Admin navigation">
         {nav.map(item => {
-          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+          const active = "exact" in item && item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = "icon" in item ? item.icon : null;
           return (
             <Link key={item.href} href={item.href} className={active ? styles.active : undefined}>
