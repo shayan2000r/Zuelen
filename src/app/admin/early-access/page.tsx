@@ -64,6 +64,7 @@ export default async function EarlyAccessAdminPage({ searchParams }: { searchPar
       {params.result === "invited" ? <div className={styles.notice}><MailCheck size={15}/> Invitation sent successfully.</div> : null}
       {params.result === "rejected" ? <div className={styles.notice}><X size={15}/> Request moved out of the active rollout queue.</div> : null}
       {params.result === "already-active" ? <div className={styles.notice}><BadgeCheck size={15}/> This user is already activated.</div> : null}
+      {params.result === "invite-error" ? <div className={styles.errorNotice}><X size={15}/> The invitation could not be delivered. No access was activated; you can safely retry.</div> : null}
 
       <section className={styles.list}>
         {ordered.length ? ordered.map(item => {
