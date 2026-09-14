@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, ShieldCheck, UsersRound } from "lucide-react";
+import { ExternalLink, Search, UsersRound } from "lucide-react";
 import { requireZuelenAdmin } from "@/lib/admin";
 import { getAdminData } from "@/lib/admin-data";
 import styles from "./users.module.css";
@@ -14,7 +14,7 @@ function formatDate(value: string | null) {
 }
 
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { admin, email } = await requireZuelenAdmin("/admin/users");
+  const { admin } = await requireZuelenAdmin("/admin/users");
   const data = await getAdminData(admin);
   const { q = "" } = await searchParams;
   const query = q.trim().toLowerCase();
@@ -27,17 +27,6 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
   ) : data.users;
 
   return <main className={styles.shell}>
-    <header className={styles.topbar}>
-      <Link href="/admin" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Admin</span></Link>
-      <nav>
-        <Link href="/admin">Overview</Link>
-        <Link className={styles.active} href="/admin/users">Users</Link>
-        <Link href="/admin/accountants">Accountants</Link>
-        <Link href="/admin/early-access">Waitlist</Link>
-      </nav>
-      <div className={styles.identity}><ShieldCheck size={14}/><span>{email}</span></div>
-    </header>
-
     <div className={styles.page}>
       <section className={styles.hero}>
         <div><span>Users</span><h1>Product users.</h1><p>Authenticated Zuelen users, their workspace type, organizations, plan status and recent sign-in activity.</p></div>
@@ -53,15 +42,20 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
 
       <section className={styles.tableWrap}>
         <table>
-          <thead><tr><th>User</th><th>Type</th><th>Organization</th><th>Plan</th><th>Joined</th><th>Last sign-in</th></tr></thead>
+          <thead><tr><th>User</th><th>Type</th><th>Organization</th><th>Plan & status</th><th>Joined</th><th>Last sign-in</th><th></th></tr></thead>
           <tbody>
             {users.map(user => <tr key={user.id}>
               <td><strong>{user.fullName || user.email}</strong>{user.fullName ? <span>{user.email}</span> : null}</td>
               <td><div className={styles.tags}>{user.types.length ? user.types.map(type => <em key={type}>{type}</em>) : <span>—</span>}</div></td>
               <td>{user.organizations.length ? user.organizations.join(", ") : "—"}</td>
-              <td><span className={styles.plan}>{user.plan}</span><small>{user.subscriptionStatus}</small></td>
+              <td>{user.accountState === "invite_pending"
+                ? <span className={styles.pendingInvite}>Invite pending</span>
+                : user.plan !== "—"
+                  ? <span className={styles.planStatus}><strong>{user.plan}</strong><em>{user.subscriptionStatus}</em></span>
+                  : <span className={styles.muted}>No subscription</span>}</td>
               <td>{formatDate(user.createdAt)}</td>
               <td>{formatDate(user.lastSignInAt)}</td>
+              <td><Link className={styles.inspect} href={"/admin/users/" + user.id}>View account <ExternalLink size={11}/></Link></td>
             </tr>)}
           </tbody>
         </table>
