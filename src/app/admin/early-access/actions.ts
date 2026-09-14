@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { allowEarlyAccessEmail, normalizeEarlyAccessEmail } from "@/lib/early-access";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { requireZuelenAdmin } from "@/lib/admin";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.zuelen.lu";
