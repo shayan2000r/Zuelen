@@ -82,8 +82,8 @@ export async function inviteEarlyAccessAction(formData: FormData) {
 
   if (inviteError) {
     // Avoid phantom users after a delivery failure.
-    const created = inviteData?.user;
-    if (created && !created.email_confirmed_at && !created.last_sign_in_at) {
+    const created = await findUserByEmail(admin, email);
+    if (created && !created.email_confirmed_at && !created.last_sign_in_at && created.user_metadata?.early_access === true) {
       try { await admin.auth.admin.deleteUser(created.id); } catch {}
     }
     throw new Error("Invitation email could not be delivered: " + inviteError.message);
