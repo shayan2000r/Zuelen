@@ -83,7 +83,7 @@ export default async function AdminDashboardPage() {
           <div className={styles.rows}>
             {data.recentWaitlist.length ? data.recentWaitlist.map(item => <div className={styles.row} key={item.id}>
               <div className={styles.avatar}>{item.email.slice(0,1).toUpperCase()}</div>
-              <div className={styles.rowMain}><strong>{item.email}</strong><span>{audienceLabel[item.audience]} · {item.locale.toUpperCase()}</span></div>
+              <div className={styles.rowMain}><strong>{item.email}</strong><span>{audienceLabel[item.audience as keyof typeof audienceLabel]} · {item.locale.toUpperCase()}</span></div>
               <span className={styles.status + " " + styles[item.status]}>{item.status}</span>
               <time>{formatDate(item.created_at)}</time>
             </div>) : <p className={styles.empty}>No Early Access requests yet.</p>}
