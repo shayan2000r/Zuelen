@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, BriefcaseBusiness, Check, Clock3, ExternalLink, Languages, MapPin, ShieldCheck, Sparkles, UserRoundCheck, X } from "lucide-react";
+import { BadgeCheck, BriefcaseBusiness, Check, Clock3, ExternalLink, Languages, MapPin, Sparkles, UserRoundCheck, X } from "lucide-react";
 import { accountantInitials, accountantLanguageLabel, type AccountantListingSubscription, type AccountantProfile } from "@/lib/accountants";
 import { requireZuelenAdmin } from "@/lib/admin";
 import { reviewAccountantProfileAction } from "./actions";
@@ -15,7 +15,7 @@ function formatDate(value: string | null) {
 }
 
 export default async function AccountantReviewPage({ searchParams }: { searchParams: Promise<Params> }) {
-  const { admin, email } = await requireZuelenAdmin("/admin/accountants");
+  const { admin } = await requireZuelenAdmin("/admin/accountants");
   const params = await searchParams;
 
   const { data: profileRows, error: profileError } = await admin
@@ -42,11 +42,6 @@ export default async function AccountantReviewPage({ searchParams }: { searchPar
   const pendingCount = profiles.filter(profile => profile.approval_status === "pending").length;
 
   return <main className={styles.shell}>
-    <header className={styles.topbar}>
-      <Link href="/admin" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Admin · Accountants</span></Link>
-      <div className={styles.reviewer}><Link href="/admin">Overview</Link><Link href="/admin/users">Users</Link><Link href="/admin/early-access">Waitlist</Link><Link href="/accountants/directory">View directory <ExternalLink size={11}/></Link><span><ShieldCheck size={14}/>{email}</span></div>
-    </header>
-
     <div className={styles.page}>
       <section className={styles.hero}>
         <div><span className={styles.eyebrow}><UserRoundCheck size={14}/> Accountant directory moderation</span><h1>Review professional listings.</h1><p>Approve only profiles whose identity, positioning and public information are suitable for the Zuelen directory. Billing eligibility is handled separately by Stripe.</p></div>
