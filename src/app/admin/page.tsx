@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight, BadgeCheck, BriefcaseBusiness, Building2, Clock3,
-  CreditCard, ShieldCheck, UserRound, UsersRound, UserRoundCheck,
+  CreditCard, UserRound, UsersRound, UserRoundCheck,
   WalletCards, XCircle,
 } from "lucide-react";
 import { requireZuelenAdmin } from "@/lib/admin";
@@ -24,12 +24,12 @@ const audienceLabel = {
 } as const;
 
 export default async function AdminDashboardPage() {
-  const { admin, email } = await requireZuelenAdmin("/admin");
+  const { admin } = await requireZuelenAdmin("/admin");
   const data = await getAdminData(admin);
   const s = data.stats;
 
   const cards = [
-    { label: "Users", value: s.users, detail: "Authenticated product users", icon: UsersRound },
+    { label: "Users", value: s.users, detail: String(s.pendingUserInvites) + " invite pending", icon: UsersRound },
     { label: "Independents", value: s.independents, detail: "Independent workspaces", icon: UserRound },
     { label: "Companies", value: s.companies, detail: "Company workspaces", icon: Building2 },
     { label: "Accountants", value: s.accountants, detail: String(s.pendingAccountants) + " awaiting review", icon: BriefcaseBusiness },
@@ -38,17 +38,6 @@ export default async function AdminDashboardPage() {
   ];
 
   return <main className={styles.shell}>
-    <header className={styles.topbar}>
-      <Link href="/admin" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Admin</span></Link>
-      <nav>
-        <Link className={styles.active} href="/admin">Overview</Link>
-        <Link href="/admin/users">Users</Link>
-        <Link href="/admin/accountants">Accountants</Link>
-        <Link href="/admin/early-access">Waitlist</Link>
-      </nav>
-      <div className={styles.identity}><ShieldCheck size={14}/><span>{email}</span></div>
-    </header>
-
     <div className={styles.page}>
       <section className={styles.hero}>
         <div>
@@ -109,7 +98,7 @@ export default async function AdminDashboardPage() {
             {data.recentUsers.length ? data.recentUsers.map(user => <div className={styles.row} key={user.id}>
               <div className={styles.avatar}>{(user.fullName || user.email).slice(0,1).toUpperCase()}</div>
               <div className={styles.rowMain}><strong>{user.fullName || user.email}</strong><span>{user.email}{user.types.length ? " · " + user.types.join(", ") : ""}</span></div>
-              <span className={styles.plan}>{user.plan}</span>
+              <span className={styles.plan}>{user.accountState === "invite_pending" ? "invite pending" : user.plan}</span>
               <time>{formatDate(user.createdAt)}</time>
             </div>) : <p className={styles.empty}>No product users yet.</p>}
           </div>

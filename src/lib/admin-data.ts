@@ -15,6 +15,8 @@ export type AdminUserRow = {
   organizations: string[];
   plan: string;
   subscriptionStatus: string;
+  accountState: "active" | "invite_pending";
+  emailConfirmedAt: string | null;
 };
 
 async function listAuthUsers(admin: AdminClient) {
@@ -111,11 +113,15 @@ export async function getAdminData(admin: AdminClient) {
         organizations: organizationNames,
         plan: firstSubscription?.plan ?? "—",
         subscriptionStatus: firstSubscription?.status ?? "—",
+        accountState: (user.email_confirmed_at || user.last_sign_in_at ? "active" : "invite_pending") as AdminUserRow["accountState"],
+        emailConfirmedAt: user.email_confirmed_at ?? null,
       };
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const pendingAccountants = accountantProfiles.filter(item => item.approval_status === "pending");
+  const activeUsers = users.filter(item => item.accountState === "active");
+  const pendingUserInvites = users.filter(item => item.accountState === "invite_pending");
   const activeSubscriptions =
     subscriptions.filter(item => item.status === "active").length +
     accountantSubscriptions.filter(item => item.status === "active").length;
@@ -128,7 +134,8 @@ export async function getAdminData(admin: AdminClient) {
 
   return {
     stats: {
-      users: users.length,
+      users: activeUsers.length,
+      pendingUserInvites: pendingUserInvites.length,
       independents: companies.filter(item => item.entity_kind === "independent").length,
       companies: companies.filter(item => item.entity_kind === "company").length,
       accountants: accountantProfiles.length,
@@ -148,5 +155,83 @@ export async function getAdminData(admin: AdminClient) {
     recentWaitlist: waitlist.slice(0, 6),
     waitlist,
     pendingAccountants: pendingAccountants.slice(0, 6),
+  };
+}
+
+
+export async function getAdminUserDetail(admin: AdminClient, userId: string) {
+  const { data: authResult, error: authError } = await admin.auth.admin.getUserById(userId);
+  if (authError) throw new Error(authError.message);
+  const user = authResult.user;
+  if (!user || user.email?.toLowerCase() === ZUELEN_ADMIN_EMAIL) return null;
+
+  const [
+    profileResult,
+    membershipsResult,
+    accountantResult,
+  ] = await Promise.all([
+    admin.from("user_profiles").select("full_name,locale,created_at,updated_at").eq("user_id", userId).maybeSingle(),
+    admin.from("organization_members").select("organization_id,role,created_at").eq("user_id", userId).order("created_at", { ascending: true }),
+    admin.from("accountant_profiles").select("*").eq("user_id", userId).maybeSingle(),
+  ]);
+  if (profileResult.error) throw new Error(profileResult.error.message);
+  if (membershipsResult.error) throw new Error(membershipsResult.error.message);
+  if (accountantResult.error) throw new Error(accountantResult.error.message);
+
+  const memberships = membershipsResult.data ?? [];
+  const organizationIds = memberships.map(item => item.organization_id);
+
+  let organizations:any[] = [];
+  let companies:any[] = [];
+  let subscriptions:any[] = [];
+  if (organizationIds.length) {
+    const [orgResult, companyResult, subResult] = await Promise.all([
+      admin.from("organizations").select("id,name,slug,owner_id,created_at").in("id", organizationIds),
+      admin.from("companies").select("*").in("organization_id", organizationIds),
+      admin.from("organization_subscriptions").select("*").in("organization_id", organizationIds),
+    ]);
+    if (orgResult.error) throw new Error(orgResult.error.message);
+    if (companyResult.error) throw new Error(companyResult.error.message);
+    if (subResult.error) throw new Error(subResult.error.message);
+    organizations = orgResult.data ?? [];
+    companies = companyResult.data ?? [];
+    subscriptions = subResult.data ?? [];
+  }
+
+  let accountantSubscription = null;
+  if (accountantResult.data?.id) {
+    const { data, error } = await admin
+      .from("accountant_listing_subscriptions")
+      .select("*")
+      .eq("profile_id", accountantResult.data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    accountantSubscription = data;
+  }
+
+  const { data: waitlist, error: waitlistError } = user.email
+    ? await admin.from("early_access_waitlist").select("*").eq("email", user.email.toLowerCase()).maybeSingle()
+    : { data: null, error: null };
+  if (waitlistError) throw new Error(waitlistError.message);
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email ?? "—",
+      createdAt: user.created_at,
+      lastSignInAt: user.last_sign_in_at ?? null,
+      emailConfirmedAt: user.email_confirmed_at ?? null,
+      phone: user.phone ?? null,
+      providers: user.app_metadata?.providers ?? [],
+      metadata: user.user_metadata ?? {},
+    },
+    profile: profileResult.data,
+    memberships,
+    organizations,
+    companies,
+    subscriptions,
+    accountant: accountantResult.data,
+    accountantSubscription,
+    waitlist,
   };
 }

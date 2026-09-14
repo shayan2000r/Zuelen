@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { BadgeCheck, BriefcaseBusiness, Building2, Clock3, ExternalLink, MailCheck, RefreshCw, ShieldCheck, UserRound, UsersRound, X } from "lucide-react";
+import { BadgeCheck, BriefcaseBusiness, Building2, Clock3, ExternalLink, MailCheck, RefreshCw, UserRound, UsersRound, X } from "lucide-react";
 import { requireZuelenAdmin } from "@/lib/admin";
 import { inviteEarlyAccessAction, rejectEarlyAccessAction } from "./actions";
 import styles from "./early-access-admin.module.css";
@@ -31,7 +30,7 @@ function formatDate(value: string | null) {
 }
 
 export default async function EarlyAccessAdminPage({ searchParams }: { searchParams: Promise<Params> }) {
-  const { admin, email } = await requireZuelenAdmin("/admin/early-access");
+  const { admin } = await requireZuelenAdmin("/admin/early-access");
   const params = await searchParams;
 
   const { data, error } = await admin
@@ -51,11 +50,6 @@ export default async function EarlyAccessAdminPage({ searchParams }: { searchPar
   };
 
   return <main className={styles.shell}>
-    <header className={styles.topbar}>
-      <Link href="/admin" className={styles.brand}><img src="/zuelen-icon.png" alt=""/><strong>Zuelen</strong><span>Admin · Waitlist</span></Link>
-      <div className={styles.links}><Link href="/admin">Overview</Link><Link href="/admin/users">Users</Link><Link href="/admin/accountants">Accountants</Link><span><ShieldCheck size={14}/>{email}</span></div>
-    </header>
-
     <div className={styles.page}>
       <section className={styles.hero}>
         <div><span className={styles.eyebrow}><UsersRound size={14}/> Controlled rollout</span><h1>Manage the Zuelen access list.</h1><p>Review requests, send personal invitations and track activation without opening public account creation.</p></div>
@@ -70,6 +64,7 @@ export default async function EarlyAccessAdminPage({ searchParams }: { searchPar
       {params.result === "invited" ? <div className={styles.notice}><MailCheck size={15}/> Invitation sent successfully.</div> : null}
       {params.result === "rejected" ? <div className={styles.notice}><X size={15}/> Request moved out of the active rollout queue.</div> : null}
       {params.result === "already-active" ? <div className={styles.notice}><BadgeCheck size={15}/> This user is already activated.</div> : null}
+      {params.result === "invite-error" ? <div className={styles.errorNotice}><X size={15}/> The invitation could not be delivered. No access was activated; you can safely retry.</div> : null}
 
       <section className={styles.list}>
         {ordered.length ? ordered.map(item => {
