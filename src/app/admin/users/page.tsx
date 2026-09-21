@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ExternalLink, Search, UsersRound } from "lucide-react";
+import { ExternalLink, MailPlus, Search, UsersRound } from "lucide-react";
 import { requireZuelenAdmin } from "@/lib/admin";
 import { getAdminData } from "@/lib/admin-data";
+import { inviteTesterAction } from "./actions";
 import styles from "./users.module.css";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +14,35 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+const testerMessages: Record<string, { tone: "success" | "error" | "warning"; text: string }> = {
+  invited: {
+    tone: "success",
+    text: "Tester invitation sent. They can set their password from the email and will continue directly to onboarding.",
+  },
+  "already-exists": {
+    tone: "warning",
+    text: "That email already belongs to a Zuelen user. Use a different tester email or inspect the existing account.",
+  },
+  "invalid-email": {
+    tone: "error",
+    text: "Enter a valid email address before sending the tester invitation.",
+  },
+  "invite-error": {
+    tone: "error",
+    text: "The tester invitation could not be delivered. No tester access was left behind.",
+  },
+};
+
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; tester?: string }>;
+}) {
   const { admin } = await requireZuelenAdmin("/admin/users");
   const data = await getAdminData(admin);
-  const { q = "" } = await searchParams;
+  const { q = "", tester = "" } = await searchParams;
   const query = q.trim().toLowerCase();
+  const testerMessage = testerMessages[tester];
 
   const users = query ? data.users.filter(user =>
     user.email.toLowerCase().includes(query) ||
@@ -32,6 +57,24 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
         <div><span>Users</span><h1>Product users.</h1><p>Authenticated Zuelen users, their workspace type, organizations, plan status and recent sign-in activity.</p></div>
         <div className={styles.total}><UsersRound size={18}/><strong>{data.stats.users}</strong><span>Total users</span></div>
       </section>
+
+      <section className={styles.testerCard}>
+        <div className={styles.testerIcon}><MailPlus size={18}/></div>
+        <div className={styles.testerCopy}>
+          <span>Usability testing</span>
+          <h2>Invite a tester</h2>
+          <p>Send a private Zuelen invitation without adding the person to the public waitlist. The tester receives an email, creates their password, then continues directly to onboarding.</p>
+        </div>
+        <form className={styles.testerForm} action={inviteTesterAction}>
+          <label htmlFor="tester-email">Tester email</label>
+          <div>
+            <input id="tester-email" name="email" type="email" placeholder="tester@example.com" autoComplete="off" required/>
+            <button type="submit">Send invitation</button>
+          </div>
+        </form>
+      </section>
+
+      {testerMessage ? <div className={styles.notice} data-tone={testerMessage.tone}>{testerMessage.text}</div> : null}
 
       <form className={styles.search} action="/admin/users">
         <Search size={15}/>
