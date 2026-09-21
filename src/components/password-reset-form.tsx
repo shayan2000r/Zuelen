@@ -2,13 +2,21 @@
 
 import { Check, LoaderCircle, LockKeyhole } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, createRecoveryClient } from "@/lib/supabase/client";
 import styles from "./security-settings.module.css";
 
-export function PasswordResetForm({ locale }: { locale: "en" | "fr" }) {
+export function PasswordResetForm({
+  locale,
+  onboardingAfterReset = false,
+}: {
+  locale: "en" | "fr";
+  onboardingAfterReset?: boolean;
+}) {
   const fr = locale === "fr";
   const l = (en: string, french: string) => fr ? french : en;
+  const router = useRouter();
   const appSupabase = useMemo(() => createClient(), []);
   const recoverySupabase = useMemo(() => createRecoveryClient(), []);
   const sessionMode = useRef<"app" | "recovery" | null>(null);
@@ -37,15 +45,15 @@ export function PasswordResetForm({ locale }: { locale: "en" | "fr" }) {
     ]).then(([recoveryResult, appResult]) => {
       if (!active) return;
 
-      if (recoveryResult.data.session) {
-        sessionMode.current = "recovery";
+      if (appResult.data.session) {
+        sessionMode.current = "app";
         setReady(true);
         setMessage(null);
         return;
       }
 
-      if (appResult.data.session) {
-        sessionMode.current = "app";
+      if (recoveryResult.data.session) {
+        sessionMode.current = "recovery";
         setReady(true);
         setMessage(null);
         return;
@@ -96,6 +104,12 @@ export function PasswordResetForm({ locale }: { locale: "en" | "fr" }) {
       const { error } = await activeClient.auth.updateUser({ password });
       if (error) throw error;
 
+      if (onboardingAfterReset && mode === "app") {
+        router.replace("/setup");
+        router.refresh();
+        return;
+      }
+
       await Promise.allSettled([
         recoverySupabase.auth.signOut(),
         appSupabase.auth.signOut(),
@@ -131,8 +145,12 @@ export function PasswordResetForm({ locale }: { locale: "en" | "fr" }) {
       <div className={styles.resetIcon}><LockKeyhole size={20} /></div>
       <h1>{l("Choose a new password", "Choisissez un nouveau mot de passe")}</h1>
       <p>{l(
-        "Use a unique password you do not reuse on another service.",
-        "Utilisez un mot de passe unique que vous ne réutilisez pas sur un autre service.",
+        onboardingAfterReset
+          ? "Create your password to activate your Zuelen access."
+          : "Use a unique password you do not reuse on another service.",
+        onboardingAfterReset
+          ? "Créez votre mot de passe pour activer votre accès à Zuelen."
+          : "Utilisez un mot de passe unique que vous ne réutilisez pas sur un autre service.",
       )}</p>
       <label>
         <span>{l("New password", "Nouveau mot de passe")}</span>
@@ -161,7 +179,7 @@ export function PasswordResetForm({ locale }: { locale: "en" | "fr" }) {
       {message ? <div className={styles.error} role="alert">{message}</div> : null}
       <button type="submit" disabled={!ready || busy}>
         {busy ? <LoaderCircle className={styles.spin} size={16} /> : null}
-        {l("Update password", "Mettre à jour le mot de passe")}
+        {l(onboardingAfterReset ? "Set password & continue" : "Update password", onboardingAfterReset ? "Définir le mot de passe et continuer" : "Mettre à jour le mot de passe")}
       </button>
     </form>
   );
