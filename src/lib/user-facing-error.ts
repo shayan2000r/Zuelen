@@ -1,4 +1,5 @@
-import "server-only";\nimport { sanitizePublicErrorMessage } from "@/lib/public-error-message";
+import "server-only";
+import { sanitizePublicErrorMessage } from "@/lib/public-error-message";
 
 type Locale = "en" | "fr";
 
@@ -10,7 +11,6 @@ function extractMessage(error: unknown) {
   }
   return typeof error === "string" ? error : "";
 }
-
 
 export function userFacingDataError(
   error: unknown,
@@ -24,16 +24,9 @@ export function userFacingDataError(
       ? "Zuelen n’a pas pu terminer cette action. Réessayez dans un instant."
       : "Zuelen couldn't complete this action. Please try again in a moment.");
 
-  if (!message) return safeFallback;
-
-  const technical =
-    technicalPatterns.some((pattern) => pattern.test(message)) ||
-    message.length > 260;
-
-  if (technical) {
+  const publicMessage = sanitizePublicErrorMessage(message, safeFallback);
+  if (publicMessage === safeFallback && message && message !== safeFallback) {
     console.error("Suppressed technical error from user interface:", message);
-    return safeFallback;
   }
-
-  return message;
+  return publicMessage;
 }
