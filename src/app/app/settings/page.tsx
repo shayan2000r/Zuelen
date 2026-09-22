@@ -44,28 +44,36 @@ export default async function SettingsPage() {
       eyebrow={fr ? "Profil et paramètres" : "Profile & settings"}
       title={fr ? "Paramètres" : "Settings"}
       description={independent
-        ? (fr ? "Gérez votre profil personnel, les accès et les informations factuelles de l’activité exercée en votre nom propre." : "Manage your personal profile, access and the factual details of the activity you operate in your own name.")
-        : (fr ? "Gérez votre compte personnel, les accès de l’équipe et le profil de l’entreprise selon votre rôle dans l’organisation." : "Manage your personal account, team access and the company profile according to your organization role.")}
+        ? (fr ? "Gérez votre compte, vos accès et les informations de l’activité exercée en votre nom propre." : "Manage your account, access and the business details for the activity you operate in your own name.")
+        : (fr ? "Gérez votre compte, les accès de l’équipe et les informations de l’entreprise." : "Manage your account, team access and business details in one place.")}
     />
-    <div className={styles.settingsLinks}>
-      <Link href="/app/settings/profile" className={styles.teamLink}><span><UserRound size={18}/></span><div><strong>{fr ? "Mon profil" : "My Profile"}</strong><p>{fr ? "Votre nom, votre e-mail et votre photo de profil personnelle." : "Your name, email and personal profile image."}</p></div><ArrowRight size={16}/></Link>
-      <Link href="/app/settings/security" className={styles.teamLink}><span><ShieldCheck size={18}/></span><div><strong>{fr ? "Sécurité" : "Security"}</strong><p>{fr ? "Mot de passe et double authentification facultative." : "Password and optional two-factor authentication."}</p></div><ArrowRight size={16}/></Link>
-      <Link href="/app/settings/team" className={styles.teamLink}><span><UsersRound size={18}/></span><div><strong>{fr ? "Équipe et accès" : "Team & Access"}</strong><p>{fr ? (canManage ? "Consultez les membres et rôles, invitez des personnes et gérez les accès." : "Consultez les membres et rôles de cette organisation.") : `See members and roles${canManage ? ", invite people and manage access" : " in this organization"}.`}</p></div><ArrowRight size={16}/></Link>
-    </div>
-    {canManage ? <>
-      <BrandImageUploader organizationId={workspace.organization.id} companyId={workspace.company.id} currentPath={workspace.company.brand_image_path} currentUrl={brand.data?.signedUrl ?? null} companyName={workspace.company.trading_name || workspace.company.legal_name}/>
-      <CompanySettingsForm company={workspace.company} independentProfile={independentProfileResult.data} taxProfile={taxProfileResult.data}/>
-    </> : <section className={styles.readOnlyCompany}>
-      <div className={styles.readOnlyHead}><span><Building2 size={18}/></span><div><p>{independent ? (fr ? "Profil de l’activité" : "Activity profile") : (fr ? "Profil de l’entreprise" : "Company profile")}</p><h2>{workspace.company.trading_name || workspace.company.legal_name}</h2></div><em>{localizedRole(locale, workspace.role)} · {fr ? "lecture seule" : "read only"}</em></div>
-      <div className={styles.readOnlyGrid}>
-        <div><span>{independent ? (fr ? "Nom légal personnel" : "Personal legal name") : (fr ? "Dénomination légale" : "Legal name")}</span><strong>{workspace.company.legal_name}</strong></div>
-        {!independent ? <div><span>{fr ? "Forme juridique" : "Legal form"}</span><strong>{workspace.company.legal_form}</strong></div> : null}
-        <div><span>{fr ? "Numéro RCS" : "RCS number"}</span><strong>{workspace.company.rcs_number || "—"}</strong></div>
-        <div><span>{fr ? "Numéro TVA" : "VAT number"}</span><strong>{workspace.company.vat_number || "—"}</strong></div>
-        <div><span>{independent ? (fr ? "Adresse de l’activité" : "Activity address") : (fr ? "Siège social" : "Registered office")}</span><strong>{address(workspace.company.registered_address, "street")}, {address(workspace.company.registered_address, "postal_code")} {address(workspace.company.registered_address, "city")}</strong></div>
-        <div><span>{fr ? "Devise de base" : "Base currency"}</span><strong>{workspace.company.base_currency}</strong></div>
+
+    <section className={styles.settingsGroup}>
+      <div className={styles.groupHead}><div><p>{fr?"Compte":"Account"}</p><h2>{fr?"Profil et accès":"Profile & access"}</h2><span>{fr?"Vos informations personnelles, sécurité et accès à l’organisation.":"Your personal information, security and organization access."}</span></div></div>
+      <div className={styles.settingsLinks}>
+        <Link href="/app/settings/profile" className={styles.teamLink}><span><UserRound size={18}/></span><div><strong>{fr ? "Mon profil" : "My Profile"}</strong><p>{fr ? "Votre nom, votre e-mail et votre photo de profil personnelle." : "Your name, email and personal profile image."}</p></div><ArrowRight size={16}/></Link>
+        <Link href="/app/settings/security" className={styles.teamLink}><span><ShieldCheck size={18}/></span><div><strong>{fr ? "Sécurité" : "Security"}</strong><p>{fr ? "Mot de passe et double authentification facultative." : "Password and optional two-factor authentication."}</p></div><ArrowRight size={16}/></Link>
+        <Link href="/app/settings/team" className={styles.teamLink}><span><UsersRound size={18}/></span><div><strong>{fr ? "Équipe et accès" : "Team & Access"}</strong><p>{fr ? (canManage ? "Consultez les membres et rôles, invitez des personnes et gérez les accès." : "Consultez les membres et rôles de cette organisation.") : `See members and roles${canManage ? ", invite people and manage access" : " in this organization"}.`}</p></div><ArrowRight size={16}/></Link>
       </div>
-      <p className={styles.readOnlyNote}>{fr ? "Seul un Propriétaire ou un Administrateur peut modifier ces informations." : "Only an Owner or Admin can change these details."}</p>
-    </section>}
+    </section>
+
+    <section className={styles.settingsGroup}>
+      <div className={styles.groupHead}><span className={styles.groupIcon}><Building2 size={18}/></span><div><p>{independent?(fr?"Activité":"Business"):(fr?"Entreprise":"Business")}</p><h2>{fr?"Informations professionnelles":"Business details"}</h2><span>{fr?"Ces informations sont réutilisées dans les factures, documents, rapports et parcours fiscaux.":"These details are reused in invoices, documents, reports and tax workflows."}</span></div></div>
+      {canManage ? <>
+        <BrandImageUploader organizationId={workspace.organization.id} companyId={workspace.company.id} currentPath={workspace.company.brand_image_path} currentUrl={brand.data?.signedUrl ?? null} companyName={workspace.company.trading_name || workspace.company.legal_name}/>
+        <CompanySettingsForm company={workspace.company} independentProfile={independentProfileResult.data} taxProfile={taxProfileResult.data}/>
+      </> : <section className={styles.readOnlyCompany}>
+        <div className={styles.readOnlyHead}><span><Building2 size={18}/></span><div><p>{independent ? (fr ? "Profil de l’activité" : "Activity profile") : (fr ? "Profil de l’entreprise" : "Company profile")}</p><h2>{workspace.company.trading_name || workspace.company.legal_name}</h2></div><em>{localizedRole(locale, workspace.role)} · {fr ? "lecture seule" : "read only"}</em></div>
+        <div className={styles.readOnlyGrid}>
+          <div><span>{independent ? (fr ? "Nom légal personnel" : "Personal legal name") : (fr ? "Dénomination légale" : "Legal name")}</span><strong>{workspace.company.legal_name}</strong></div>
+          {!independent ? <div><span>{fr ? "Forme juridique" : "Legal form"}</span><strong>{workspace.company.legal_form}</strong></div> : null}
+          <div><span>{fr ? "Numéro RCS" : "RCS number"}</span><strong>{workspace.company.rcs_number || "—"}</strong></div>
+          <div><span>{fr ? "Numéro TVA" : "VAT number"}</span><strong>{workspace.company.vat_number || "—"}</strong></div>
+          <div><span>{independent ? (fr ? "Adresse de l’activité" : "Business address") : (fr ? "Siège social" : "Registered office")}</span><strong>{address(workspace.company.registered_address, "street")}, {address(workspace.company.registered_address, "postal_code")} {address(workspace.company.registered_address, "city")}</strong></div>
+          <div><span>{fr ? "Devise de base" : "Base currency"}</span><strong>{workspace.company.base_currency}</strong></div>
+        </div>
+        <p className={styles.readOnlyNote}>{fr ? "Seul un Propriétaire ou un Administrateur peut modifier ces informations." : "Only an Owner or Admin can change these details."}</p>
+      </section>}
+    </section>
   </V2Page>;
 }
