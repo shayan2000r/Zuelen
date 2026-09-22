@@ -5,11 +5,11 @@ import { assertUsageAvailable, billingLimitMessage } from "@/lib/billing";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
-export type TransactionActionState={status:"idle"|"success"|"error";message:string;journalEntryId?:string};
+export type TransactionActionState={status:"idle"|"success"|"error";message:string;journalEntryId?:string;transactionId?:string;matchedExisting?:boolean};
 const treatments=["domestic","eu_b2b_reverse_charge","non_eu","exempt_or_zero","unknown"];
 function roundMoney(value:number){return Math.round((value+Number.EPSILON)*100)/100}
 function validUuid(value:string){return /^[0-9a-f-]{36}$/i.test(value)}
-function refreshBooks(){for(const path of ["/app","/app/transactions","/app/accounting","/app/taxes","/app/vat","/app/banking","/app/year-end","/app/settings/usage"])revalidatePath(path)}
+function refreshBooks(){for(const path of ["/app","/app/transactions","/app/documents","/app/accounting","/app/taxes","/app/vat","/app/banking","/app/year-end","/app/settings/usage"])revalidatePath(path)}
 function calculateVat(formData:FormData){
  const entered=Number(formData.get("amount")??formData.get("amount_gross")),rate=Number(formData.get("vat_rate")||0),included=String(formData.get("vat_included")??"yes")!=="no",treatment=String(formData.get("vat_treatment")??"domestic");
  if(!Number.isFinite(entered)||entered<=0)return{error:"Amount must be greater than zero."} as const;
@@ -30,6 +30,16 @@ export async function createSourceTransaction(_previous:TransactionActionState,f
  const supabase=await createClient();const{data,error}=await supabase.from("source_transactions").insert({organization_id:workspace.organization.id,company_id:workspace.company.id,occurred_on:occurredOn,direction,amount_gross:vat.gross,amount_net:vat.net,vat_amount:vat.vat,vat_rate:vat.rate,vat_treatment:vat.treatment,counterparty_country:country||null,currency:workspace.company.base_currency||"EUR",counterparty_name:counterparty||null,description:description||null,source_type:"manual",classification_status:"review",created_by:workspace.userId}).select("id").single();
  if(error){const friendly=billingLimitMessage(new Error(error.message),workspace.profile?.locale==="fr"?"fr":"en");return{status:"error",message:friendly??error.message}}if(data?.id)await supabase.rpc("apply_source_transaction_suggestion",{p_source_transaction_id:data.id});refreshBooks();
  return{status:"success",message:vat.treatment==="eu_b2b_reverse_charge"?`Transaction recorded · ${vat.net.toFixed(2)} net · ${vat.vat.toFixed(2)} reverse-charge VAT will self-balance when posted.`:`Transaction recorded · net ${vat.net.toFixed(2)} · VAT ${vat.vat.toFixed(2)}.`};
+}
+
+export async function createTransactionFromDocumentAction(documentId:string):Promise<TransactionActionState>{
+ const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};if(!validUuid(documentId))return{status:"error",message:"The document reference is invalid."};
+ const supabase=await createClient();const{data,error}=await supabase.rpc("create_source_transaction_from_document",{p_document_id:documentId});
+ if(error){const friendly=billingLimitMessage(new Error(error.message),workspace.profile?.locale==="fr"?"fr":"en");return{status:"error",message:friendly??error.message}}
+ const result=data&&typeof data==="object"?data as Record<string,unknown>:{},transactionId=typeof result.transaction_id==="string"?result.transaction_id:undefined,matchedExisting=result.matched_existing===true,alreadyCreated=result.already_created===true;refreshBooks();
+ if(matchedExisting)return{status:"success",message:"A matching transaction already exists, so Zuelen did not create a duplicate. The document is ready to be linked to that transaction.",transactionId,matchedExisting:true};
+ if(alreadyCreated)return{status:"success",message:"This document already has a transaction. Opening the existing transaction for review.",transactionId};
+ return{status:"success",message:"Transaction created from the document and added to review. The source evidence is already linked.",transactionId};
 }
 
 export async function postSourceTransaction(_previous:TransactionActionState,formData:FormData):Promise<TransactionActionState>{const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};const id=String(formData.get("source_transaction_id")??"").trim(),code=String(formData.get("account_code")??"").trim();if(!validUuid(id))return{status:"error",message:"The transaction reference is invalid."};if(!/^\d{3,6}$/.test(code))return{status:"error",message:"Choose a valid accounting category."};const supabase=await createClient();const{data,error}=await supabase.rpc("classify_and_post_source_transaction",{p_source_transaction_id:id,p_account_code:code});if(error)return{status:"error",message:error.message};refreshBooks();return{status:"success",message:"Posted successfully. The journal entry is locked, auditable, and the treatment is remembered for this counterparty.",journalEntryId:typeof data==="string"?data:undefined}}
