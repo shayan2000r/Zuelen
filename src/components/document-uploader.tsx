@@ -54,12 +54,16 @@ export function DocumentUploader({organizationId,companyId,autoOpen=false}:{orga
        setFile(null);if(inputRef.current)inputRef.current.value="";router.refresh();return;
      }
      const transaction=await createTransactionFromDocumentAction(inserted.id);
-     if(transaction.status!=="success"){
-       setMessage(`Document saved, but no transaction was created: ${transaction.message}`);
+     if(transaction.status!=="success"||!transaction.review){
+       setMessage(`Document saved, but no transaction was prepared: ${transaction.message}`);
        setFile(null);if(inputRef.current)inputRef.current.value="";router.refresh();return;
      }
-     success=`Document secured. ${transaction.message}`;
-     redirectPath="/app/transactions";redirectDelay=1200;
+     setTransactionReview(transaction.review);
+     setSelectedAccountCode(transaction.review.suggestedCode??"");
+     setEditingAccount(!transaction.review.suggestedCode);
+     setTransactionMessage(transaction.message);
+     setTransactionPosted(transaction.review.classificationStatus==="posted");
+     setFile(null);if(inputRef.current)inputRef.current.value="";router.refresh();return;
    }else if(purpose==="opening"){
      setOpeningStage("processing");setMessage("Document secured. Zuelen is extracting the closing PCN balances, validating the year and accounts, and building the opening position…");
      const formData=new FormData();formData.set("document_id",inserted.id);
@@ -68,6 +72,7 @@ export function DocumentUploader({organizationId,companyId,autoOpen=false}:{orga
    }
    setFile(null);if(inputRef.current)inputRef.current.value="";setMessage(success);router.refresh();if(redirectPath)window.setTimeout(()=>{close();router.push(redirectPath!)},redirectDelay)
  }catch(error){if(purpose==="opening")setOpeningStage("error");setMessage(error instanceof Error?error.message:"The document could not be uploaded.")}finally{setBusy(false)}}
+ async function finalizeTransaction(){if(!transactionReview)return;if(!selectedAccountCode){setEditingAccount(true);setTransactionMessage("Choose an accounting category before adding the transaction.");return}setBusy(true);setTransactionMessage(null);try{const formData=new FormData();formData.set("source_transaction_id",transactionReview.id);formData.set("account_code",selectedAccountCode);const result=await postSourceTransaction(transactionInitial,formData);if(result.status!=="success"){setTransactionMessage(result.message);return}setTransactionPosted(true);setTransactionMessage("Added to Transactions and posted to the ledger. The receipt stays linked as evidence.");router.refresh();window.setTimeout(()=>{close();router.push("/app/transactions")},900)}finally{setBusy(false)}}
  const selected=reports.find(r=>r.value===report)!;
  if(!mounted||!canBookkeep)return null;
  const intakeTitle=scanMode?"Scan document":purpose==="opening"?"Import opening position":"Upload document";
