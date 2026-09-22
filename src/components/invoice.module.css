@@ -16,3 +16,5 @@
 .addLine{border-color:var(--invoice-form-border);color:var(--invoice-form-text)}
 .previewStage{background:var(--z-bg-subtle)}
 :global(html[data-zuelen-theme="dark"]) .composerForm{--invoice-form-bg:#121713;--invoice-form-text:#f2f6f1;--invoice-form-muted:#9aa79d;--invoice-form-border:#2c382f;--invoice-field-bg:#18201a;--invoice-field-focus:#1d281f;--invoice-accent:#8de5a0}
+
+.complianceWarning{display:flex;align-items:flex-start;gap:10px;margin:15px 0 0;padding:12px 13px;border:1px solid #6e5a2e;border-radius:11px;background:#2b2618;color:#f0d990}.complianceWarning svg{flex:0 0 auto;margin-top:1px}.complianceWarning strong{display:block;font-size:10px;color:#ffe7a8}.complianceWarning span{display:block;margin-top:3px;font-size:9px;line-height:1.55;color:#d8c99f}:global(html[data-zuelen-theme="light"]) .complianceWarning{border-color:#e8d8aa;background:#fff8e6;color:#7b5c13}:global(html[data-zuelen-theme="light"]) .complianceWarning strong{color:#6d4f09}:global(html[data-zuelen-theme="light"]) .complianceWarning span{color:#7d6a3f}
