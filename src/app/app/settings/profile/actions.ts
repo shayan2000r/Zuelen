@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { normalizeLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { userFacingDataError } from "@/lib/user-facing-error";
 
 export type ProfileState={status:"idle"|"success"|"error";message:string};
 const allowedTypes=new Set(["image/jpeg","image/png","image/webp"]);
@@ -27,18 +28,18 @@ export async function savePersonalProfile(_previous:ProfileState,formData:FormDa
   const nextPath=`${workspace.userId}/avatar.${extension}`;
   const bytes=Buffer.from(await avatar.arrayBuffer());
   const{error:uploadError}=await supabase.storage.from("user-avatars").upload(nextPath,bytes,{contentType:avatar.type,upsert:true,cacheControl:"3600"});
-  if(uploadError)return{status:"error",message:`${fr?"Impossible d’importer la photo de profil":"Could not upload profile image"}: ${uploadError.message}`};
+  if(uploadError)return{status:"error",message:`${fr?"Impossible d’importer la photo de profil":"Could not upload profile image"}: ${userFacingDataError(uploadError)}`};
   if(avatarPath&&avatarPath!==nextPath)await supabase.storage.from("user-avatars").remove([avatarPath]);
   avatarPath=nextPath;
  }
  const removeAvatar=formData.get("remove_avatar")==="yes";
  if(removeAvatar&&avatarPath){await supabase.storage.from("user-avatars").remove([avatarPath]);avatarPath=null;}
  const{error:profileError}=await supabase.from("user_profiles").upsert({user_id:workspace.userId,full_name:fullName||null,avatar_path:avatarPath,locale,updated_at:new Date().toISOString()},{onConflict:"user_id"});
- if(profileError)return{status:"error",message:profileError.message};
+ if(profileError)return{status:"error",message:userFacingDataError(profileError)};
  let emailMessage="";
  if(requestedEmail!==workspace.email?.toLowerCase()){
   const{error:emailError}=await supabase.auth.updateUser({email:requestedEmail});
-  if(emailError)return{status:"error",message:`${fr?"Profil enregistré, mais le changement d’adresse e-mail n’a pas pu démarrer":"Profile saved, but the email change could not start"}: ${emailError.message}`};
+  if(emailError)return{status:"error",message:`${fr?"Profil enregistré, mais le changement d’adresse e-mail n’a pas pu démarrer":"Profile saved, but the email change could not start"}: ${userFacingDataError(emailError)}`};
   emailMessage=fr?" Consultez votre boîte de réception pour confirmer la nouvelle adresse e-mail.":" Check your inbox to confirm the new email address before it becomes active.";
  }
  for(const path of["/app","/app/settings","/app/settings/profile","/app/settings/team"])revalidatePath(path);
