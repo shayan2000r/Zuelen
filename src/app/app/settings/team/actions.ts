@@ -7,6 +7,7 @@ import { seatLimitMessage } from "@/lib/billing";
 import { allowEarlyAccessEmail } from "@/lib/early-access";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_WORKSPACE_COOKIE, getWorkspace } from "@/lib/workspace";
+import { userFacingDataError } from "@/lib/user-facing-error";
 
 export type TeamActionState={status:"idle"|"success"|"error";message:string};
 const ROLES=new Set(["admin","accountant","bookkeeper","viewer"]);
@@ -21,7 +22,7 @@ export async function inviteTeamMemberAction(_previous:TeamActionState,formData:
  if(!ROLES.has(role))return{status:"error",message:"Choose a valid role."};
  const supabase=await createClient();
  const{data,error}=await supabase.rpc("create_organization_invitation",{p_organization_id:workspace.organization.id,p_email:email,p_role:role});
- if(error)return{status:"error",message:seatLimitMessage(new Error(error.message),workspace.profile?.locale==="fr"?"fr":"en")??error.message};
+ if(error)return{status:"error",message:seatLimitMessage(new Error(error.message),workspace.profile?.locale==="fr"?"fr":"en")??userFacingDataError(error)};
  const invite=Array.isArray(data)?data[0]:null;
  if(!invite?.token)return{status:"error",message:"The invitation could not be created."};
  const requestHeaders=await headers(),host=requestHeaders.get("x-forwarded-host")||requestHeaders.get("host"),proto=requestHeaders.get("x-forwarded-proto")||"https";
@@ -31,7 +32,7 @@ export async function inviteTeamMemberAction(_previous:TeamActionState,formData:
  const{error:mailError}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:callback}});
  if(mailError){
   await supabase.rpc("revoke_organization_invitation",{p_organization_id:workspace.organization.id,p_invitation_id:invite.id});
-  return{status:"error",message:`Invitation email could not be sent: ${mailError.message}`};
+  return{status:"error",message:`Invitation email could not be sent: ${userFacingDataError(mailError)}`};
  }
  await allowEarlyAccessEmail(email,"manual");
  refreshTeam();
@@ -41,17 +42,17 @@ export async function inviteTeamMemberAction(_previous:TeamActionState,formData:
 export async function updateTeamMemberRoleAction(formData:FormData){
  const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.organization)throw new Error("Your session expired.");
  const userId=String(formData.get("user_id")??""),role=String(formData.get("role")??"");if(!ROLES.has(role))throw new Error("Invalid role.");
- const supabase=await createClient(),{error}=await supabase.rpc("update_organization_member_role",{p_organization_id:workspace.organization.id,p_user_id:userId,p_role:role});if(error)throw new Error(error.message);refreshTeam();
+ const supabase=await createClient(),{error}=await supabase.rpc("update_organization_member_role",{p_organization_id:workspace.organization.id,p_user_id:userId,p_role:role});if(error)throw new Error(userFacingDataError(error));refreshTeam();
 }
 
 export async function removeTeamMemberAction(formData:FormData){
  const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.organization)throw new Error("Your session expired.");
- const userId=String(formData.get("user_id")??"");const supabase=await createClient(),{error}=await supabase.rpc("remove_organization_member",{p_organization_id:workspace.organization.id,p_user_id:userId});if(error)throw new Error(error.message);refreshTeam();
+ const userId=String(formData.get("user_id")??"");const supabase=await createClient(),{error}=await supabase.rpc("remove_organization_member",{p_organization_id:workspace.organization.id,p_user_id:userId});if(error)throw new Error(userFacingDataError(error));refreshTeam();
 }
 
 export async function revokeTeamInvitationAction(formData:FormData){
  const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.organization)throw new Error("Your session expired.");
- const id=String(formData.get("invitation_id")??"");const supabase=await createClient(),{error}=await supabase.rpc("revoke_organization_invitation",{p_organization_id:workspace.organization.id,p_invitation_id:id});if(error)throw new Error(error.message);refreshTeam();
+ const id=String(formData.get("invitation_id")??"");const supabase=await createClient(),{error}=await supabase.rpc("revoke_organization_invitation",{p_organization_id:workspace.organization.id,p_invitation_id:id});if(error)throw new Error(userFacingDataError(error));refreshTeam();
 }
 
 export async function acceptTeamInvitationAction(formData:FormData){
