@@ -46,8 +46,17 @@ export function DocumentUploader({organizationId,companyId,autoOpen=false}:{orga
      setMessage("Document secured. Zuelen is reading the visible transaction details…");
      const formData=new FormData();formData.set("document_id",inserted.id);
      const extraction=await extractDocumentAction(extractionInitial,formData);
-     success=extraction.status==="success"?`Document secured. ${extraction.message}`:`Document secured. AI review could not complete: ${extraction.message}`;
-     redirectPath="/app/documents";redirectDelay=1200;
+     if(extraction.status!=="success"){
+       setMessage(`Document saved, but AI analysis could not create the transaction: ${extraction.message}`);
+       setFile(null);if(inputRef.current)inputRef.current.value="";router.refresh();return;
+     }
+     const transaction=await createTransactionFromDocumentAction(inserted.id);
+     if(transaction.status!=="success"){
+       setMessage(`Document saved, but no transaction was created: ${transaction.message}`);
+       setFile(null);if(inputRef.current)inputRef.current.value="";router.refresh();return;
+     }
+     success=`Document secured. ${transaction.message}`;
+     redirectPath="/app/transactions";redirectDelay=1200;
    }else if(purpose==="opening"){
      setOpeningStage("processing");setMessage("Document secured. Zuelen is extracting the closing PCN balances, validating the year and accounts, and building the opening position…");
      const formData=new FormData();formData.set("document_id",inserted.id);
