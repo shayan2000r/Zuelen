@@ -10,7 +10,8 @@ import { defaultDateForFiscalYear, fiscalYearBounds, getActiveFiscalYear } from 
 import { localizedAccountLabel, normalizeLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
-import { canBookkeep } from "@/lib/permissions";\nimport { userFacingDataError } from "@/lib/user-facing-error";
+import { canBookkeep } from "@/lib/permissions";
+import { userFacingDataError } from "@/lib/user-facing-error";
 import styles from "./transactions.module.css";
 
 export const dynamic="force-dynamic";
