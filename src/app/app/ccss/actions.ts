@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { deriveResidentTaxClass, type CivilStatus, type FiscalResidency, type TaxationMode } from "@/lib/personal-fiscal/tax-class";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { userFacingDataError } from "@/lib/user-facing-error";
 
 export type CcssActionState = { status: "idle" | "success" | "error"; message: string };
 
@@ -181,7 +182,7 @@ export async function saveCcssConfiguration(_previous: CcssActionState, formData
     supabase.from("ccss_profiles").upsert(ccssPayload, { onConflict: "user_id,tax_year" }),
   ]);
   const error = fiscalResult.error ?? ccssResult.error;
-  if (error) return { status: "error", message: error.message };
+  if (error) return { status: "error", message: userFacingDataError(error) };
   refresh();
   return { status: "success", message: localized(workspace, "Your CCSS and personal fiscal profiles are confirmed.", "Vos profils CCSS et fiscal personnel sont confirmés.") };
 }
@@ -230,7 +231,7 @@ export async function saveCcssStatement(_previous: CcssActionState, formData: Fo
     paid_date: paymentStatus === "paid" ? paidDate : null,
     source_document_id: sourceDocumentId,
   }, { onConflict: "user_id,company_id,contribution_month" });
-  if (error) return { status: "error", message: error.message };
+  if (error) return { status: "error", message: userFacingDataError(error) };
   refresh();
   return { status: "success", message: localized(workspace, "CCSS statement recorded with its official payment deadline.", "L’extrait CCSS et son échéance officielle ont été enregistrés.") };
 }
