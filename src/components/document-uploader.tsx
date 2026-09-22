@@ -10,7 +10,8 @@ import { processOpeningDocumentAction, type OpeningImportState } from "@/app/app
 import { createTransactionFromDocumentAction, postSourceTransaction, type TransactionActionState, type TransactionReview } from "@/app/app/transactions/actions";
 import { generateFinancialDocumentAction, type GeneratedDocumentState } from "@/app/app/documents/generated-actions";
 import { createClient } from "@/lib/supabase/client";
-import { useRolePermissions } from "@/components/role-context";\nimport { sanitizePublicErrorMessage } from "@/lib/public-error-message";
+import { useRolePermissions } from "@/components/role-context";
+import { sanitizePublicErrorMessage } from "@/lib/public-error-message";
 import { TransactionUploadReview } from "@/components/transaction-upload-review";
 import styles from "./documents.module.css";
 import createStyles from "./document-create.module.css";
