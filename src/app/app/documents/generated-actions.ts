@@ -5,6 +5,7 @@ import { hasPremiumAccess } from "@/lib/billing";
 import { fiscalYearBounds } from "@/lib/fiscal-year";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { userFacingDataError } from "@/lib/user-facing-error";
 
 export type GeneratedDocumentState={status:"idle"|"success"|"error";message:string;documentId?:string;upgradeRequired?:boolean};
 const REPORTS={profit_loss:"Profit & Loss",balance_sheet:"Balance Sheet",trial_balance:"Trial Balance",pcn:"PCN Closing Balances",annual_accounts:"Annual Accounts",annexe:"Annexe to the Annual Accounts",general_ledger:"General Ledger",general_journal:"General Journal"} as const;
@@ -24,10 +25,10 @@ export async function generateFinancialDocumentAction(_previous:GeneratedDocumen
  if(!validType(documentType))return{status:"error",message:"Choose a supported financial document."};
  const bounds=fiscalYearBounds(fiscalYear,workspace.company.fiscal_year_start_month),supabase=await createClient();
  const{data:filing,error:filingError}=await supabase.from("filings").select("id,period_label,status,rules_version,ledger_snapshot,snapshot_at,ledger_checksum,period_start,period_end").eq("company_id",workspace.company.id).eq("filing_type","ecdf_accounts").eq("period_label",String(fiscalYear)).order("snapshot_at",{ascending:false}).limit(1).maybeSingle();
- if(filingError)return{status:"error",message:filingError.message};
+ if(filingError)return{status:"error",message: userFacingDataError(filingError)};
  if(!filing?.ledger_snapshot)return{status:"error",message:`${fiscalYear} has no closing snapshot. Create the closing snapshot first.`};
  const{data:period,error:periodError}=await supabase.from("accounting_periods").select("status,locked_at").eq("company_id",workspace.company.id).eq("starts_on",filing.period_start||bounds.start).eq("ends_on",filing.period_end||bounds.end).maybeSingle();
- if(periodError)return{status:"error",message:periodError.message};
+ if(periodError)return{status:"error",message: userFacingDataError(periodError)};
  if(!period||!["soft_closed","hard_closed"].includes(period.status))return{status:"error",message:`${fiscalYear} must be closed before generating frozen financial documents.`};
  const snapshot=asObject(filing.ledger_snapshot);if(!snapshot)return{status:"error",message:"The closing snapshot is unreadable."};
  const payload:Record<string,unknown>={
@@ -51,7 +52,7 @@ export async function generateFinancialDocumentAction(_previous:GeneratedDocumen
  }
  const title=`${REPORTS[documentType]} · ${fiscalYear}`;
  const{data:generated,error}=await supabase.from("generated_documents").insert({organization_id:workspace.organization.id,company_id:workspace.company.id,filing_id:filing.id,fiscal_year:fiscalYear,document_type:documentType,title,generator_version:GENERATOR_VERSION,payload,created_by:workspace.userId}).select("id").single();
- if(error||!generated)return{status:"error",message:error?.message??"The financial document could not be generated."};
+ if(error||!generated)return{status:"error",message:error?userFacingDataError(error,"The financial document could not be generated."):"The financial document could not be generated."};
  revalidatePath("/app/documents");revalidatePath("/app/ecdf");
  return{status:"success",message:`${REPORTS[documentType]} generated from the frozen ${fiscalYear} snapshot.`,documentId:generated.id};
 }
@@ -60,6 +61,6 @@ export async function deleteGeneratedFinancialDocumentAction(formData:FormData):
  const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)throw new Error("Your session expired. Please sign in again.");
  const id=String(formData.get("document_id")??"");if(!validUuid(id))throw new Error("Invalid generated document.");
  const supabase=await createClient(),{error}=await supabase.from("generated_documents").delete().eq("company_id",workspace.company.id).eq("id",id);
- if(error)throw new Error(error.message);
+ if(error)throw new Error(userFacingDataError(error));
  revalidatePath("/app/documents");
 }
