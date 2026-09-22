@@ -5,12 +5,14 @@ import { assertUsageAvailable, billingLimitMessage } from "@/lib/billing";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import { userFacingDataError } from "@/lib/user-facing-error";
+import { canBookkeep } from "@/lib/permissions";
 
 export type TransactionReview={id:string;occurredOn:string;direction:string;amountGross:number;currency:string;counterpartyName:string;classificationStatus:string;suggestedCode:string|null;suggestedLabel:string|null;suggestionConfidence:number|null;suggestionReason:string|null;accounts:{code:string;label:string;accountType:string}[]};
-export type TransactionActionState={status:"idle"|"success"|"error";message:string;journalEntryId?:string;transactionId?:string;matchedExisting?:boolean;review?:TransactionReview};
+export type TransactionActionState={status:"idle"|"success"|"error";message:string;journalEntryId?:string;transactionId?:string;documentId?:string;matchedExisting?:boolean;review?:TransactionReview};
 const treatments=["domestic","eu_b2b_reverse_charge","non_eu","exempt_or_zero","unknown"];
 function roundMoney(value:number){return Math.round((value+Number.EPSILON)*100)/100}
 function validUuid(value:string){return /^[0-9a-f-]{36}$/i.test(value)}
+function safeEvidenceFileName(name:string){const parts=name.split("."),ext=parts.length>1?`.${parts.pop()?.toLowerCase().replace(/[^a-z0-9]/g,"")}`:"",base=parts.join(".").normalize("NFKD").replace(/[^a-zA-Z0-9-_]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80)||"evidence";return`${base}${ext}`}
 function refreshBooks(){for(const path of ["/app","/app/transactions","/app/documents","/app/accounting","/app/taxes","/app/vat","/app/banking","/app/year-end","/app/settings/usage"])revalidatePath(path)}
 function calculateVat(formData:FormData){
  const entered=Number(formData.get("amount")??formData.get("amount_gross")),rate=Number(formData.get("vat_rate")||0),included=String(formData.get("vat_included")??"yes")!=="no",treatment=String(formData.get("vat_treatment")??"domestic");
@@ -109,6 +111,70 @@ export async function discardManualSourceTransactionAction(transactionId:string)
  if(error)return{status:"error",message:userFacingDataError(error)};
  refreshBooks();
  return{status:"success",message:"Manual draft cancelled."};
+}
+
+export async function attachEvidenceToTransactionAction(_previous:TransactionActionState,formData:FormData):Promise<TransactionActionState>{
+ const workspace=await getWorkspace();
+ const locale=workspace.profile?.locale==="fr"?"fr":"en";
+ if(!workspace.authenticated||!workspace.userId||!workspace.organization||!workspace.company)return{status:"error",message:locale==="fr"?"Votre session a expiré. Reconnectez-vous.":"Your session expired. Please sign in again."};
+ if(!canBookkeep(workspace.role))return{status:"error",message:locale==="fr"?"Votre rôle ne permet pas d’ajouter des justificatifs.":"Your role cannot attach evidence."};
+ const transactionId=String(formData.get("source_transaction_id")??"").trim();
+ if(!validUuid(transactionId))return{status:"error",message:locale==="fr"?"La référence de transaction est invalide.":"The transaction reference is invalid."};
+ const file=formData.get("evidence_file");
+ if(!(file instanceof File)||file.size<=0)return{status:"error",message:locale==="fr"?"Choisissez un justificatif à joindre.":"Choose a document to attach."};
+ const allowed=new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
+ if(!allowed.has(file.type))return{status:"error",message:locale==="fr"?"Utilisez un fichier PDF, JPG, PNG ou WebP.":"Use a PDF, JPG, PNG or WebP file."};
+ if(file.size>25*1024*1024)return{status:"error",message:locale==="fr"?"Le fichier doit faire 25 Mo maximum.":"The maximum file size is 25 MB."};
+ const requestedType=String(formData.get("document_type")??"receipt");
+ const documentType=["receipt","purchase_invoice","sales_invoice","other"].includes(requestedType)?requestedType:"receipt";
+ try{await assertUsageAvailable(workspace.organization.id,"documents",1)}catch(error){return{status:"error",message:billingLimitMessage(error,locale)??userFacingDataError(error,locale==="fr"?"La limite de documents a été atteinte.":"Your document allowance has been reached.",locale)}}
+ const supabase=await createClient();
+ const{data:transaction,error:transactionError}=await supabase.from("source_transactions").select("id,occurred_on").eq("id",transactionId).eq("company_id",workspace.company.id).maybeSingle();
+ if(transactionError)return{status:"error",message:userFacingDataError(transactionError,undefined,locale)};
+ if(!transaction)return{status:"error",message:locale==="fr"?"Transaction introuvable.":"Transaction not found."};
+ const uploadYear=Number(String(transaction.occurred_on).slice(0,4))||new Date().getFullYear();
+ const storagePath=`${workspace.organization.id}/${workspace.company.id}/${uploadYear}/${crypto.randomUUID()}-${safeEvidenceFileName(file.name)}`;
+ const{error:storageError}=await supabase.storage.from("company-documents").upload(storagePath,file,{contentType:file.type,upsert:false,cacheControl:"3600"});
+ if(storageError)return{status:"error",message:userFacingDataError(storageError,locale==="fr"?"Le justificatif n’a pas pu être importé. Réessayez.":"The evidence could not be uploaded. Please try again.",locale)};
+ const{data:document,error:documentError}=await supabase.from("documents").insert({
+   organization_id:workspace.organization.id,
+   company_id:workspace.company.id,
+   type:documentType,
+   storage_path:storagePath,
+   file_name:file.name,
+   mime_type:file.type,
+   file_size:file.size,
+   extraction_status:"not_started",
+   created_by:workspace.userId
+ }).select("id").single();
+ if(documentError||!document){
+   await supabase.storage.from("company-documents").remove([storagePath]);
+   return{status:"error",message:userFacingDataError(documentError,locale==="fr"?"Le justificatif n’a pas pu être enregistré.":"The evidence could not be saved.",locale)};
+ }
+ const{data:link,error:linkError}=await supabase.from("document_transaction_links").insert({
+   organization_id:workspace.organization.id,
+   company_id:workspace.company.id,
+   document_id:document.id,
+   source_transaction_id:transactionId,
+   match_score:1,
+   status:"suggested",
+   match_reason:"Evidence attached directly from the transaction.",
+   created_by:workspace.userId
+ }).select("id").single();
+ if(linkError||!link){
+   await supabase.from("documents").delete().eq("id",document.id).eq("company_id",workspace.company.id);
+   await supabase.storage.from("company-documents").remove([storagePath]);
+   return{status:"error",message:userFacingDataError(linkError,locale==="fr"?"Le justificatif n’a pas pu être lié à la transaction.":"The evidence could not be linked to the transaction.",locale)};
+ }
+ const{error:confirmError}=await supabase.rpc("confirm_document_match",{p_link_id:link.id});
+ if(confirmError){
+   await supabase.from("document_transaction_links").delete().eq("id",link.id);
+   await supabase.from("documents").delete().eq("id",document.id).eq("company_id",workspace.company.id);
+   await supabase.storage.from("company-documents").remove([storagePath]);
+   return{status:"error",message:userFacingDataError(confirmError,locale==="fr"?"Le justificatif n’a pas pu être lié à la transaction.":"The evidence could not be linked to the transaction.",locale)};
+ }
+ refreshBooks();
+ return{status:"success",message:locale==="fr"?"Justificatif ajouté et lié à cette transaction.":"Evidence attached and linked to this transaction.",transactionId,documentId:document.id};
 }
 
 export async function createTransactionFromDocumentAction(documentId:string):Promise<TransactionActionState>{
