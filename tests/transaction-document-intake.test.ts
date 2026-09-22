@@ -64,3 +64,11 @@ test("transaction intake trusts the user-selected receipt category over AI docum
   assert.match(migration,/v_line_count=1/);
   assert.doesNotMatch(migration,/This document type cannot create a transaction automatically/);
 });
+
+
+test("failed transaction preparation can be retried without another upload",()=>{
+  const uploader=read("../src/components/document-uploader.tsx");
+  assert.match(uploader,/failedTransactionDocumentId/);
+  assert.match(uploader,/retryTransactionPreparation/);
+  assert.match(uploader,/Try preparation again/);
+});
