@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import { canManageOrganization } from "@/lib/permissions";
+import { userFacingDataError } from "@/lib/user-facing-error";
 
 export type SettingsState = { status: "idle" | "success" | "error"; message: string };
 function text(formData: FormData, key: string) { return String(formData.get(key) ?? "").trim(); }
@@ -87,7 +88,7 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
     registered_address: { street, postal_code: normalizedPostal, city, country_code: country },
     updated_at: new Date().toISOString(),
   }).eq("id", workspace.company.id);
-  if (companyResult.error) return { status: "error", message: companyResult.error.message };
+  if (companyResult.error) return { status: "error", message: userFacingDataError(companyResult.error) };
 
   if (hasTaxProfile) {
     const taxProfileResult = await supabase.from("company_tax_profiles").upsert({
@@ -103,7 +104,7 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
       updated_by: workspace.userId,
       updated_at: new Date().toISOString(),
     }, { onConflict: "company_id" });
-    if (taxProfileResult.error) return { status: "error", message: taxProfileResult.error.message };
+    if (taxProfileResult.error) return { status: "error", message: userFacingDataError(taxProfileResult.error) };
   }
 
   if (independent) {
@@ -117,7 +118,7 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
       rcs_registered: Boolean(rcs),
       business_permit_held: Boolean(permit),
     }).eq("company_id", workspace.company.id).eq("user_id", workspace.userId);
-    if (profileResult.error) return { status: "error", message: profileResult.error.message };
+    if (profileResult.error) return { status: "error", message: userFacingDataError(profileResult.error) };
   }
 
   for (const path of ["/app", "/app/settings", "/app/invoices", "/app/taxes", "/app/vat", "/app/compliance", "/app/copilot"]) revalidatePath(path);
