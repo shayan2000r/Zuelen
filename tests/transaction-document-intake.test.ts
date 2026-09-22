@@ -55,3 +55,12 @@ test("confirmed document links render as linked instead of showing Apply & link 
   assert.match(workflow,/>Linked</);
   assert.match(page,/status=\{match\?\.status\}/);
 });
+
+
+test("transaction intake trusts the user-selected receipt category over AI document kind",()=>{
+  const migration=read("../db/migrations/20260922190500_respect_transaction_upload_category.sql");
+  assert.match(migration,/v_doc\.type not in \('receipt','purchase_invoice','sales_invoice'\)/);
+  assert.match(migration,/v_kind='bank_statement'/);
+  assert.match(migration,/v_line_count=1/);
+  assert.doesNotMatch(migration,/This document type cannot create a transaction automatically/);
+});
