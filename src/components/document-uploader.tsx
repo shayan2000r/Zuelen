@@ -10,7 +10,7 @@ import { processOpeningDocumentAction, type OpeningImportState } from "@/app/app
 import { createTransactionFromDocumentAction, postSourceTransaction, type TransactionActionState, type TransactionReview } from "@/app/app/transactions/actions";
 import { generateFinancialDocumentAction, type GeneratedDocumentState } from "@/app/app/documents/generated-actions";
 import { createClient } from "@/lib/supabase/client";
-import { useRolePermissions } from "@/components/role-context";
+import { useRolePermissions } from "@/components/role-context";\nimport { sanitizePublicErrorMessage } from "@/lib/public-error-message";
 import { TransactionUploadReview } from "@/components/transaction-upload-review";
 import styles from "./documents.module.css";
 import createStyles from "./document-create.module.css";
@@ -72,7 +72,7 @@ export function DocumentUploader({organizationId,companyId,autoOpen=false}:{orga
      if(opening.status==="success"){setOpeningStage("success");success=opening.message;redirectPath="/app/accounting";redirectDelay=2400}else{setOpeningStage("error");setMessage(opening.message);setFile(null);if(inputRef.current)inputRef.current.value="";router.refresh();return}
    }
    setFile(null);if(inputRef.current)inputRef.current.value="";setMessage(success);router.refresh();if(redirectPath)window.setTimeout(()=>{close();router.push(redirectPath!)},redirectDelay)
- }catch(error){if(purpose==="opening")setOpeningStage("error");setMessage(error instanceof Error?error.message:"The document could not be uploaded.")}finally{setBusy(false)}}
+ }catch(error){if(purpose==="opening")setOpeningStage("error");setMessage(sanitizePublicErrorMessage(error instanceof Error?error.message:null,"The document could not be uploaded. Please try again."))}finally{setBusy(false)}}
  async function retryTransactionPreparation(){if(!failedTransactionDocumentId)return;setBusy(true);setMessage(null);try{const transaction=await createTransactionFromDocumentAction(failedTransactionDocumentId);if(transaction.status!=="success"||!transaction.review){setMessage(`The document is saved, but transaction preparation still needs attention: ${transaction.message}`);return}setTransactionReview(transaction.review);setSelectedAccountCode(transaction.review.suggestedCode??"");setEditingAccount(!transaction.review.suggestedCode);setTransactionMessage(transaction.message);setTransactionPosted(transaction.review.classificationStatus==="posted");setFailedTransactionDocumentId(null);router.refresh()}finally{setBusy(false)}}
  async function finalizeTransaction(){if(!transactionReview)return;if(!selectedAccountCode){setEditingAccount(true);setTransactionMessage("Choose an accounting category before adding the transaction.");return}setBusy(true);setTransactionMessage(null);try{const formData=new FormData();formData.set("source_transaction_id",transactionReview.id);formData.set("account_code",selectedAccountCode);const result=await postSourceTransaction(transactionInitial,formData);if(result.status!=="success"){setTransactionMessage(result.message);return}setTransactionPosted(true);setTransactionMessage("Added to Transactions and posted to the ledger. The receipt stays linked as evidence.");router.refresh();window.setTimeout(()=>{close();router.push("/app/transactions")},900)}finally{setBusy(false)}}
  const selected=reports.find(r=>r.value===report)!;
