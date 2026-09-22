@@ -5,7 +5,8 @@ import { assertUsageAvailable, billingLimitMessage } from "@/lib/billing";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
-export type TransactionActionState={status:"idle"|"success"|"error";message:string;journalEntryId?:string;transactionId?:string;matchedExisting?:boolean};
+export type TransactionReview={id:string;occurredOn:string;direction:string;amountGross:number;currency:string;counterpartyName:string;classificationStatus:string;suggestedCode:string|null;suggestedLabel:string|null;suggestionConfidence:number|null;suggestionReason:string|null;accounts:{code:string;label:string;accountType:string}[]};
+export type TransactionActionState={status:"idle"|"success"|"error";message:string;journalEntryId?:string;transactionId?:string;matchedExisting?:boolean;review?:TransactionReview};
 const treatments=["domestic","eu_b2b_reverse_charge","non_eu","exempt_or_zero","unknown"];
 function roundMoney(value:number){return Math.round((value+Number.EPSILON)*100)/100}
 function validUuid(value:string){return /^[0-9a-f-]{36}$/i.test(value)}
@@ -36,10 +37,22 @@ export async function createTransactionFromDocumentAction(documentId:string):Pro
  const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};if(!validUuid(documentId))return{status:"error",message:"The document reference is invalid."};
  const supabase=await createClient();const{data,error}=await supabase.rpc("create_source_transaction_from_document",{p_document_id:documentId});
  if(error){const friendly=billingLimitMessage(new Error(error.message),workspace.profile?.locale==="fr"?"fr":"en");return{status:"error",message:friendly??error.message}}
- const result=data&&typeof data==="object"?data as Record<string,unknown>:{},transactionId=typeof result.transaction_id==="string"?result.transaction_id:undefined,matchedExisting=result.matched_existing===true,alreadyCreated=result.already_created===true;refreshBooks();
- if(matchedExisting)return{status:"success",message:"A matching transaction already exists, so Zuelen did not create a duplicate. The document is ready to be linked to that transaction.",transactionId,matchedExisting:true};
- if(alreadyCreated)return{status:"success",message:"This document already has a transaction. Opening the existing transaction for review.",transactionId};
- return{status:"success",message:"Transaction created from the document and added to review. The source evidence is already linked.",transactionId};
+ const result=data&&typeof data==="object"?data as Record<string,unknown>:{},transactionId=typeof result.transaction_id==="string"?result.transaction_id:undefined,matchedExisting=result.matched_existing===true,alreadyCreated=result.already_created===true;
+ if(!transactionId)return{status:"error",message:"Zuelen analyzed the document but could not prepare the transaction."};
+
+ const{data:transaction,error:transactionError}=await supabase.from("source_transactions").select("id,occurred_on,direction,amount_gross,currency,counterparty_name,classification_status,suggested_account_id,suggestion_confidence,suggestion_reason").eq("id",transactionId).eq("company_id",workspace.company.id).maybeSingle();
+ if(transactionError||!transaction)return{status:"error",message:transactionError?.message??"The prepared transaction could not be loaded."};
+ const allowedTypes=transaction.direction==="income"?["revenue","asset","liability","expense"]:["expense","asset","liability"];
+ const{data:accountRows,error:accountError}=await supabase.from("company_accounts").select("id,code,label,label_en,label_fr,account_type").eq("company_id",workspace.company.id).eq("is_active",true).in("account_type",allowedTypes).order("code",{ascending:true});
+ if(accountError)return{status:"error",message:accountError.message};
+ const fr=workspace.profile?.locale==="fr",accounts=(accountRows??[]).map(account=>({code:account.code,label:(fr?(account.label_fr||account.label_en||account.label):(account.label_en||account.label_fr||account.label))??account.code,accountType:account.account_type}));
+ const suggested=(accountRows??[]).find(account=>account.id===transaction.suggested_account_id);
+ const review:TransactionReview={id:transaction.id,occurredOn:transaction.occurred_on,direction:transaction.direction,amountGross:Number(transaction.amount_gross),currency:transaction.currency,counterpartyName:transaction.counterparty_name||"Transaction",classificationStatus:transaction.classification_status,suggestedCode:suggested?.code??null,suggestedLabel:suggested?((fr?(suggested.label_fr||suggested.label_en||suggested.label):(suggested.label_en||suggested.label_fr||suggested.label))??suggested.code):null,suggestionConfidence:transaction.suggestion_confidence==null?null:Number(transaction.suggestion_confidence),suggestionReason:transaction.suggestion_reason??null,accounts};
+ refreshBooks();
+ if(transaction.classification_status==="posted")return{status:"success",message:"This document is already linked to a posted transaction.",transactionId,matchedExisting,review};
+ if(matchedExisting)return{status:"success",message:"Zuelen found the matching transaction and linked the evidence. Confirm or adjust the accounting category below.",transactionId,matchedExisting:true,review};
+ if(alreadyCreated)return{status:"success",message:"This document already has a prepared transaction. Confirm or adjust the accounting category below.",transactionId,review};
+ return{status:"success",message:"Zuelen prepared the transaction from your document. Confirm the suggested category or choose another one.",transactionId,review};
 }
 
 export async function postSourceTransaction(_previous:TransactionActionState,formData:FormData):Promise<TransactionActionState>{const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};const id=String(formData.get("source_transaction_id")??"").trim(),code=String(formData.get("account_code")??"").trim();if(!validUuid(id))return{status:"error",message:"The transaction reference is invalid."};if(!/^\d{3,6}$/.test(code))return{status:"error",message:"Choose a valid accounting category."};const supabase=await createClient();const{data,error}=await supabase.rpc("classify_and_post_source_transaction",{p_source_transaction_id:id,p_account_code:code});if(error)return{status:"error",message:error.message};refreshBooks();return{status:"success",message:"Posted successfully. The journal entry is locked, auditable, and the treatment is remembered for this counterparty.",journalEntryId:typeof data==="string"?data:undefined}}
