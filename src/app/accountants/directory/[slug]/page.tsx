@@ -7,6 +7,7 @@ import { accountantBusinessTypeLabel, accountantInitials, accountantLanguageLabe
 import { normalizeLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { userFacingDataError } from "@/lib/user-facing-error";
 import styles from "../../../app/accountants/[slug]/profile.module.css";
 import polish from "./profile-polish.module.css";
 
@@ -23,21 +24,21 @@ export default async function StandaloneAccountantProfilePage({ params }: { para
   let ownSubscription: AccountantListingSubscription | null = null;
   if (workspace.userId) {
     const ownResult = await supabase.from("accountant_profiles").select("*").eq("user_id", workspace.userId).maybeSingle();
-    if (ownResult.error) throw new Error(ownResult.error.message);
+    if (ownResult.error) throw new Error(userFacingDataError(ownResult.error));
     ownProfile = ownResult.data as AccountantProfile | null;
     if (ownProfile) {
       const ownSubResult = await supabase.from("accountant_listing_subscriptions").select("*").eq("profile_id", ownProfile.id).maybeSingle();
-      if (ownSubResult.error) throw new Error(ownSubResult.error.message);
+      if (ownSubResult.error) throw new Error(userFacingDataError(ownSubResult.error));
       ownSubscription = ownSubResult.data as AccountantListingSubscription | null;
     }
   }
 
   const { data, error } = await supabase.from("accountant_profiles").select("*").eq("slug", slug).eq("approval_status", "approved").maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userFacingDataError(error));
   if (!data) notFound();
   const profile = data as AccountantProfile;
   const { data: subscriptionData, error: subError } = await supabase.from("accountant_listing_subscriptions").select("*").eq("profile_id", profile.id).maybeSingle();
-  if (subError) throw new Error(subError.message);
+  if (subError) throw new Error(userFacingDataError(subError));
   const subscription = subscriptionData as AccountantListingSubscription | null;
   const visible = subscription && (subscription.status === "active" || (subscription.status === "trialing" && (!subscription.trial_end || new Date(subscription.trial_end).getTime() > Date.now())));
   if (!visible) notFound();
