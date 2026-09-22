@@ -18,7 +18,8 @@ test("transaction document intake creates a review transaction and links its evi
   assert.match(migration,/upper\(st\.currency\)=v_currency/);
   assert.match(migration,/perform public\.confirm_document_match\(v_link_id\)/);
   assert.match(uploader,/createTransactionFromDocumentAction\(inserted\.id\)/);
-  assert.match(uploader,/redirectPath="\/app\/transactions"/);
+  assert.match(uploader,/TransactionUploadReview/);
+  assert.match(uploader,/postSourceTransaction/);
   assert.match(actions,/create_source_transaction_from_document/);
 });
 
@@ -37,4 +38,20 @@ test("invoice compliance stays inline and does not open an issue confirmation di
   assert.doesNotMatch(composer,/confirmCompliance/);
   assert.doesNotMatch(composer,/Issue the invoice anyway/);
   assert.doesNotMatch(recordActions,/Issue the invoice anyway/);
+});
+
+
+test("document-origin transactions are valid journal sources and preserve the merchant",()=>{
+  const migration=read("../db/migrations/20260922185800_fix_document_transaction_posting.sql");
+  assert.match(migration,/'document'::text/);
+  assert.match(migration,/transaction_counterparty/);
+  assert.match(migration,/counterparty_name=coalesce\(v_counterparty,counterparty_name\)/);
+});
+
+test("confirmed document links render as linked instead of showing Apply & link again",()=>{
+  const workflow=read("../src/components/document-workflow-actions.tsx");
+  const page=read("../src/app/app/documents/page.tsx");
+  assert.match(workflow,/status==="confirmed"/);
+  assert.match(workflow,/>Linked</);
+  assert.match(page,/status=\{match\?\.status\}/);
 });
