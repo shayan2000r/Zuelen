@@ -81,8 +81,16 @@ export function PasswordResetForm({
     event.preventDefault();
     setMessage(null);
 
+    if (!ready) {
+      setMessage(l(
+        "Open a fresh password link from your email first.",
+        "Ouvrez d’abord un nouveau lien de mot de passe reçu par e-mail.",
+      ));
+      return;
+    }
+
     const mode = sessionMode.current;
-    if (!ready || !mode) {
+    if (!mode) {
       setMessage(l(
         "Open a fresh password link from your email first.",
         "Ouvrez d’abord un nouveau lien de mot de passe reçu par e-mail.",
