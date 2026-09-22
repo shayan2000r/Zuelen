@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { userFacingDataError } from "@/lib/user-facing-error";
 
 export async function setLocalePreference(locale: Locale) {
   const workspace = await getWorkspace();
@@ -20,7 +21,7 @@ export async function setLocalePreference(locale: Locale) {
       },
       { onConflict: "user_id" },
     );
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userFacingDataError(error));
   revalidatePath("/app", "layout");
   revalidatePath("/app/settings/profile");
   return nextLocale;
