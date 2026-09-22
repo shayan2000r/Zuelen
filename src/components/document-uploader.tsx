@@ -7,6 +7,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { extractDocumentAction, type DocumentExtractionState } from "@/app/app/documents/actions";
 import { processOpeningDocumentAction, type OpeningImportState } from "@/app/app/documents/opening-actions";
+import { createTransactionFromDocumentAction } from "@/app/app/transactions/actions";
 import { generateFinancialDocumentAction, type GeneratedDocumentState } from "@/app/app/documents/generated-actions";
 import { createClient } from "@/lib/supabase/client";
 import { useRolePermissions } from "@/components/role-context";
