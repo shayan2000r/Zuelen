@@ -21,6 +21,8 @@ export function TransactionUploadReview({
   onReviewLater,
   source="document",
   locale="en",
+  exchangeRateValue="",
+  onExchangeRateChange,
 }:{
   review:TransactionReview;
   selectedAccountCode:string;
@@ -34,8 +36,10 @@ export function TransactionUploadReview({
   onReviewLater:()=>void;
   source?:"document"|"manual";
   locale?:"en"|"fr";
+  exchangeRateValue?:string;
+  onExchangeRateChange?:(value:string)=>void;
 }){
-  const fr=locale==="fr",manual=source==="manual";
+  const fr=locale==="fr",manual=source==="manual",foreign=review.currency!==review.baseCurrency,fxKnown=review.exchangeRateToBase!=null&&review.exchangeRateToBase>0,fxValue=exchangeRateValue||(fxKnown?String(review.exchangeRateToBase):"");
   const title=posted
     ?(fr?"Transaction ajoutée":"Transaction added")
     :(fr?"Prête à ajouter":"Ready to add");
@@ -63,6 +67,10 @@ export function TransactionUploadReview({
         <div><span>{fr?"Date":"Date"}</span><strong>{review.occurredOn}</strong></div>
         <div><span>{fr?"Montant":"Amount"}</span><strong>{money(review.amountGross,review.currency)}</strong></div>
       </div>
+      {foreign?<div className={styles.fxReview}>
+        <div><small>{fr?"Devise étrangère":"Foreign currency"}</small><strong>{review.currency+" → "+review.baseCurrency}</strong><span>{fxValue?("1 "+review.currency+" = "+fxValue+" "+review.baseCurrency):(fr?"Taux de change requis avant comptabilisation":"Exchange rate required before posting")}</span></div>
+        {!fxKnown&&onExchangeRateChange?<label><span>{fr?("Taux de change · 1 "+review.currency+" en "+review.baseCurrency):("Exchange rate · 1 "+review.currency+" in "+review.baseCurrency)}</span><input type="number" min="0.00000001" step="0.00000001" inputMode="decimal" value={exchangeRateValue} onChange={event=>onExchangeRateChange(event.target.value)} placeholder="0.00000000"/></label>:null}
+      </div>:null}
 
       {posted?
         <div className={styles.transactionPosted}>
@@ -102,7 +110,7 @@ export function TransactionUploadReview({
         {message?<div className={styles.transactionHint}>{message}</div>:null}
 
         <div className={styles.transactionReviewActions}>
-          <button type="button" className={styles.transactionPrimary} onClick={onConfirm} disabled={busy||!selectedAccountCode}>
+          <button type="button" className={styles.transactionPrimary} onClick={onConfirm} disabled={busy||!selectedAccountCode||(foreign&&!fxKnown&&!exchangeRateValue)}>
             {busy?<LoaderCircle className={styles.spin} size={15}/>:<CheckCircle2 size={15}/>}
             {fr?"Ajouter la transaction":"Add transaction"}
           </button>
