@@ -24,6 +24,7 @@ function ManualEntryFlow({
   defaultDate,
   locale,
   currency,
+  accounts,
   onBack,
   onPrepared,
   onFinish,
@@ -33,6 +34,7 @@ function ManualEntryFlow({
   defaultDate:string;
   locale:"en"|"fr";
   currency:string;
+  accounts:{code:string;label:string;accountType:string}[];
   onBack:()=>void;
   onPrepared:(id:string)=>void;
   onFinish:()=>void;
@@ -119,6 +121,7 @@ function ManualEntryFlow({
 
   const counterpartyLabel=direction==="expense"?(fr?"Payé à":"Paid to"):(fr?"Reçu de":"Received from");
   const amountLabel=direction==="expense"?(fr?"Total payé":"Total paid"):(fr?"Total reçu":"Total received");
+  const categoryOptions=accounts.filter(account=>direction==="income"?["revenue","asset","liability","expense"].includes(account.accountType):["expense","asset","liability"].includes(account.accountType));
 
   return <>
     <button type="button" className={choiceStyles.back} onClick={onBack} disabled={busy}>{fr?"← Retour":"← Back"}</button>
@@ -141,6 +144,8 @@ function ManualEntryFlow({
 
       <label className={styles.field}><span>{counterpartyLabel}</span><input name="counterparty_name" placeholder={direction==="expense"?(fr?"ex. McDonald's, Lidl, Adobe":"e.g. McDonald's, Lidl, Adobe"):(fr?"ex. Acme SARL, Upwork":"e.g. Acme SARL, Upwork")}/></label>
       <label className={styles.field}><span>{fr?"À quoi cela correspond ?":"What was it for?"}</span><input name="description" placeholder={direction==="expense"?(fr?"ex. repas d’équipe, logiciel, fournitures":"e.g. team lunch, software, office supplies"):(fr?"ex. paiement client, remboursement":"e.g. client payment, refund")}/></label>
+
+      <label className={styles.field+" "+styles.fieldFull}><span>{fr?"Catégorie comptable · facultatif":"Accounting category · optional"}</span><select name="account_code" defaultValue=""><option value="">{fr?"Laisser Zuelen proposer une catégorie":"Let Zuelen suggest a category"}</option>{categoryOptions.map(account=><option key={account.code} value={account.code}>{account.code+" · "+account.label}</option>)}</select><small className={styles.fieldHelp}>{fr?"Si vous connaissez déjà la catégorie, choisissez-la maintenant. Vous pourrez encore la modifier à l’étape suivante.":"If you already know the category, choose it now. You can still change it on the next step."}</small></label>
 
       <details className={styles.vatDetails+" "+styles.fieldFull}>
         <summary>
@@ -171,7 +176,7 @@ function ManualEntryFlow({
   </>;
 }
 
-export function SourceTransactionForm({defaultDate,initialOpen=false,locale="en",currency="EUR"}:{defaultDate?:string;initialOpen?:boolean;locale?:"en"|"fr";currency?:string}){
+export function SourceTransactionForm({defaultDate,initialOpen=false,locale="en",currency="EUR",accounts=[]}:{defaultDate?:string;initialOpen?:boolean;locale?:"en"|"fr";currency?:string;accounts?:{code:string;label:string;accountType:string}[]}){
   const fr=locale==="fr",today=defaultDate||new Date().toISOString().slice(0,10);
   const[open,setOpen]=useState(initialOpen),[entryMode,setEntryMode]=useState<"choose"|"manual">("choose"),[upgradeOpen,setUpgradeOpen]=useState(false),[draftId,setDraftId]=useState<string|null>(null),[closing,setClosing]=useState(false),[flowBusy,setFlowBusy]=useState(false);
 
@@ -206,6 +211,7 @@ export function SourceTransactionForm({defaultDate,initialOpen=false,locale="en"
             defaultDate={today}
             locale={locale}
             currency={currency}
+            accounts={accounts}
             onBack={()=>{if(!flowBusy&&!draftId)setEntryMode("choose")}}
             onPrepared={setDraftId}
             onFinish={finish}
