@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, Languages, MapPin, Search, Sparkles, UserRoundCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, BriefcaseBusiness, Languages, MapPin, MessageCircle, Search, ShieldCheck, Sparkles, UserRoundCheck, UsersRound } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ACCOUNTANT_LANGUAGES, ACCOUNTANT_SPECIALTIES, accountantInitials, accountantLanguageLabel, accountantSpecialtyLabel, type AccountantListingSubscription, type AccountantProfile } from "@/lib/accountants";
 import { normalizeLocale } from "@/lib/i18n";
@@ -52,6 +52,16 @@ export default async function AccountantsPage({ searchParams }: { searchParams: 
     <section className={styles.hero}>
       <div><span className={styles.eyebrow}><BriefcaseBusiness size={14}/>{fr ? "Réseau professionnel Zuelen" : "Zuelen professional network"}</span><h1>{fr ? "Trouvez le bon comptable pour votre entreprise." : "Find the right accountant for your business."}</h1><p>{fr ? "Gérez le quotidien dans Zuelen, puis trouvez un professionnel vérifié lorsque vous souhaitez une vérification, un deuxième avis ou un accompagnement continu." : "Handle the day-to-day in Zuelen, then find a verified professional when you want a review, a second opinion or ongoing support."}</p></div>
       <div className={styles.heroProof}><BadgeCheck size={20}/><div><strong>{fr ? "Profils vérifiés" : "Verified profiles"}</strong><span>{fr ? "Chaque profil est vérifié par Zuelen avant publication." : "Every profile is reviewed by Zuelen before publication."}</span></div></div>
+    </section>
+
+    <section className={styles.howItWorks}>
+      <div className={styles.howIntro}><span>{fr?"Comment fonctionne l’annuaire":"How the directory works"}</span><h2>{fr?"Trouvez un professionnel, contactez-le, puis gardez le contrôle de l’accès.":"Find a professional, contact them, then keep control of workspace access."}</h2><p>{fr?"L’annuaire sert à découvrir des professionnels indépendants. Consulter ou contacter un profil ne lui donne aucun accès à vos données Zuelen.":"The directory helps you discover independent professionals. Viewing or contacting a profile never gives them access to your Zuelen data."}</p></div>
+      <div className={styles.howSteps}>
+        <div><span><Search size={15}/></span><strong>{fr?"1 · Rechercher":"1 · Find"}</strong><p>{fr?"Filtrez par langue, spécialité et localisation, puis consultez le profil complet.":"Filter by language, specialty and location, then review the full profile."}</p></div>
+        <div><span><MessageCircle size={15}/></span><strong>{fr?"2 · Contacter":"2 · Contact"}</strong><p>{fr?"Contactez directement le professionnel pour discuter de vos besoins, honoraires et disponibilité.":"Contact the professional directly to discuss your needs, fees and availability."}</p></div>
+        <div><span><UsersRound size={15}/></span><strong>{fr?"3 · Donner accès si besoin":"3 · Grant access if needed"}</strong><p>{fr?"Si vous travaillez ensemble, invitez-le ensuite via Équipe et accès avec le rôle approprié. Vous contrôlez toujours les permissions.":"If you decide to work together, invite them through Team & Access with the appropriate role. You stay in control of permissions."}</p></div>
+      </div>
+      <div className={styles.directoryTrust}><ShieldCheck size={14}/><span>{fr?"« Vérifié » signifie que Zuelen a examiné l’identité et les informations du profil avant publication ; ce n’est ni une recommandation ni une garantie de prestation. Les profils Premium peuvent être affichés en priorité.":"“Verified” means Zuelen reviewed the identity and listing information before publication; it is not an endorsement or a guarantee of service. Premium listings may receive priority placement."}</span></div>
     </section>
 
     <form className={styles.filters} method="get">
