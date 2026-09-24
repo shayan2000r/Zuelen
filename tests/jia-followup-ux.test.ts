@@ -46,7 +46,7 @@ test("business details are grouped by user intent instead of one long legal form
   const form=read("../src/components/company-settings-form.tsx");
   const css=read("../src/app/app/settings/settings.module.css");
 
-  assert.match(settings,/Profile & access/);
+  assert.doesNotMatch(settings,/Profile & access/);
   assert.match(settings,/Business details/);
   assert.match(form,/Business Identity/);
   assert.match(form,/Registrations & Identifiers/);
