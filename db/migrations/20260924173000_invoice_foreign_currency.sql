@@ -251,6 +251,9 @@ end
 $function$
 
 
+revoke all on function public.issue_service_invoice_draft(uuid) from public, anon;
+grant execute on function public.issue_service_invoice_draft(uuid) to authenticated;
+
 drop function if exists public.record_invoice_payment(uuid,numeric,date,uuid,text);
 CREATE OR REPLACE FUNCTION public.record_invoice_payment(p_invoice_id uuid, p_amount numeric, p_paid_on date, p_bank_transaction_id uuid DEFAULT NULL::uuid, p_reference text DEFAULT NULL::text, p_exchange_rate_to_base numeric DEFAULT NULL::numeric)
  RETURNS uuid
