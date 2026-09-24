@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, LoaderCircle } from "lucide-react";
+import { Check, Info, LoaderCircle } from "lucide-react";
 import { useActionState } from "react";
 import { saveCompanySettings, type SettingsState } from "@/app/app/settings/actions";
 import { useI18n } from "@/components/locale-context";
@@ -52,13 +52,13 @@ export function CompanySettingsForm({ company, independentProfile=null, taxProfi
 
     <div id="business-registrations" className={styles.settingsAnchor}>
       <FormSection title={fr ? "Immatriculations et identifiants" : "Registrations & Identifiers"} description={fr ? "Ajoutez uniquement les numéros effectivement attribués à votre activité. Un champ vide ne bloque pas Zuelen." : "Add only identifiers that have actually been issued to your business. Leaving a field blank does not block Zuelen."}>
-        <div className={styles.registrationHint}>{fr?"RCS et autorisation d’établissement ne s’appliquent pas à toutes les situations et peuvent ne pas encore avoir été délivrés. Zuelen vous signalera les mentions manquantes lorsqu’elles deviennent pertinentes, par exemple lors de la création d’une facture.":"RCS and business-permit details do not apply in every situation and may not have been issued yet. Zuelen will flag missing legal details when they become relevant, for example during invoice creation."}</div>
         <FieldGroup columns={2}>
           <TextField label={fr ? "Numéro RCS" : "RCS number"} name="rcs_number" defaultValue={company.rcs_number ?? ""} placeholder={fr?"Facultatif · ex. B 123456":"Optional · e.g. B 123456"} />
           <TextField label={fr ? "Autorisation d’établissement" : "Business permit"} name="business_permit_number" defaultValue={company.business_permit_number ?? ""} placeholder={fr?"Facultatif · si délivrée":"Optional · if issued"} />
           <TextField label={fr ? "Numéro TVA" : "VAT number"} name="vat_number" defaultValue={company.vat_number ?? ""} placeholder="LU12345678" />
           <TextField label={fr ? "Numéro fiscal ACD" : "ACD tax number"} name="tax_number" defaultValue={company.tax_number ?? ""} placeholder={fr ? "Facultatif · si connu" : "Optional · if known"} />
         </FieldGroup>
+        <div className={styles.registrationNote}><span><Info size={14}/></span><p>{fr?"RCS et autorisation d’établissement ne s’appliquent pas à toutes les situations et peuvent aussi être délivrés plus tard. Laissez simplement ces champs vides si vous ne les avez pas encore ; Zuelen signalera les mentions manquantes uniquement lorsqu’elles deviennent pertinentes, par exemple lors de la création d’une facture.":"RCS and business-permit details do not apply in every situation and may also be issued later. Leave them blank if you do not have them yet; Zuelen will flag missing legal details only when they become relevant, for example during invoice creation."}</p></div>
       </FormSection>
     </div>
 
