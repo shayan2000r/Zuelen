@@ -53,6 +53,8 @@ function ManualEntryFlow({
   const[vatTreatment,setVatTreatment]=useState("unknown");
   const[vatRate,setVatRate]=useState(0);
   const[vatIncluded,setVatIncluded]=useState(true);
+  const[transactionCurrency,setTransactionCurrency]=useState(currency.toUpperCase());
+  const[exchangeRate,setExchangeRate]=useState("");
 
   function changeBusy(next:boolean){setBusy(next);onBusyChange(next)}
 
@@ -87,6 +89,7 @@ function ManualEntryFlow({
       const formData=new FormData();
       formData.set("source_transaction_id",review.id);
       formData.set("account_code",selectedAccountCode);
+      if(review.currency!==review.baseCurrency&&review.exchangeRateToBase)formData.set("exchange_rate_to_base",String(review.exchangeRateToBase));
       const result=await postSourceTransaction(initialTransactionState,formData);
       if(result.status!=="success"){
         setReviewMessage(result.message);
@@ -121,6 +124,7 @@ function ManualEntryFlow({
 
   const counterpartyLabel=direction==="expense"?(fr?"Payé à":"Paid to"):(fr?"Reçu de":"Received from");
   const amountLabel=direction==="expense"?(fr?"Total payé":"Total paid"):(fr?"Total reçu":"Total received");
+  const foreignCurrency=transactionCurrency.toUpperCase()!==currency.toUpperCase();
   const categoryOptions=accounts.filter(account=>direction==="income"?["revenue","asset","liability","expense"].includes(account.accountType):["expense","asset","liability"].includes(account.accountType));
 
   return <>
@@ -140,7 +144,9 @@ function ManualEntryFlow({
       </div>
 
       <label className={styles.field}><span>{fr?"Date":"Date"}</span><input name="occurred_on" type="date" defaultValue={defaultDate} required/></label>
-      <label className={styles.field}><span>{amountLabel+" · "+currency}</span><input name="amount" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" required/></label>
+      <label className={styles.field}><span>{amountLabel+" · "+transactionCurrency}</span><input name="amount" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" required/></label>
+      <label className={styles.field}><span>{fr?"Devise":"Currency"}</span><input name="currency" value={transactionCurrency} onChange={event=>setTransactionCurrency(event.target.value.toUpperCase().replace(/[^A-Z]/g,"").slice(0,3))} list="transaction-currencies" maxLength={3} pattern="[A-Z]{3}" required/><datalist id="transaction-currencies"><option value={currency.toUpperCase()}/><option value="EUR"/><option value="USD"/><option value="GBP"/><option value="CHF"/></datalist></label>
+      {foreignCurrency?<label className={styles.field}><span>{fr?`Taux de change · 1 ${transactionCurrency} en ${currency.toUpperCase()}`:`Exchange rate · 1 ${transactionCurrency} in ${currency.toUpperCase()}`}</span><input name="exchange_rate_to_base" type="number" min="0.00000001" step="0.00000001" inputMode="decimal" value={exchangeRate} onChange={event=>setExchangeRate(event.target.value)} placeholder="0.00000000" required/><small className={styles.fieldHelp}>{fr?"Utilisez le taux figurant sur votre paiement ou relevé. Zuelen ne suppose jamais un taux 1:1.":"Use the rate shown on your payment or bank record. Zuelen never assumes a 1:1 exchange rate."}</small></label>:<input type="hidden" name="exchange_rate_to_base" value="1"/>}
 
       <label className={styles.field}><span>{counterpartyLabel}</span><input name="counterparty_name" placeholder={direction==="expense"?(fr?"ex. McDonald's, Lidl, Adobe":"e.g. McDonald's, Lidl, Adobe"):(fr?"ex. Acme SARL, Upwork":"e.g. Acme SARL, Upwork")}/></label>
       <label className={styles.field}><span>{fr?"À quoi cela correspond ?":"What was it for?"}</span><input name="description" placeholder={direction==="expense"?(fr?"ex. repas d’équipe, logiciel, fournitures":"e.g. team lunch, software, office supplies"):(fr?"ex. paiement client, remboursement":"e.g. client payment, refund")}/></label>
