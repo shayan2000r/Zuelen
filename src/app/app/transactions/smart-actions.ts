@@ -12,10 +12,19 @@ function refreshBooks(){for(const path of ["/app","/app/transactions","/app/acco
 export async function postSmartSourceTransaction(_previous:TransactionActionState,formData:FormData):Promise<TransactionActionState>{
  const workspace=await getWorkspace();
  if(!workspace.authenticated||!workspace.company||!workspace.organization)return{status:"error",message:"Your session expired. Please sign in again."};
- const id=String(formData.get("source_transaction_id")??"").trim(),code=String(formData.get("account_code")??"").trim();
+ const locale=workspace.profile?.locale==="fr"?"fr":"en",id=String(formData.get("source_transaction_id")??"").trim(),code=String(formData.get("account_code")??"").trim(),submittedFx=Number(formData.get("exchange_rate_to_base")??0);
  if(!validUuid(id))return{status:"error",message:"The transaction reference is invalid."};
  if(!/^\d{3,6}$/.test(code))return{status:"error",message:"Choose a valid accounting category."};
  const supabase=await createClient();
+ const{data:tx,error:txError}=await supabase.from("source_transactions").select("currency,exchange_rate_to_base").eq("id",id).eq("company_id",workspace.company.id).maybeSingle();
+ if(txError||!tx)return{status:"error",message:txError?userFacingDataError(txError,locale==="fr"?"La transaction n’a pas pu être chargée.":"The transaction could not be loaded.",locale):"Transaction not found."};
+ const baseCurrency=String(workspace.company.base_currency||"EUR").trim().toUpperCase(),txCurrency=String(tx.currency||baseCurrency).trim().toUpperCase();
+ if(txCurrency!==baseCurrency){
+   const fx=Number.isFinite(submittedFx)&&submittedFx>0?submittedFx:Number(tx.exchange_rate_to_base??0);
+   if(!Number.isFinite(fx)||fx<=0)return{status:"error",message:locale==="fr"?`Indiquez le taux de change : 1 ${txCurrency} = ? ${baseCurrency}.`:`Enter the exchange rate: 1 ${txCurrency} = ? ${baseCurrency}.`};
+   const{error:updateFxError}=await supabase.from("source_transactions").update({exchange_rate_to_base:fx}).eq("id",id).eq("company_id",workspace.company.id);
+   if(updateFxError)return{status:"error",message:userFacingDataError(updateFxError,locale==="fr"?"Le taux de change n’a pas pu être enregistré.":"The exchange rate could not be saved.",locale)};
+ }
  const{data:existing,error:existingError}=await supabase.from("company_accounts").select("id,is_active").eq("company_id",workspace.company.id).eq("code",code).maybeSingle();
  if(existingError)return{status:"error",message:userFacingDataError(existingError)};
  if(existing&&!existing.is_active){const{error}=await supabase.from("company_accounts").update({is_active:true}).eq("id",existing.id);if(error)return{status:"error",message:userFacingDataError(error)}}
@@ -30,5 +39,5 @@ export async function postSmartSourceTransaction(_previous:TransactionActionStat
  const{data,error}=await supabase.rpc("classify_and_post_source_transaction",{p_source_transaction_id:id,p_account_code:code});
  if(error)return{status:"error",message:userFacingDataError(error)};
  refreshBooks();
- return{status:"success",message:"Posted successfully. Zuelen will remember this treatment for similar transactions.",journalEntryId:typeof data==="string"?data:undefined};
+ return{status:"success",message:locale==="fr"?"Comptabilisée avec succès. Zuelen mémorisera ce traitement pour les transactions similaires.":"Posted successfully. Zuelen will remember this treatment for similar transactions.",journalEntryId:typeof data==="string"?data:undefined};
 }
