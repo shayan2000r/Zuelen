@@ -43,9 +43,7 @@ begin
     values(new.organization_id,new.company_id,auth.uid(),v_event,'source_transaction',new.id,v_metadata);
     return new;
   elsif tg_op='DELETE' then
-    insert into public.audit_events(organization_id,company_id,actor_user_id,event_type,entity_type,entity_id,metadata)
-    values(old.organization_id,old.company_id,auth.uid(),'source_transaction.deleted','source_transaction',old.id,
-      jsonb_build_object('direction',old.direction,'amount_gross',old.amount_gross,'currency',old.currency,'status',old.classification_status));
+    -- Safe-delete RPCs already write a richer deletion event including reversal metadata.
     return old;
   end if;
 
