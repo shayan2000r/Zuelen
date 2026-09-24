@@ -14,7 +14,7 @@ test("pending transaction rows open the exact review item with a loading state",
 
   assert.match(page,/review\?:string/);
   assert.match(page,/requestedReview/);
-  assert.match(page,/focusedId=\{nextReview\?\.id\?\?null\}/);
+  assert.match(page,/focusedId=\{focusedId\}/);
   assert.match(table,/function openReview\(id:string\)/);
   assert.match(table,/params\.set\("review",id\)/);
   assert.match(table,/Loading…/);
@@ -33,9 +33,12 @@ test("evidence can be attached directly from a transaction without rewriting acc
   assert.match(actions,/document_transaction_links/);
   assert.match(actions,/match_score:1/);
   assert.match(actions,/confirm_document_match/);
-  assert.match(evidence,/Attaching evidence does not rewrite posted accounting/);
+  assert.match(evidence,/View the documents already linked to this transaction/);
+  assert.match(evidence,/Attached evidence/);
+  assert.match(evidence,/\/app\/documents\/.*\/open/);
+  assert.match(evidence,/Adding evidence never changes the accounting entry itself/);
   assert.match(rowActions,/TransactionEvidenceAction/);
-  assert.match(rowActions,/evidenceCount=\{row\.evidence_count\?\?0\}/);
+  assert.match(rowActions,/evidence=\{row\.evidence\?\?\[\]\}/);
 });
 
 test("business details are grouped by user intent instead of one long legal form",()=>{
@@ -54,4 +57,18 @@ test("business details are grouped by user intent instead of one long legal form
   assert.match(form,/RCS and business-permit details do not apply in every situation/);
   assert.match(css,/\.businessDetailsIntro/);
   assert.match(css,/\.advancedDetails/);
+});
+
+
+test("linked evidence is visible from Documents and navigates back to its transaction",()=>{
+  const documents=read("../src/app/app/documents/page.tsx");
+  const css=read("../src/components/documents.module.css");
+
+  assert.match(documents,/match_reason/);
+  assert.match(documents,/Evidence attached directly/);
+  assert.match(documents,/Linked evidence/);
+  assert.match(documents,/transactionHref/);
+  assert.match(documents,/focus=\$\{match\.source_transaction_id\}/);
+  assert.match(css,/\.linkedEvidenceTag/);
+  assert.match(css,/\.transactionLink/);
 });
