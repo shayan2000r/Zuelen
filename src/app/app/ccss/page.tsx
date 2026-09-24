@@ -3,6 +3,7 @@ import {
   BadgeEuro,
   CalendarClock,
   CircleDollarSign,
+  CircleHelp,
   ExternalLink,
   FileCheck2,
   HeartPulse,
@@ -189,6 +190,16 @@ export default async function CcssPage() {
     />
 
     {openStatement ? <section className={styles.actualBanner}><div className={styles.actualIcon}><FileCheck2 size={19}/></div><div><span>{l("From CCSS statement", "Depuis l’extrait CCSS")}</span><strong>{money(openStatement.amount_due, locale)}</strong><small>{l("Payment deadline", "Échéance de paiement")} · {new Date(`${openStatement.due_date}T12:00:00`).toLocaleDateString(dateLocale, { day: "2-digit", month: "long", year: "numeric" })}</small></div><StatusBadge tone={openStatement.payment_status === "disputed" ? "warning" : "danger"}>{statusLabel(openStatement.payment_status, fr)}</StatusBadge></section> : null}
+
+    <section className={styles.contextGuide}>
+      <div className={styles.contextLead}><span><CircleHelp size={18}/></span><div><p>{l("How to read this estimate", "Comment lire cette estimation")}</p><h2>{ccssProfile?.income_status==="final_acd"?l("Your estimate uses ACD-confirmed income", "Votre estimation utilise un revenu confirmé par l’ACD"):l("This is a planning estimate — not your CCSS invoice", "Il s’agit d’une estimation de planification — pas de votre facture CCSS")}</h2><small>{l("CCSS contributions for self-employed people are based on professional income. The amount can later be recalculated when the tax administration communicates definitive income.", "Les cotisations CCSS des indépendants reposent sur le revenu professionnel. Le montant peut ensuite être recalculé lorsque l’administration fiscale communique le revenu définitif.")}</small></div></div>
+      <div className={styles.contextSteps}>
+        <div><strong>{l("Income used", "Revenu utilisé")}</strong><span>{ccssProfile?money(ccssProfile.estimated_annual_professional_income,locale)+" / "+l("year","an"):l("Confirm your professional income first.", "Confirmez d’abord votre revenu professionnel.")}</span></div>
+        <div><strong>{l("Why it can change", "Pourquoi le montant peut changer")}</strong><span>{l("Provisional income, minimum/maximum contribution bases and later ACD-confirmed income can change the final contributions.", "Le revenu provisoire, les minima/maxima cotisables et le revenu ensuite confirmé par l’ACD peuvent modifier les cotisations finales.")}</span></div>
+        <div><strong>{l("If your income estimate changed", "Si votre estimation de revenu a changé")}</strong><span>{l("Update the professional-income assumption in Zuelen and consider requesting a provisional-income adjustment from the CCSS.", "Mettez à jour l’hypothèse de revenu professionnel dans Zuelen et envisagez de demander au CCSS une adaptation du revenu provisoire.")}</span></div>
+      </div>
+      <div className={styles.contextFoot}><span>{l("Actual amounts due always come from your CCSS account statements. Zuelen keeps official statements separate from estimates.", "Les montants réellement dus proviennent toujours de vos extraits de compte CCSS. Zuelen sépare les extraits officiels des estimations.")}</span><a href="https://ccss.public.lu/en/independants/cotisations-sociales/assiette-cotisation-adaptation.html" target="_blank" rel="noreferrer">CCSS <ExternalLink size={11}/></a></div>
+    </section>
 
     <DataSummary label={l("CCSS estimate summary", "Résumé de l’estimation CCSS")} items={[
       { label: l("Current monthly estimate", "Estimation mensuelle actuelle"), value: current ? moneyFromCents(current.combinedTotalCents, locale) : "—", description: l("Zuelen estimate", "Estimation Zuelen"), icon: WalletCards, tone: current ? "info" : "neutral" },
