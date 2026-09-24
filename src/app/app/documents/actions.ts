@@ -20,9 +20,9 @@ function typeSafeguard(selectedType:string,extracted:Record<string,unknown>):Doc
  const detectedType=String(extracted.document_kind??"other"),confidence=Number(extracted.confidence??0),lineItems=Array.isArray(extracted.line_items)?extracted.line_items.length:0;
  if(!detectedType||selectedType===detectedType||detectedType==="other"||selectedType==="other")return undefined;
  const oppositeInvoice=(selectedType==="sales_invoice"&&["purchase_invoice","receipt"].includes(detectedType))||(detectedType==="sales_invoice"&&["purchase_invoice","receipt"].includes(selectedType));
- const multiStatement=detectedType==="bank_statement"&&lineItems>1;
- const highRisk=oppositeInvoice||multiStatement||confidence>=.92;
- const allowKeep=!oppositeInvoice&&!multiStatement&&confidence<.92;
+ const multiStatement=detectedType==="bank_statement"&&lineItems>1,singleStatement=detectedType==="bank_statement"&&lineItems<=1,compatibleExpensePair=["receipt","purchase_invoice"].includes(selectedType)&&["receipt","purchase_invoice"].includes(detectedType);
+ const highRisk=oppositeInvoice||multiStatement||(confidence>=.92&&!singleStatement&&!compatibleExpensePair);
+ const allowKeep=!oppositeInvoice&&!multiStatement&&(singleStatement||compatibleExpensePair||confidence<.92);
  let reason="You selected "+documentTypeLabel(selectedType)+", but Zuelen detected "+documentTypeLabel(detectedType)+(confidence?" ("+Math.round(confidence*100)+"% confidence).":".");
  if(multiStatement)reason="You selected "+documentTypeLabel(selectedType)+", but Zuelen detected a bank statement with multiple movements. It should not be turned into one transaction.";
  if(oppositeInvoice)reason="You selected "+documentTypeLabel(selectedType)+", but Zuelen detected "+documentTypeLabel(detectedType)+". That changes whether the document represents money in or money out, so the type must be confirmed first.";
