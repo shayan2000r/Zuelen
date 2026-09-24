@@ -1,4 +1,4 @@
-import { AlertTriangle, BadgeCheck, CheckCircle2, FileOutput, Landmark, ReceiptText, Scale } from "lucide-react";
+import { AlertTriangle, BadgeCheck, CheckCircle2, CircleHelp, ExternalLink, FileOutput, Landmark, ReceiptText, Scale } from "lucide-react";
 import { redirect } from "next/navigation";
 import { VatFilingAction } from "@/components/vat-filing-action";
 import { DataSummary } from "@/components/zuelen-data-ui-v2";
@@ -33,6 +33,19 @@ export default async function VatFilingPage(){
    description={fr ? "La position TVA, les justificatifs par taux et la préparation de la déclaration dans un même workflow financier." : "Your VAT position, evidence by rate and filing readiness in one financial workflow."}
    meta={<StatusBadge tone={ready ? "success" : "warning"}><BadgeCheck size={13}/>{fr ? "TVA LU · " + freqLabel : "LU VAT · " + freqLabel}</StatusBadge>}
   />
+
+  <section className={styles.contextGuide}>
+   <div className={styles.contextLead}>
+    <span><CircleHelp size={18}/></span>
+    <div><p>{fr?"Comprendre cette page":"What this page is telling you"}</p><h2>{ready?(fr?"Votre TVA est prête à être vérifiée":"Your VAT is ready for review"):(fr?"Il reste des éléments à confirmer avant la déclaration":"Some items still need attention before filing")}</h2><small>{fr?"Zuelen calcule votre position TVA à partir des écritures comptabilisées et des justificatifs disponibles. Une transaction bancaire seule ne prouve pas une TVA déductible.":"Zuelen builds your VAT position from posted bookkeeping and available evidence. A bank transaction on its own does not prove deductible VAT."}</small></div>
+   </div>
+   <div className={styles.contextSteps}>
+    <div><strong>{fr?"TVA collectée":"Output VAT"}</strong><span>{fr?"TVA facturée à vos clients sur les ventes taxables.":"VAT charged to customers on taxable sales."}</span></div>
+    <div><strong>{fr?"TVA déductible":"Recoverable input VAT"}</strong><span>{fr?"TVA sur les achats professionnels lorsqu’elle est correctement justifiée et déductible.":"VAT on business purchases when it is properly evidenced and deductible."}</span></div>
+    <div><strong>{fr?"À vérifier maintenant":"What to check now"}</strong><span>{ready?(fr?"Aucun élément bloquant détecté ; vérifiez les montants avant de préparer la déclaration.":"No blocking items detected; review the figures before preparing the filing."):(fr?`${pendingCount??0} transaction(s) à vérifier · ${bankEvidenceMissing+unknownNonBank} traitement(s) TVA encore inconnu(s).`:`${pendingCount??0} transaction(s) need review · ${bankEvidenceMissing+unknownNonBank} item(s) still have unknown VAT treatment.`)}</span></div>
+   </div>
+   <div className={styles.contextFoot}><span>{fr?"Les taux luxembourgeois actuellement utilisés par Zuelen sont 17 %, 14 %, 8 % et 3 %. Ne choisissez pas un taux au hasard : utilisez le justificatif ou confirmez le traitement applicable.":"Zuelen currently uses Luxembourg VAT rates of 17%, 14%, 8% and 3%. Do not guess a rate: use the supporting document or confirm the applicable treatment."}</span><a href="https://guichet.public.lu/en/entreprises/fiscalite/impots-benefices/tva/notions/tva.html" target="_blank" rel="noreferrer">{fr?"Guide TVA officiel":"Official VAT guide"} <ExternalLink size={11}/></a></div>
+  </section>
 
   <DataSummary
    label={fr ? "Résumé TVA" : "VAT summary"}
