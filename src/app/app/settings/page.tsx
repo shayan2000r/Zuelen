@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ArrowRight, Building2, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { BrandImageUploader } from "@/components/brand-image-uploader";
 import { CompanySettingsForm } from "@/components/company-settings-form";
@@ -42,20 +41,11 @@ export default async function SettingsPage() {
   return <V2Page className={styles.page}>
     <PageHeader
       eyebrow={fr ? "Profil et paramètres" : "Profile & settings"}
-      title={fr ? "Paramètres" : "Settings"}
+      title={fr ? "Informations professionnelles" : "Business Settings"}
       description={independent
-        ? (fr ? "Gérez votre compte, vos accès et les informations de l’activité exercée en votre nom propre." : "Manage your account, access and the business details for the activity you operate in your own name.")
-        : (fr ? "Gérez votre compte, les accès de l’équipe et les informations de l’entreprise." : "Manage your account, team access and business details in one place.")}
+        ? (fr ? "Gérez les informations de l’activité utilisées dans les factures, documents, rapports et parcours fiscaux." : "Manage the business information used across invoices, documents, reports and tax workflows.")
+        : (fr ? "Gérez les informations de l’entreprise utilisées dans les factures, documents, rapports et parcours fiscaux." : "Manage the company information used across invoices, documents, reports and tax workflows.")}
     />
-
-    <section className={styles.settingsGroup}>
-      <div className={styles.groupHead}><div><p>{fr?"Compte":"Account"}</p><h2>{fr?"Profil et accès":"Profile & access"}</h2><span>{fr?"Vos informations personnelles, sécurité et accès à l’organisation.":"Your personal information, security and organization access."}</span></div></div>
-      <div className={styles.settingsLinks}>
-        <Link href="/app/settings/profile" className={styles.teamLink}><span><UserRound size={18}/></span><div><strong>{fr ? "Mon profil" : "My Profile"}</strong><p>{fr ? "Votre nom, votre e-mail et votre photo de profil personnelle." : "Your name, email and personal profile image."}</p></div><ArrowRight size={16}/></Link>
-        <Link href="/app/settings/security" className={styles.teamLink}><span><ShieldCheck size={18}/></span><div><strong>{fr ? "Sécurité" : "Security"}</strong><p>{fr ? "Mot de passe et double authentification facultative." : "Password and optional two-factor authentication."}</p></div><ArrowRight size={16}/></Link>
-        <Link href="/app/settings/team" className={styles.teamLink}><span><UsersRound size={18}/></span><div><strong>{fr ? "Équipe et accès" : "Team & Access"}</strong><p>{fr ? (canManage ? "Consultez les membres et rôles, invitez des personnes et gérez les accès." : "Consultez les membres et rôles de cette organisation.") : `See members and roles${canManage ? ", invite people and manage access" : " in this organization"}.`}</p></div><ArrowRight size={16}/></Link>
-      </div>
-    </section>
 
     <section className={styles.settingsGroup}>
       <div className={styles.groupHead}><span className={styles.groupIcon}><Building2 size={18}/></span><div><p>{independent?(fr?"Activité":"Business"):(fr?"Entreprise":"Business")}</p><h2>{fr?"Informations professionnelles":"Business details"}</h2><span>{fr?"Ces informations sont réutilisées dans les factures, documents, rapports et parcours fiscaux.":"These details are reused in invoices, documents, reports and tax workflows."}</span></div></div>
