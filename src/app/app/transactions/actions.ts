@@ -27,7 +27,7 @@ function calculateVat(formData:FormData){
 
 export async function createSourceTransaction(_previous:TransactionActionState,formData:FormData):Promise<TransactionActionState>{
  const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.userId||!workspace.organization||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};
- const occurredOn=String(formData.get("occurred_on")??""),direction=String(formData.get("direction")??""),counterparty=String(formData.get("counterparty_name")??"").trim(),description=String(formData.get("description")??"").trim(),country=String(formData.get("counterparty_country")??"").trim().toUpperCase(),vat=calculateVat(formData),locale=workspace.profile?.locale==="fr"?"fr":"en";
+ const occurredOn=String(formData.get("occurred_on")??""),direction=String(formData.get("direction")??""),counterparty=String(formData.get("counterparty_name")??"").trim(),description=String(formData.get("description")??"").trim(),country=String(formData.get("counterparty_country")??"").trim().toUpperCase(),selectedAccountCode=String(formData.get("account_code")??"").trim(),vat=calculateVat(formData),locale=workspace.profile?.locale==="fr"?"fr":"en";
  if(!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn))return{status:"error",message:locale==="fr"?"Choisissez une date valide.":"Choose a valid transaction date."};
  if(!["income","expense"].includes(direction))return{status:"error",message:locale==="fr"?"Choisissez Dépense ou Revenu.":"Choose income or expense."};
  if(!counterparty&&!description)return{status:"error",message:locale==="fr"?"Indiquez avec qui l’opération a eu lieu ou à quoi elle correspond.":"Tell Zuelen who this was with or what the transaction was for."};
@@ -35,6 +35,14 @@ export async function createSourceTransaction(_previous:TransactionActionState,f
  if(!workspace.company.vat_registered&&vat.vat>0)return{status:"error",message:locale==="fr"?"Cette entreprise n’est pas configurée comme assujettie à la TVA. Laissez les détails TVA sur « Je ne sais pas » ou mettez à jour le profil TVA.":"This company is not marked as VAT registered. Leave VAT details as “Not sure” or update the VAT profile."};
  try{await assertUsageAvailable(workspace.organization.id,"transactions",1)}catch(error){return{status:"error",message:billingLimitMessage(error,locale)??userFacingDataError(error,"Your Basic transaction allowance has been reached.",locale)}}
  const supabase=await createClient();
+ let selectedAccount:{id:string;code:string;account_type:string}|null=null;
+ if(selectedAccountCode){
+   const allowedTypes=direction==="income"?["revenue","asset","liability","expense"]:["expense","asset","liability"];
+   const{data:selected,error:selectedError}=await supabase.from("company_accounts").select("id,code,account_type").eq("company_id",workspace.company.id).eq("code",selectedAccountCode).eq("is_active",true).maybeSingle();
+   if(selectedError)return{status:"error",message:userFacingDataError(selectedError,locale==="fr"?"La catégorie comptable n’a pas pu être vérifiée.":"The accounting category could not be verified.",locale)};
+   if(!selected||!allowedTypes.includes(selected.account_type))return{status:"error",message:locale==="fr"?"Cette catégorie n’est pas disponible pour ce type de transaction.":"That accounting category is not available for this transaction type."};
+   selectedAccount=selected;
+ }
  const{data,error}=await supabase.from("source_transactions").insert({
    organization_id:workspace.organization.id,
    company_id:workspace.company.id,
@@ -51,12 +59,16 @@ export async function createSourceTransaction(_previous:TransactionActionState,f
    description:description||null,
    source_type:"manual",
    classification_status:"review",
+   suggested_account_id:selectedAccount?.id??null,
+   suggestion_confidence:selectedAccount?1:null,
+   suggestion_reason:selectedAccount?(locale==="fr"?"Catégorie choisie lors de la saisie manuelle.":"Category selected during manual entry."):null,
+   suggestion_kind:selectedAccount?"manual_selected":null,
    created_by:workspace.userId
  }).select("id").single();
  if(error){const friendly=billingLimitMessage(new Error(error.message),locale);return{status:"error",message:friendly??userFacingDataError(error,undefined,locale)}}
  if(!data?.id)return{status:"error",message:locale==="fr"?"Zuelen n’a pas pu préparer cette transaction. Réessayez.":"Zuelen couldn't prepare this transaction. Please try again."};
 
- await supabase.rpc("apply_source_transaction_suggestion",{p_source_transaction_id:data.id});
+ if(!selectedAccount)await supabase.rpc("apply_source_transaction_suggestion",{p_source_transaction_id:data.id});
  const{data:transaction,error:transactionError}=await supabase.from("source_transactions")
    .select("id,occurred_on,direction,amount_gross,currency,counterparty_name,classification_status,suggested_account_id,suggestion_confidence,suggestion_reason")
    .eq("id",data.id).eq("company_id",workspace.company.id).maybeSingle();
@@ -91,9 +103,11 @@ export async function createSourceTransaction(_previous:TransactionActionState,f
  refreshBooks();
  return{
    status:"success",
-   message:vat.treatment==="unknown"
-     ?(fr?"Détails prêts. Zuelen n’a pas deviné la TVA : confirmez maintenant la catégorie comptable.":"Details ready. Zuelen did not guess VAT — now confirm the accounting category.")
-     :(fr?"Détails prêts. Vérifiez la catégorie comptable avant d’ajouter la transaction.":"Details ready. Confirm the accounting category before adding the transaction."),
+   message:selectedAccount
+     ?(fr?"Catégorie sélectionnée. Vérifiez-la une dernière fois avant d’ajouter la transaction.":"Category selected. Give it one final check before adding the transaction.")
+     :vat.treatment==="unknown"
+       ?(fr?"Détails prêts. Zuelen n’a pas deviné la TVA : confirmez maintenant la catégorie comptable.":"Details ready. Zuelen did not guess VAT — now confirm the accounting category.")
+       :(fr?"Détails prêts. Vérifiez la catégorie comptable avant d’ajouter la transaction.":"Details ready. Confirm the accounting category before adding the transaction."),
    transactionId:data.id,
    review
  };
