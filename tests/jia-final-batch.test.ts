@@ -54,6 +54,23 @@ test("foreign currency requires an explicit FX rate and posts journals in base c
   assert.match(migration,/v_base_currency/);
 });
 
+test("foreign currency also works for invoices and settlements",()=>{
+  const composer=read("../src/components/invoice-composer.tsx");
+  const actions=read("../src/app/app/invoices/actions.ts");
+  const payments=read("../src/components/invoice-payment-panel.tsx");
+  const migration=read("../db/migrations/20260924173000_invoice_foreign_currency.sql");
+  assert.match(composer,/Invoice currency/);
+  assert.match(composer,/Exchange rate · 1/);
+  assert.match(composer,/never assumes 1:1/);
+  assert.match(actions,/p_exchange_rate_to_base/);
+  assert.match(payments,/Payment-date rate/);
+  assert.match(payments,/FX gain or loss automatically/);
+  assert.match(migration,/Foreign exchange gain/);
+  assert.match(migration,/Foreign exchange loss/);
+  assert.match(migration,/original_currency/);
+  assert.match(migration,/upper\(trim\(currency\)\)=upper\(trim\(v\.currency\)\)/);
+});
+
 test("transaction audit history is visible and records creation posting and FX changes",()=>{
   const page=read("../src/app/app/transactions/page.tsx");
   const action=read("../src/components/transaction-history-action.tsx");
