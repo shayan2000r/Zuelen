@@ -5,7 +5,6 @@ import { availableFiscalYears, fiscalYearBounds, getActiveFiscalYear } from "@/l
 import { normalizeLocale, type AccountTranslation } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
-import "./v2-rollout.css";
 import "./final-ux-cleanup.css";
 
 export const dynamic = "force-dynamic";
