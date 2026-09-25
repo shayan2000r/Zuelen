@@ -1,7 +1,0 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-html,body{font-family:'Inter',ui-sans-serif,system-ui,sans-serif;letter-spacing:-.02em}
-body :where(button,input,select,textarea,a,p,span,small,label,li,th,td,code,kbd){font-family:'Inter',ui-sans-serif,system-ui,sans-serif;letter-spacing:-.02em}
-body :where(h1,h2,h3,h4,h5,h6){font-family:'Inter',ui-sans-serif,system-ui,sans-serif!important;letter-spacing:-.04em!important}
-body :where([class*="eyebrow"],[class*="kicker"],[class*="Label"],[class*="label"],[class*="navSection"],[class*="overline"]){font-family:'Inter',ui-sans-serif,system-ui,sans-serif!important;letter-spacing:-.02em!important}
-body :where(code,kbd){font-family:'Inter',ui-sans-serif,system-ui,sans-serif!important;letter-spacing:-.02em!important;font-variant-numeric:tabular-nums}
