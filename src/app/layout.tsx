@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "./typography-2026.css";
-import "./zuelen-ui-v2.css";
 
 export const metadata: Metadata = {
   title: "Zuelen — Luxembourg business, under control",
