@@ -96,6 +96,7 @@
   --z-brand-hover: var(--z-green-700);
   --z-brand-soft: var(--z-green-50);
   --z-brand-soft-strong: var(--z-green-100);
+  --z-brand-strong: var(--z-green-700);
   --z-brand-on: #ffffff;
 
   --z-success: #2f8a4a;
@@ -180,6 +181,7 @@ html[data-zuelen-theme='dark'] {
   --z-brand-hover: #91c79f;
   --z-brand-soft: rgba(121,184,139,.10);
   --z-brand-soft-strong: rgba(121,184,139,.16);
+  --z-brand-strong: #a7d4b2;
   --z-brand-on: #102015;
 
   --z-success: #79c68d;

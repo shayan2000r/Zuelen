@@ -84,8 +84,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         eyebrow={l("Plan & payments", "Formule & paiements")}
         title={l("Subscription & Billing", "Abonnement & facturation")}
         description={l("See what your plan includes, understand team-seat billing and manage payments without accounting jargon.", "Consultez ce que votre formule inclut, comprenez la facturation des sièges d’équipe et gérez vos paiements sans jargon comptable.")}
-        meta={<StatusBadge tone={snapshot.plan === "premium" ? "success" : "neutral"}><span className={styles.dot} />{snapshot.plan === "premium" ? "Premium" : "Basic"}</StatusBadge>}
-        actions={[{ label: l("Team & Access", "Équipe et accès"), href: "/app/settings/team", icon: UsersRound, variant: "secondary" }]}
+        meta={<StatusBadge tone={snapshot.plan === "premium" ? "success" : "neutral"}>{snapshot.plan === "premium" ? "Premium" : "Basic"}</StatusBadge>}
+        actions={[{ label: l("Team & Access", "Équipe et accès"), href: "/app/settings/team", icon: UsersRound, variant: "ghost" }]}
       />
 
       {params.checkout === "success" ? <div className={styles.notice}>{snapshot.plan === "premium" ? l("Payment complete — Premium is active.", "Paiement effectué — Premium est actif.") : l("Payment complete. Premium access will update shortly.", "Paiement effectué. L’accès Premium sera mis à jour dans un instant.")}</div> : null}
@@ -172,8 +172,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               <Link href="/app/settings/team" className={styles.secondary}>{l("Manage team", "Gérer l’équipe")} <ArrowRight size={13}/></Link>
               {canManage && snapshot.billing_source !== "internal" ? (
                 snapshot.stripe_seat_subscription_id
-                  ? <form action={createBillingPortalAction}><button className={styles.cta} disabled={!stripeReady} type="submit">{l("Manage paid seats", "Gérer les sièges payants")}</button></form>
-                  : <form action={createSeatCheckoutAction}><button className={styles.cta} disabled={!stripeReady} type="submit">{l("Add paid seat · €9.99/mo", "Ajouter un siège · 9,99 €/mois")}</button></form>
+                  ? <form action={createBillingPortalAction}><button className={snapshot.plan === "basic" ? styles.secondary : styles.cta} disabled={!stripeReady} type="submit">{l("Manage paid seats", "Gérer les sièges payants")}</button></form>
+                  : <form action={createSeatCheckoutAction}><button className={snapshot.plan === "basic" ? styles.secondary : styles.cta} disabled={!stripeReady} type="submit">{l("Add paid seat · €9.99/mo", "Ajouter un siège · 9,99 €/mois")}</button></form>
               ) : null}
             </div>
 
@@ -186,7 +186,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <div className={styles.compareHead}><div><span>{l("Plans", "Formules")}</span><h2>{l("Choose the level that fits your workflow", "Choisissez le niveau adapté à votre activité")}</h2></div></div>
         <div className={styles.compareGrid}>
           <article className={styles.compareCard}>
-            <div className={styles.compareLabel}><CreditCard size={14}/> BASIC</div>
+            <div className={styles.compareTier}><CreditCard size={14}/> BASIC</div>
             <div className={styles.comparePrice}>€0 <small>{l("/ month", "/ mois")}</small></div>
             <p>{l("For light monthly bookkeeping with clear limits.", "Pour une gestion mensuelle légère avec des limites claires.")}</p>
             <ul>{basicFeatures.map(feature=><li key={feature.label} className={feature.included?styles.included:styles.excluded}>{feature.included?<Check size={14}/>:<X size={14}/>}<span>{feature.label}</span></li>)}</ul>
@@ -194,7 +194,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           </article>
 
           <article className={styles.compareCard + " " + styles.comparePremium}>
-            <div className={styles.compareLabel}><Sparkles size={14}/> PREMIUM</div>
+            <div className={styles.compareTier}><Sparkles size={14}/> PREMIUM</div>
             <div className={styles.comparePrice}>€39 <small>{l("/ month", "/ mois")}</small></div>
             <p>{l("Unlimited day-to-day usage plus reports, document generation and Copilot.", "Utilisation quotidienne illimitée avec rapports, génération de documents et Copilot.")}</p>
             <ul>{premiumFeatures.map(feature=><li key={feature} className={styles.included}><Check size={14}/><span>{feature}</span></li>)}</ul>
