@@ -271,6 +271,24 @@ body :where(code,kbd) {
   --shell-muted: rgba(226, 238, 229, .62);
   --shell-faint: rgba(226, 238, 229, .38);
   --shell-mint: #9fdcb0;
+
+  /* In-app design tokens: Geist for interface text, Inter Display for headings,
+     a slightly larger reading scale and softer, deeper elevation. */
+  --z-font-sans: var(--font-geist), 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --z-font-display: var(--font-inter-display), 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --z-text-xs: 12px;
+  --z-text-sm: 13px;
+  --z-text-md: 14px;
+  --z-text-lg: 17px;
+  --z-radius-lg: 18px;
+  --z-radius-xl: 20px;
+  --z-brand: #23803f;
+  --z-brand-hover: #1c6b39;
+  --z-shadow-xs: 0 1px 2px rgba(15,23,18,.04), 0 12px 32px -18px rgba(15,23,18,.14);
+  --z-shadow-sm: 0 1px 2px rgba(15,23,18,.05), 0 22px 44px -22px rgba(15,23,18,.22);
+  --z-gradient-button: linear-gradient(180deg, #2f9a53, #1c6b39);
+  font-family: var(--z-font-sans);
+  letter-spacing: -.01em;
   min-height: 100vh;
   display: grid;
   grid-template-columns: calc(var(--shell-sidebar-w) + var(--shell-gutter) * 2) minmax(0, 1fr);
@@ -340,6 +358,17 @@ body :where(code,kbd) {
 .workspace :where(button,a,input,select,textarea):focus-visible { outline: 0; box-shadow: var(--z-focus-ring); }
 html[data-zuelen-theme="dark"] .workspace { background: radial-gradient(circle at 94% 0%, rgba(121,184,139,.025), transparent 24%), var(--z-bg); }
 html[data-zuelen-theme="dark"] .topbar { background: color-mix(in srgb, var(--z-bg) 84%, transparent); }
+html[data-zuelen-theme="dark"] .app-shell {
+  --z-brand: #3fae62;
+  --z-brand-hover: #5cb97a;
+  --z-shadow-xs: 0 1px 0 rgba(255,255,255,.02) inset, 0 12px 32px -18px rgba(0,0,0,.6);
+  --z-shadow-sm: 0 1px 0 rgba(255,255,255,.03) inset, 0 22px 44px -22px rgba(0,0,0,.8);
+}
+/* The base rule above forces every heading onto the sans face; inside the app,
+   headings use Inter Display with spacing tuned per level. */
+.app-shell :where(h1,h2,h3,h4) { font-family: var(--z-font-display) !important; font-optical-sizing: auto; }
+.app-shell :where(h1) { letter-spacing: -.035em !important; }
+.app-shell :where(h2,h3,h4,h5,h6) { letter-spacing: -.02em !important; }
 html[data-zuelen-theme="dark"] .sidebar {
   border-color: rgba(255,255,255,.07);
   background:

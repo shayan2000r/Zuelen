@@ -17,7 +17,7 @@ html[data-zuelen-theme="dark"] [class*="folderActive"] small{color:#aab2ad!impor
 
 /* Filters must never render as clipped/native broken-looking controls. */
 .workspace :where(select){text-overflow:ellipsis}
-[class*="tools"] select,[class*="toolbar"] select,[class*="filters"] select{min-height:40px!important;border-radius:11px!important;padding-left:12px!important;padding-right:34px!important;line-height:1.2!important}
+[class*="tools"] select,[class*="toolbar"] select,[class*="filters"] select{min-height:42px!important;border-radius:999px!important;padding-left:14px!important;padding-right:34px!important;line-height:1.2!important}
 
 /* Bank import primary action remains legible even before a file is selected. */
 [class*="importButton"]{background:#2b8a46!important;color:#fff!important;border:1px solid #3da35b!important;text-shadow:none!important}
