@@ -4,3 +4,5 @@
 /* The explainer now follows the directory, so it needs its own breathing room. */
 .howItWorks{margin-top:28px}
 .join>a{border-radius:999px;font-weight:550}
+/* The global dark input fill outranks the transparent inner input; keep the search field a single box. */
+:global(html[data-zuelen-theme="dark"]) .search input{background:transparent!important}

@@ -139,3 +139,7 @@ a.metricCard:hover { border-color: var(--z-border-strong); transform: translateY
   .headerActions .button { flex: 1; }
   .emptyState { min-height: 260px; padding: var(--z-space-8) var(--z-space-4); }
 }
+
+/* A badge that carries its own icon drops the status dot, and the icon is sized to the text. */
+.badge:has(> svg)::before { display: none; }
+.badge > svg { width: 13px; height: 13px; flex: none; }

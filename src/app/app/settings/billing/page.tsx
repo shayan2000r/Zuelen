@@ -84,7 +84,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         eyebrow={l("Plan & payments", "Formule & paiements")}
         title={l("Subscription & Billing", "Abonnement & facturation")}
         description={l("See what your plan includes, understand team-seat billing and manage payments without accounting jargon.", "Consultez ce que votre formule inclut, comprenez la facturation des sièges d’équipe et gérez vos paiements sans jargon comptable.")}
-        meta={<StatusBadge tone={snapshot.plan === "premium" ? "success" : "neutral"}><span className={styles.dot} />{snapshot.plan === "premium" ? "Premium" : "Basic"}</StatusBadge>}
+        meta={<StatusBadge tone={snapshot.plan === "premium" ? "success" : "neutral"}>{snapshot.plan === "premium" ? "Premium" : "Basic"}</StatusBadge>}
         actions={[{ label: l("Team & Access", "Équipe et accès"), href: "/app/settings/team", icon: UsersRound, variant: "ghost" }]}
       />
 

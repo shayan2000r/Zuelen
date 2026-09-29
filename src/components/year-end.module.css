@@ -55,7 +55,7 @@
 .adjustmentSuccess{color:var(--z-success)}
 .adjustmentLocked{display:flex;align-items:center;gap:6px;margin-top:9px;color:var(--z-text-secondary);font-size:12px}
 .adjustmentLocked svg{width:13px}
-.lock{border:1px solid rgba(255,255,255,.08);background:radial-gradient(circle at 90% 0%,var(--z-brand-soft),transparent 34%),linear-gradient(160deg,#0f2818,#08170e);color:#eef5f0;border-radius:var(--z-radius-lg);padding:22px;display:flex;gap:14px;align-items:flex-start;box-shadow:var(--z-shadow-md)}
+.lock{border:1px solid rgba(255,255,255,.08);background:radial-gradient(circle at 90% 0%,rgba(92,185,122,.18),transparent 34%),linear-gradient(160deg,#0f2818,#08170e);color:#eef5f0;border-radius:var(--z-radius-lg);padding:22px;display:flex;gap:14px;align-items:flex-start;box-shadow:var(--z-shadow-md)}
 .lock>svg{width:21px;color:var(--z-brand);flex:none}
 .lock strong{font-size:14px;color:#eef5f0}
 .lock p{font-size:12px;line-height:1.6;color:rgba(226,238,229,.7);margin:6px 0 0}
