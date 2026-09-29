@@ -3,8 +3,6 @@ html[data-zuelen-theme="dark"]{--z-bg:#0d0f0e;--z-bg-subtle:#111312;--z-surface-
 html[data-zuelen-theme="dark"] .app-shell{--page:#0d0f0e;--card:#151817;--card-strong:#1b1e1c;--text:#f3f5f3;--muted:#b5bbb7;--border:rgba(243,245,243,.10);--border-strong:rgba(243,245,243,.17);--glass:rgba(13,15,14,.94)}
 html[data-zuelen-theme="dark"] body,html[data-zuelen-theme="dark"] .workspace{background:#0d0f0e!important}
 html[data-zuelen-theme="dark"] .workspace{background-image:radial-gradient(circle at 95% -10%,rgba(45,198,83,.018),transparent 26%)!important}
-html[data-zuelen-theme="dark"] .sidebar{background:#111412!important;border-color:#292e2b!important}
-html[data-zuelen-theme="dark"] .topbar{background:rgba(13,15,14,.92)!important;border-color:#292e2b!important}
 html[data-zuelen-theme="dark"] .workspace :where(input,select,textarea){background:#1b1e1c!important;border-color:#343a36!important;color:#f3f5f3!important}
 html[data-zuelen-theme="dark"] .workspace table tbody tr{background:#151817!important}
 
@@ -14,38 +12,12 @@ html[data-zuelen-theme="dark"] [class*="folderActive"]>span{background:#234a2d!i
 html[data-zuelen-theme="dark"] [class*="folderActive"] strong{color:#f3f5f3!important}
 html[data-zuelen-theme="dark"] [class*="folderActive"] small{color:#aab2ad!important}
 
-/* Desktop header: no inert hamburger. Mobile keeps the drawer trigger. */
-.topbar-left .mobile-only{display:none!important}.sidebar .brand-row>.mobile-only{display:none!important}.topbar-left{min-width:0!important}.topbar{padding-left:20px!important}
-
-/* Sidebar labels and premium markers stay readable and on one line. */
-.sidebar .nav-item,.sidebar [class*="nestedNavItem"],.sidebar [class*="groupButton"]{text-decoration:none!important;white-space:nowrap!important}
-.sidebar .nav-item>span,.sidebar [class*="nestedNavItem"]>span{min-width:0;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
-.sidebar [class*="premiumNavBadge"]{flex:none!important;color:#e9fff0!important;background:#1d6132!important;border:1px solid rgba(189,244,203,.25)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
-html[data-zuelen-theme="dark"] .sidebar [class*="premiumNavBadge"]{color:#eaffef!important;background:#225d33!important;border-color:#397d4c!important}
-/* /app/settings used to match every child route. Visually clear the parent when a real child is active. */
-.sidebar [class*="navGroup"]:has(a[href^="/app/settings/"].nav-active) a[href="/app/settings"].nav-active{background:transparent!important;color:#a5aba0!important;box-shadow:none!important}
-.sidebar [class*="navGroup"]:has(a[href^="/app/settings/"].nav-active) a[href="/app/settings"].nav-active svg{color:inherit!important}
-.sidebar [class*="navGroup"]:has(a[href^="/app/settings/"].nav-active) a[href="/app/settings"].nav-active:hover{background:#20231e!important;color:#fff!important}
-
-/* Workspace/account menu: flatten the financial-year control into the same row language as the other actions. */
-[class*="workspaceName"]{display:flex!important;align-items:center!important;gap:6px!important;min-width:0}
-[class*="workspaceName"] svg{flex:none!important;color:var(--z-brand-strong)!important}
-[class*="accountPreferences"]{gap:0!important;padding:9px 10px!important}
-[class*="accountPreferences"]>label{display:grid!important;grid-template-columns:minmax(0,1fr) 112px!important;align-items:center!important;gap:12px!important;min-height:52px!important;width:100%!important;padding:8px 10px!important;border:0!important;border-radius:11px!important;background:transparent!important}
-[class*="accountPreferences"]>label:hover{background:var(--z-surface-2)!important}
-[class*="accountPreferences"]>label>span{white-space:nowrap!important;line-height:1.2!important;font-size:10px!important;font-weight:700!important;color:var(--z-text-secondary)!important}
-[class*="accountPreferences"] select{width:112px!important;min-width:0!important;height:36px!important;border:1px solid var(--z-border)!important;border-radius:10px!important;background:var(--z-surface-2)!important;color:var(--z-text)!important;padding:0 30px 0 11px!important;font-size:11px!important;font-weight:750!important;box-shadow:none!important}
-
-/* Overview rhythm: keep explanatory copy and chart separators away from actions/data. */
-[class*="aiCard"]>p{margin-bottom:18px!important}
-[class*="overviewCard"] [class*="barChart"]{margin-top:30px!important}
-
 /* Empty-state action pair: icon-bearing actions with deliberate breathing room. */
 .transaction-empty-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
 
 /* Filters must never render as clipped/native broken-looking controls. */
 .workspace :where(select){text-overflow:ellipsis}
-[class*="tools"] select,[class*="toolbar"] select,[class*="filters"] select{min-height:40px!important;border-radius:11px!important;padding-left:12px!important;padding-right:34px!important;line-height:1.2!important}
+[class*="tools"] select,[class*="toolbar"] select,[class*="filters"] select{min-height:42px!important;border-radius:999px!important;padding-left:14px!important;padding-right:34px!important;line-height:1.2!important}
 
 /* Bank import primary action remains legible even before a file is selected. */
 [class*="importButton"]{background:#2b8a46!important;color:#fff!important;border:1px solid #3da35b!important;text-shadow:none!important}
@@ -85,6 +57,4 @@ html[data-zuelen-theme="dark"] .billing-plan-basic{background:#151817;border-col
 [class*="formHint"]{margin:10px 0 0;color:var(--z-text-secondary);font-size:12px;line-height:1.55}
 
 @media(max-width:980px){.billing-plan-grid{grid-template-columns:1fr}.billing-plan-card{min-height:0}.billing-plan-showcase-head{align-items:flex-start;flex-direction:column}.billing-cycle-note{align-self:flex-start}}
-@media(max-width:880px){.topbar-left .mobile-only{display:grid!important}.sidebar .brand-row>.mobile-only{display:grid!important}.topbar{padding-left:12px!important}.sidebar .brand-row{min-height:52px;align-items:center;position:relative;z-index:3;background:inherit}.sidebar .brand-row>.mobile-only{margin-left:auto;flex:none}.sidebar{padding-top:10px!important}.sidebar .brand-row img{display:block!important;visibility:visible!important;opacity:1!important}}
 @media(max-width:700px){[class*="invoice"] [class*="editorLine"]{grid-template-columns:1fr 1fr!important}[class*="invoice"] [class*="editorLine"] [class*="lineDescription"]{grid-column:1/-1!important}[class*="invoice"] [class*="editorLine"] label:nth-of-type(4){grid-column:1!important}[class*="invoice"] [class*="editorLine"] [class*="removeLine"]{grid-column:2!important;justify-self:end!important}.billing-plan-showcase{padding:18px}.billing-plan-card{padding:22px}.billing-plan-price{font-size:46px}.billing-premium-actions{grid-template-columns:1fr}}
-@media(max-width:620px){.topbar{left:8px!important;right:8px!important;width:auto!important}.topbar-actions{gap:4px!important}}
