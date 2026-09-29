@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { geist, interDisplay } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ const themeBootstrap = `
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${geist.variable} ${interDisplay.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
