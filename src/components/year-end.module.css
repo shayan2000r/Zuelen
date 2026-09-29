@@ -9,11 +9,11 @@
 .ok{background:var(--z-success-soft);color:var(--z-success)}
 .warn{background:var(--z-warning-soft);color:var(--z-warning)}
 .check strong{display:block;font-size:13px;color:var(--z-text)}
-.check small{display:block;font-size:11px;color:var(--z-text-secondary);margin-top:4px;line-height:1.45}
+.check small{display:block;font-size:12px;color:var(--z-text-secondary);margin-top:4px;line-height:1.45}
 .check b{font-size:12px;color:var(--z-text);white-space:nowrap}
 .adjustmentSection{display:grid;gap:var(--z-space-3)}
 .adjustmentHead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
-.adjustmentHead p{text-transform:uppercase;letter-spacing:.11em;font-size:10px;font-weight:750;color:var(--z-text-tertiary);margin:0 0 6px}
+.adjustmentHead p{text-transform:uppercase;letter-spacing:.11em;font-size:12px;font-weight:600;color:var(--z-text-tertiary);margin:0 0 6px}
 .adjustmentHead h2{font-size:21px;letter-spacing:-.035em;margin:0 0 5px}
 .adjustmentHead span{font-size:12px;color:var(--z-text-secondary);line-height:1.55}
 .adjustmentGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--z-space-3)}
@@ -22,51 +22,51 @@
 .adjustmentIcon{width:38px;height:38px;display:grid;place-items:center;border-radius:var(--z-radius-md);background:var(--z-warning-soft);color:var(--z-warning)}
 .adjustmentIcon svg{width:17px}
 .adjustmentOk{background:var(--z-success-soft);color:var(--z-success)}
-.adjustmentStatusGood,.adjustmentStatusWarn,.adjustmentStatusNeutral{font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.07em;border-radius:999px;padding:5px 8px}
+.adjustmentStatusGood,.adjustmentStatusWarn,.adjustmentStatusNeutral{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;border-radius:999px;padding:5px 8px}
 .adjustmentStatusGood{background:var(--z-success-soft);color:var(--z-success)}
 .adjustmentStatusWarn{background:var(--z-warning-soft);color:var(--z-warning)}
 .adjustmentStatusNeutral{background:var(--z-surface-3);color:var(--z-text-secondary)}
 .adjustmentCard h3{font-size:15px;letter-spacing:-.02em;margin:16px 0 7px}
 .adjustmentCard>p{font-size:12px;line-height:1.55;color:var(--z-text-secondary);min-height:56px;margin:0 0 12px}
-.adjustmentDone{display:flex;align-items:center;gap:6px;color:var(--z-success);font-size:12px;font-weight:700;margin-top:10px}
+.adjustmentDone{display:flex;align-items:center;gap:6px;color:var(--z-success);font-size:12px;font-weight:600;margin-top:10px}
 .adjustmentDone svg{width:13px}
-.adjustmentButton,.adjustmentLink{min-height:36px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:12px;font-weight:750;text-decoration:none;margin-top:10px;padding:0 13px;transition:transform .18s ease,opacity .18s ease}
+.adjustmentButton,.adjustmentLink{min-height:36px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:12px;font-weight:600;text-decoration:none;margin-top:10px;padding:0 13px;transition:transform .18s ease,opacity .18s ease}
 .adjustmentButton{border:0;background:var(--z-brand);color:var(--z-brand-on);cursor:pointer}
 .adjustmentButton:hover,.adjustmentLink:hover{transform:translateY(-1px)}
 .adjustmentButton:disabled{opacity:.42;cursor:not-allowed;transform:none}
 .adjustmentButton svg,.adjustmentLink svg{width:13px}
 .adjustmentLink{color:var(--z-text);border:1px solid var(--z-border);background:var(--z-surface-2)}
 .issueList{display:grid;gap:6px;margin-top:10px}
-.issueList>div{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 9px;border-radius:var(--z-radius-sm);background:var(--z-surface-3);font-size:11px}
+.issueList>div{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 9px;border-radius:var(--z-radius-sm);background:var(--z-surface-3);font-size:12px}
 .issueList span{min-width:0;color:var(--z-text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .issueList b{color:var(--z-text);margin-right:6px}
-.issueList strong{font-size:11px;white-space:nowrap}
+.issueList strong{font-size:12px;white-space:nowrap}
 .adjustmentDetails{margin-top:9px}
-.adjustmentDetails summary{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:750;cursor:pointer;color:var(--z-text);list-style:none}
+.adjustmentDetails summary{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;cursor:pointer;color:var(--z-text);list-style:none}
 .adjustmentDetails summary::-webkit-details-marker{display:none}
 .adjustmentForm{display:grid;grid-template-columns:1.4fr .8fr auto;gap:8px;align-items:end;margin-top:11px;padding-top:11px;border-top:1px solid var(--z-border)}
 .adjustmentForm label{display:grid;gap:5px}
-.adjustmentForm label span{font-size:11px;color:var(--z-text-secondary);font-weight:650}
+.adjustmentForm label span{font-size:12px;color:var(--z-text-secondary);font-weight:600}
 .adjustmentForm select,.adjustmentForm input{height:38px;border:1px solid var(--z-border);border-radius:var(--z-radius-sm);background:var(--z-surface-1);color:var(--z-text);padding:0 10px;font:inherit;font-size:12px;min-width:0}
 .adjustmentForm select:focus-visible,.adjustmentForm input:focus-visible{outline:0;box-shadow:var(--z-focus-ring)}
 .adjustmentForm .adjustmentButton{margin:0}
-.adjustmentError,.adjustmentSuccess{display:block;font-size:11px;line-height:1.45;margin-top:8px}
+.adjustmentError,.adjustmentSuccess{display:block;font-size:12px;line-height:1.45;margin-top:8px}
 .adjustmentError{color:var(--z-danger)}
 .adjustmentSuccess{color:var(--z-success)}
-.adjustmentLocked{display:flex;align-items:center;gap:6px;margin-top:9px;color:var(--z-text-secondary);font-size:11px}
+.adjustmentLocked{display:flex;align-items:center;gap:6px;margin-top:9px;color:var(--z-text-secondary);font-size:12px}
 .adjustmentLocked svg{width:13px}
-.lock{border:1px solid rgba(255,255,255,.08);background:radial-gradient(circle at 90% 0%,rgba(179,222,1,.08),transparent 34%),linear-gradient(145deg,#242426,#18181a);color:#f7f7fb;border-radius:var(--z-radius-lg);padding:22px;display:flex;gap:14px;align-items:flex-start;box-shadow:var(--z-shadow-md)}
-.lock>svg{width:21px;color:#b3de01;flex:none}
-.lock strong{font-size:14px;color:#f7f7fb}
-.lock p{font-size:12px;line-height:1.6;color:#b4b4ba;margin:6px 0 0}
-.closeButton{margin-top:13px;border:0;border-radius:999px;background:#b3de01;color:#171717;font-size:12px;font-weight:800;min-height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;text-decoration:none;transition:transform .18s ease,box-shadow .18s ease}
-.closeButton:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(179,222,1,.12)}
+.lock{border:1px solid rgba(255,255,255,.08);background:radial-gradient(circle at 90% 0%,var(--z-brand-soft),transparent 34%),linear-gradient(160deg,#0f2818,#08170e);color:#eef5f0;border-radius:var(--z-radius-lg);padding:22px;display:flex;gap:14px;align-items:flex-start;box-shadow:var(--z-shadow-md)}
+.lock>svg{width:21px;color:var(--z-brand);flex:none}
+.lock strong{font-size:14px;color:#eef5f0}
+.lock p{font-size:12px;line-height:1.6;color:rgba(226,238,229,.7);margin:6px 0 0}
+.closeButton{margin-top:13px;border:0;border-radius:999px;background:var(--z-brand);color:var(--z-brand-on);font-size:12px;font-weight:600;min-height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;text-decoration:none;transition:transform .18s ease,box-shadow .18s ease}
+.closeButton:hover{transform:translateY(-1px);box-shadow:0 10px 24px var(--z-brand-soft-strong)}
 .closeButton:disabled{opacity:.38;cursor:not-allowed}
 .closeButton svg{width:14px}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.actionError,.actionSuccess{font-size:11px;margin:8px 0 0}
+.actionError,.actionSuccess{font-size:12px;margin:8px 0 0}
 .actionError{color:#ffb19d}
-.actionSuccess{color:#b3de01}
+.actionSuccess{color:var(--z-brand)}
 @media(max-width:1100px){.checks,.adjustmentGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.checks,.adjustmentGrid{grid-template-columns:1fr}.adjustmentHead{align-items:flex-start;flex-direction:column}.adjustmentForm{grid-template-columns:1fr}.lock{padding:18px}}
