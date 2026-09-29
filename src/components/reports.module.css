@@ -4,13 +4,13 @@
 .analyticsCard{border:1px solid var(--z-border);background:var(--z-surface-1);border-radius:var(--z-radius-lg);padding:20px;box-shadow:var(--z-shadow-xs);min-width:0}
 .monthlyCard{min-height:330px}
 .head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:18px}
-.head p,.trial summary p{text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-weight:750;color:var(--z-text-tertiary);margin:0 0 7px}
-.head h2,.trial summary h2{margin:0;font-size:19px;font-weight:650;letter-spacing:-.035em}
+.head p,.trial summary p{text-transform:uppercase;letter-spacing:.1em;font-size:12px;font-weight:600;color:var(--z-text-tertiary);margin:0 0 7px}
+.head h2,.trial summary h2{margin:0;font-size:19px;font-weight:600;letter-spacing:-.035em}
 .head>strong{font-size:12px}
 .monthInsights{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
 .monthInsights>div{border:1px solid var(--z-border);border-radius:var(--z-radius-md);padding:11px;background:var(--z-surface-2);display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center}
 .monthInsights svg{width:15px;color:var(--z-text-secondary);grid-row:1/3}
-.monthInsights span{font-size:11px;color:var(--z-text-secondary)}
+.monthInsights span{font-size:12px;color:var(--z-text-secondary)}
 .monthInsights strong{font-size:12px;margin-top:2px}
 .monthChart{height:170px;display:grid;grid-template-columns:repeat(12,1fr);gap:7px;align-items:end;border-bottom:1px solid var(--z-border);padding:0 2px}
 .monthCol{height:100%;display:grid;grid-template-rows:1fr auto;gap:7px}
@@ -18,9 +18,9 @@
 .monthBars i{display:block;width:min(11px,38%);min-height:0;border-radius:5px 5px 2px 2px;transition:height .4s ease}
 .revBar{background:var(--z-brand)}
 .expBar{background:var(--z-text-secondary)}
-.monthCol small{text-align:center;font-size:10px;color:var(--z-text-tertiary);padding-bottom:7px}
+.monthCol small{text-align:center;font-size:12px;color:var(--z-text-tertiary);padding-bottom:7px}
 .chartLegend{display:flex;justify-content:flex-end;gap:14px;margin-top:11px}
-.chartLegend span{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--z-text-secondary)}
+.chartLegend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--z-text-secondary)}
 .chartLegend i{width:8px;height:8px;border-radius:2px}
 .revLegend{background:var(--z-brand)}
 .expLegend{background:var(--z-text-secondary)}
@@ -30,39 +30,47 @@
 .donut>span{position:relative;z-index:1;text-align:center;max-width:96px}
 .donut strong,.donut small{display:block}
 .donut strong{font-size:16px;letter-spacing:-.035em}
-.donut small{margin-top:4px;font-size:10px;color:var(--z-text-secondary)}
+.donut small{margin-top:4px;font-size:12px;color:var(--z-text-secondary)}
 .mixList{width:100%;display:grid;gap:9px}
-.mixList>div{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:8px;font-size:11px}
+.mixList>div{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:8px;font-size:12px}
 .mixList i{width:9px;height:9px;border-radius:3px}
 .mixList span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--z-text-secondary)}
-.mixList strong{font-size:11px}
+.mixList strong{font-size:12px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--z-space-4)}
 .card,.trial{border:1px solid var(--z-border);background:var(--z-surface-1);border-radius:var(--z-radius-lg);box-shadow:var(--z-shadow-xs)}
 .card{padding:22px}
-.card h3{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--z-text-tertiary);margin:20px 0 9px}
+.card h3{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--z-text-tertiary);margin:20px 0 9px}
 .row,.total,.result{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--z-border);font-size:12px}
 .row span{display:flex;gap:9px;min-width:0;color:var(--z-text-secondary)}
-.row b{color:var(--z-text-tertiary);font-weight:700}
+.row b{color:var(--z-text-tertiary);font-weight:600}
 .row strong,.total strong{font-size:12px;text-align:right}
-.total{font-weight:700;border-top:1px solid var(--z-border-strong)}
+.total{font-weight:600;border-top:1px solid var(--z-border-strong)}
 .result{margin-top:14px;border:0;background:var(--z-text);border-radius:var(--z-radius-md);padding:13px 14px}
 .result span{color:var(--z-bg)}
 .result strong{font-size:16px;color:var(--z-brand)}
 .trial{overflow:hidden}
 .trial summary{list-style:none;cursor:pointer;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .trial summary::-webkit-details-marker{display:none}
-.trial summary span{font-size:11px;color:var(--z-text-secondary);display:block;margin-top:6px}
-.trial summary>strong{font-size:11px;color:var(--z-text-secondary);white-space:nowrap}
+.trial summary span{font-size:12px;color:var(--z-text-secondary);display:block;margin-top:6px}
+.trial summary>strong{font-size:12px;color:var(--z-text-secondary);white-space:nowrap}
 .trial[open] summary{border-bottom:1px solid var(--z-border)}
 .table{overflow:auto;background:var(--z-surface-2)}
 .th,.tr{display:grid;grid-template-columns:90px minmax(220px,1fr) 130px 130px 130px;align-items:center;min-width:760px}
-.th{background:var(--z-surface-1);color:var(--z-text-tertiary);text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:750}
+.th{background:var(--z-surface-1);color:var(--z-text-tertiary);text-transform:uppercase;letter-spacing:.08em;font-size:12px;font-weight:600}
 .th span,.tr>*{padding:10px 12px}
-.tr{border-top:1px solid var(--z-border);font-size:11px;transition:background .15s ease}
+.tr{border-top:1px solid var(--z-border);font-size:12px;transition:background .15s ease}
 .tr:hover{background:var(--z-surface-1)}
-.tr b{font-weight:700}
+.tr b{font-weight:600}
 .tr span:nth-child(n+3),.tr strong{text-align:right}
-.tr strong{font-size:11px}
+.tr strong{font-size:12px}
 @media(max-width:1180px){.analyticsGrid{grid-template-columns:1fr 1fr}.monthlyCard{grid-column:1/-1}}
 @media(max-width:1000px){.grid{grid-template-columns:1fr}}
 @media(max-width:650px){.analyticsGrid,.monthInsights{grid-template-columns:1fr}.monthlyCard{grid-column:auto}.card,.analyticsCard{padding:17px}.monthChart{gap:3px}.monthBars i{width:7px}.donut{width:136px;height:136px}.trial summary{align-items:flex-start;flex-direction:column}}
+
+/* Statement lines read at body size; the net result is the statement's headline figure. */
+.row,.total{font-size:13.5px}
+.row strong,.total strong{font-size:13.5px;font-variant-numeric:tabular-nums}
+.head>strong{font-size:13px}
+.result{background:var(--z-brand-soft);border:1px solid color-mix(in srgb,var(--z-brand) 22%,var(--z-border));font-size:13.5px}
+.result span{color:var(--z-text-secondary)}
+.result strong{font-family:var(--z-font-display);font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--z-brand-strong);font-variant-numeric:tabular-nums}

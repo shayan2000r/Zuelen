@@ -36,9 +36,9 @@ export default async function ReportsPage(){
    description={fr?`Les analyses proviennent des écritures comptabilisées entre le ${bounds.start} et le ${bounds.end}. Le détail comptable reste disponible pour retracer chaque chiffre.`:`Analytics come from posted journal entries between ${bounds.start} and ${bounds.end}. Accounting detail remains available to trace every figure.`}
   />
   <DataSummary label={fr?"Synthèse financière":"Financial summary"} items={[
+   {label:fr?"Résultat net":"Net result",value:fmt(result),description:result>=0?(fr?"Résultat positif":"Positive result"):(fr?"Perte nette":"Net loss"),icon:result>=0?TrendingUp:TrendingDown,tone:result>=0?"success":"danger"},
    {label:fr?"Produits":"Revenue",value:fmt(revenueTotal),description:fr?`Exercice ${year}`:`Financial year ${year}`,icon:BarChart3},
    {label:fr?"Charges":"Expenses",value:fmt(expenseTotal),description:fr?"Charges comptabilisées":"Posted expenses",icon:Scale},
-   {label:fr?"Résultat net":"Net result",value:fmt(result),description:result>=0?(fr?"Résultat positif":"Positive result"):(fr?"Perte nette":"Net loss"),icon:result>=0?TrendingUp:TrendingDown,tone:result>=0?"success":"danger"},
    {label:fr?"Marge nette":"Net margin",value:`${new Intl.NumberFormat(intl,{minimumFractionDigits:1,maximumFractionDigits:1}).format(margin)}%`,description:fr?"Produits après charges":"Revenue after expenses",icon:TrendingUp,tone:margin>=0?"success":"danger"}
   ]}/>
   {!openingFound&&entryIds.length?<div className={styles.warning}>{fr?`Le compte de profits et pertes est exploitable, mais le bilan reste provisoire tant que ${year} ne comporte pas d’écriture de soldes d’ouverture issue de la clôture de l’exercice précédent.`:`The P&L is usable, but the balance sheet is provisional until ${year} has an opening-balance entry from the prior-year closing position.`}</div>:null}

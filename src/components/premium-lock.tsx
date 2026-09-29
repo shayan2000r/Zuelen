@@ -25,7 +25,7 @@ export function PremiumLock({
       <div className={styles.overlay}>
         <div className={styles.modal}>
           <div className={styles.icon}><LockKeyhole size={20} /></div>
-          <span className={styles.eyebrow}>{l("Premium feature", "Fonctionnalité Premium")}</span>
+          <span className={styles.lockTag}>{l("Premium feature", "Fonctionnalité Premium")}</span>
           <h2>{title}</h2>
           <p>{description}</p>
           <div className={styles.features}>{features.slice(0, 4).map(feature => <span key={feature}><Check size={13} />{feature}</span>)}</div>
