@@ -129,13 +129,13 @@ function ManualEntryFlow({
 
   return <>
     <button type="button" className={choiceStyles.back} onClick={onBack} disabled={busy}>{fr?"← Retour":"← Back"}</button>
-    <p className={styles.eyebrow}>{fr?"Saisie manuelle · Étape 1 sur 2":"Manual entry · Step 1 of 2"}</p>
+    <p className={styles.stepTag}>{fr?"Saisie manuelle · Étape 1 sur 2":"Manual entry · Step 1 of 2"}</p>
     <h2 id="new-transaction-title">{fr?"Que s’est-il passé ?":"What happened?"}</h2>
     <p>{fr?"Saisissez simplement ce que vous savez. Zuelen vous proposera la catégorie comptable à l’étape suivante. Les détails TVA sont facultatifs.":"Enter what you actually know. Zuelen will suggest the accounting category next. VAT details are optional."}</p>
 
     <form onSubmit={prepare} className={styles.transactionForm}>
       <div className={styles.fieldFull}>
-        <span className={styles.fieldLabel}>{fr?"Type":"Type"}</span>
+        <span className={styles.fieldName}>{fr?"Type":"Type"}</span>
         <div className={styles.typeToggle} role="group" aria-label={fr?"Type de transaction":"Transaction type"}>
           <button type="button" className={direction==="expense"?styles.typeActive:""} onClick={()=>setDirection("expense")}>{fr?"Dépense":"Expense"}</button>
           <button type="button" className={direction==="income"?styles.typeActive:""} onClick={()=>setDirection("income")}>{fr?"Revenu / remboursement":"Income / refund"}</button>
@@ -205,7 +205,7 @@ export function SourceTransactionForm({defaultDate,initialOpen=false,locale="en"
         <button autoFocus className={styles.drawerClose} type="button" onClick={()=>void close()} disabled={closing||flowBusy} aria-label={fr?"Fermer":"Close"}>{closing?<LoaderCircle className={styles.reviewSpinner} size={17}/>:<X size={18}/>}</button>
         <aside className={styles.formPanel+" "+styles.drawerCard} role="dialog" aria-modal="true" aria-labelledby="new-transaction-title">
           {entryMode==="choose"?<>
-            <p className={styles.eyebrow}>{fr?"Nouvelle activité":"New activity"}</p>
+            <p className={styles.stepTag}>{fr?"Nouvelle activité":"New activity"}</p>
             <h2 id="new-transaction-title">{fr?"Ajouter une transaction":"Add a transaction"}</h2>
             <p>{fr?"Choisissez la méthode la plus rapide. Vous vérifierez la catégorie avant toute comptabilisation.":"Choose the fastest way to start. You'll confirm the accounting category before anything is posted."}</p>
             <div className={choiceStyles.choices}>
