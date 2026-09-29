@@ -38,10 +38,10 @@ export default async function BankingPage({searchParams}:{searchParams:SearchPar
   />
 
   <DataSummary items={[
-   {label:fr?"Comptes bancaires":"Bank accounts",value:accounts.length,description:fr?"Comptes connectés ou suivis":"Accounts currently tracked",icon:Landmark},
-   {label:fr?"Mouvements":"Bank movements",value:rows.length,description:fr?`Exercice ${year}`:`Financial year ${year}`,icon:WalletCards},
    {label:fr?"À rapprocher":"Needs reconciliation",value:unmatched,description:unmatched?(fr?"Action requise":"Action required"):(fr?"Tout est rapproché":"Everything reconciled"),icon:CircleHelp,tone:unmatched?"warning":"success"},
-   {label:fr?"Couverture":"Reconciliation coverage",value:`${coverage}%`,description:fr?`${matched} mouvement${matched===1?"":"s"} rapproché${matched===1?"":"s"}`:`${matched} movement${matched===1?"":"s"} reconciled`,icon:CheckCircle2,tone:coverage===100?"success":"info"}
+   {label:fr?"Couverture":"Reconciliation coverage",value:`${coverage}%`,description:fr?`${matched} mouvement${matched===1?"":"s"} rapproché${matched===1?"":"s"}`:`${matched} movement${matched===1?"":"s"} reconciled`,icon:CheckCircle2,tone:coverage===100?"success":"info"},
+   {label:fr?"Mouvements":"Bank movements",value:rows.length,description:fr?`Exercice ${year}`:`Financial year ${year}`,icon:WalletCards},
+   {label:fr?"Comptes bancaires":"Bank accounts",value:accounts.length,description:fr?"Comptes connectés ou suivis":"Accounts currently tracked",icon:Landmark}
   ]}/>
 
   <div style={{height:"var(--z-space-6)"}}/>
