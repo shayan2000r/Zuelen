@@ -66,7 +66,7 @@ export function CopilotPanel({ premium, initialQuestion = "", conversations, act
           <div className={`${styles.visualMetric} ${styles.visualMetricRight}`}><WalletCards size={15}/><span>{fr ? "Trésorerie" : "Cash"}</span><strong>€ —</strong></div>
           <div className={styles.visualCore}><Image src="/zuelen-icon.png" alt="" width={46} height={46}/><Sparkles size={16}/></div>
         </div>
-        <span className={styles.eyebrow}>{fr ? "VOS CHIFFRES, EN LANGAGE CLAIR" : "YOUR NUMBERS, IN PLAIN LANGUAGE"}</span>
+        <span className={styles.introTag}>{fr ? "VOS CHIFFRES, EN LANGAGE CLAIR" : "YOUR NUMBERS, IN PLAIN LANGUAGE"}</span>
         <h2>{fr ? "Posez une question à votre comptabilité." : "Ask your books a business question."}</h2>
         <p>{canBookkeep ? (fr ? "Copilot explique les données déjà présentes dans votre espace et distingue les faits comptabilisés, les justificatifs et les estimations." : "Copilot explains the data already in your workspace and separates posted facts, evidence and estimates.") : (fr ? "Votre rôle Lecteur peut consulter les données, mais ne peut pas créer de conversation." : "Your Viewer role can inspect data, but cannot create a conversation.")}</p>
         {canBookkeep ? <div className={styles.suggestionGrid}>{suggestions.map((item,index) => <button type="button" key={item.title} onClick={() => setQuestion(prompts[index])}><span><item.icon size={17}/></span><strong>{item.title}</strong><small>{item.copy}</small></button>)}</div> : null}
