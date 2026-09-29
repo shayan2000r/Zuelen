@@ -22,6 +22,10 @@ type Params=Promise<{q?:string;kind?:string;from?:string;to?:string;opening?:str
 function money(value:number,currency:string,locale:Locale){return new Intl.NumberFormat(intlLocale(locale),{style:"currency",currency,minimumFractionDigits:2}).format(value)}
 function validDate(value:string|undefined){return value&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value:""}function within(value:string,bounds:{start:string;end:string},fallback:string){return value&&value>=bounds.start&&value<=bounds.end?value:fallback}
 
+function leadWithOpening<T>(items: T[], missing: boolean) {
+  return missing ? [items[items.length - 1], ...items.slice(0, -1)] : items;
+}
+
 export default async function AccountingPage({searchParams}:{searchParams:Params}){
  const params=await searchParams,q=(params.q??"").trim().toLowerCase(),kind=["all","revenue","expense","manual","invoice","payment","reversal","opening"].includes(params.kind??"")?params.kind!:"all",workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",dateLocale=intlLocale(locale),editable=canAccount(workspace.role),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),from=within(validDate(params.from),bounds,bounds.start),to=within(validDate(params.to),bounds,bounds.end),supabase=await createClient();
  const[{data:entryData,error:entryError},{data:accountData,error:accountError}]=await Promise.all([supabase.from("journal_entries").select("id,entry_number,entry_date,description,source_type,source_id,status,posted_at,reversal_of").eq("company_id",workspace.company.id).gte("entry_date",from).lte("entry_date",to).order("entry_number",{ascending:false}).limit(1000),supabase.from("company_accounts").select("id,code,label,label_en,label_fr,account_type").eq("company_id",workspace.company.id).eq("is_active",true).order("code")]);if(entryError)throw new Error(`${fr?"Impossible de charger les écritures":"Could not load journal entries"}: ${entryError.message}`);if(accountError)throw new Error(`${fr?"Impossible de charger le plan comptable":"Could not load chart of accounts"}: ${accountError.message}`);
@@ -45,12 +49,12 @@ export default async function AccountingPage({searchParams}:{searchParams:Params
 
   <DataSummary
    label={fr ? "Résumé du grand livre" : "Ledger summary"}
-   items={[
+   items={leadWithOpening([
     {label:fr ? "Écritures de journal" : "Journal entries",value:entries.length,description:String(year),icon:BookOpen},
     {label:fr ? "Liées aux produits" : "Revenue-related",value:revenueCount,description:fr ? "Écritures touchant des comptes de produits" : "Entries touching revenue accounts",icon:TrendingUp,tone:"success"},
     {label:fr ? "Liées aux charges" : "Expense-related",value:expenseCount,description:fr ? "Écritures touchant des comptes de charges" : "Entries touching expense accounts",icon:TrendingDown,tone:"danger"},
     {label:fr ? "Situation d’ouverture" : "Opening position",value:openingPosted ? (fr ? "Prête" : "Ready") : (fr ? "Manquante" : "Missing"),description:openingPosted ? (fr ? "Report du bilan comptabilisé" : "Balance sheet carry-forward posted") : (fr ? "Nécessaire pour un bilan complet" : "Needed for a complete balance sheet"),icon:Scale,tone:openingPosted ? "success" : "warning"}
-   ]}
+   ], !openingPosted)}
   />
 
   <DataPanel>
@@ -60,7 +64,7 @@ export default async function AccountingPage({searchParams}:{searchParams:Params
     meta={fr ? visible.length + " affichées" : visible.length + " shown"}
    />
    <DataToolbar>
-    <form className={styles.filters} method="get">
+    <form className={styles.journalFilters} method="get">
      <label className={styles.search}><Search size={15}/><input name="q" defaultValue={params.q??""} placeholder={fr ? "Rechercher dans le journal " + year : "Search " + year + " journal"}/></label>
      <label><span className={styles.srOnly}>{fr ? "Type d’écriture" : "Entry type"}</span><select name="kind" defaultValue={kind}><option value="all">{fr ? "Toute l’activité" : "All activity"}</option><option value="revenue">{fr ? "Produits" : "Revenue"}</option><option value="expense">{fr ? "Charges" : "Expenses"}</option><option value="manual">Transactions</option><option value="invoice">{fr ? "Factures" : "Invoices"}</option><option value="payment">{fr ? "Paiements" : "Payments"}</option><option value="opening">{fr ? "Situation d’ouverture" : "Opening position"}</option><option value="reversal">{fr ? "Extournes" : "Reversals"}</option></select></label>
      <label><span className={styles.srOnly}>{fr ? "Date de début" : "From date"}</span><input name="from" type="date" min={bounds.start} max={bounds.end} defaultValue={from} aria-label={fr ? "Date de début" : "From date"}/></label>
