@@ -5,6 +5,6 @@
 .open,.secondary{height:32px;padding:0 12px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--z-text-secondary);font-size:13px;font-weight:550;transition:background .15s ease,color .15s ease,border-color .15s ease}
 .open:hover,.secondary:hover,.open:focus-visible,.secondary:focus-visible{background:var(--z-surface-2);border-color:var(--z-border);color:var(--z-text)}
 /* Columns shrink with the panel instead of pushing rows past its right edge. */
-.row{grid-template-columns:minmax(170px,1.3fr) minmax(120px,1fr) minmax(84px,.55fr) minmax(64px,.45fr) minmax(90px,.6fr) minmax(90px,.6fr) auto}
-@media(max-width:1180px){.row{grid-template-columns:minmax(170px,1.3fr) minmax(120px,1fr) minmax(90px,.6fr) minmax(90px,.6fr) auto}}
+.row{grid-template-columns:minmax(170px,1.3fr) minmax(120px,1fr) minmax(84px,.55fr) minmax(64px,.45fr) minmax(90px,.6fr) minmax(90px,.6fr) 148px}
+@media(max-width:1180px){.row{grid-template-columns:minmax(170px,1.3fr) minmax(120px,1fr) minmax(90px,.6fr) minmax(90px,.6fr) 148px}}
 @media(max-width:760px){.row{grid-template-columns:minmax(0,1fr) auto}}
