@@ -8,5 +8,11 @@ export const dynamic = "force-dynamic";
 export default async function IndependentSetupPage() {
   const workspace = await getWorkspace();
   if (!workspace.authenticated) redirect("/sign-in?next=/setup/independent");
-  return <IndependentSetup locale={normalizeLocale(workspace.profile?.locale)} year={new Date().getFullYear()} defaultName={workspace.profile?.full_name ?? ""}/>;
+  return (
+    <IndependentSetup
+      locale={normalizeLocale(workspace.profile?.locale)}
+      year={new Date().getFullYear()}
+      defaultName={workspace.profile?.full_name ?? ""}
+    />
+  );
 }

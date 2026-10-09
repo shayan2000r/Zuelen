@@ -1,1 +1,68 @@
-.mobileAuthTop{display:none}.desktopLanguage{display:block}.desktopLanguage>div{margin-left:auto}@media(max-width:880px){.authShell{display:flex!important;flex-direction:column!important}.formPanel{order:-1;min-height:auto!important;place-items:start center!important;padding:18px 24px 38px!important}.formWrap{width:min(460px,100%)}.storyPanel{order:2;min-height:auto!important}.storyTop{display:none}.storyContent{margin:20px 0}.storyContent h1{font-size:40px}.mobileAuthTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}.mobileAuthTop>span{display:flex;align-items:center;gap:9px}.desktopLanguage{display:none}}@media(max-width:580px){.formPanel{padding:14px 18px 30px!important}.storyPanel{padding:26px 20px!important}.storyContent{margin:6px 0 18px}.storyContent h1{font-size:32px}.mobileAuthTop{margin-bottom:20px}}
+.mobileAuthTop {
+  display: none;
+}
+.desktopLanguage {
+  display: block;
+}
+.desktopLanguage > div {
+  margin-left: auto;
+}
+@media (max-width: 880px) {
+  .authShell {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .formPanel {
+    order: -1;
+    min-height: auto !important;
+    place-items: start center !important;
+    padding: 18px 24px 38px !important;
+  }
+  .formWrap {
+    width: min(460px, 100%);
+  }
+  .storyPanel {
+    order: 2;
+    min-height: auto !important;
+  }
+  .storyTop {
+    display: none;
+  }
+  .storyContent {
+    margin: 20px 0;
+  }
+  .storyContent h1 {
+    font-size: 40px;
+  }
+  .mobileAuthTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .mobileAuthTop > span {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .desktopLanguage {
+    display: none;
+  }
+}
+@media (max-width: 580px) {
+  .formPanel {
+    padding: 14px 18px 30px !important;
+  }
+  .storyPanel {
+    padding: 26px 20px !important;
+  }
+  .storyContent {
+    margin: 6px 0 18px;
+  }
+  .storyContent h1 {
+    font-size: 32px;
+  }
+  .mobileAuthTop {
+    margin-bottom: 20px;
+  }
+}

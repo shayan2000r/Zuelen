@@ -12,11 +12,7 @@ function extractMessage(error: unknown) {
   return typeof error === "string" ? error : "";
 }
 
-export function userFacingDataError(
-  error: unknown,
-  fallback?: string,
-  locale: Locale = "en",
-) {
+export function userFacingDataError(error: unknown, fallback?: string, locale: Locale = "en") {
   const message = extractMessage(error).trim();
   const safeFallback =
     fallback ??

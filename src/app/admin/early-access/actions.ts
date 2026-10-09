@@ -12,7 +12,10 @@ function text(formData: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-async function findUserByEmail(admin: Awaited<ReturnType<typeof requireZuelenAdmin>>["admin"], email: string): Promise<any | null> {
+async function findUserByEmail(
+  admin: Awaited<ReturnType<typeof requireZuelenAdmin>>["admin"],
+  email: string,
+): Promise<any | null> {
   for (let page = 1; page <= 20; page += 1) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
     if (error) throw new Error(error.message);
@@ -75,7 +78,7 @@ export async function inviteEarlyAccessAction(formData: FormData) {
     redirect("/admin/early-access?result=already-active");
   }
 
-  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo,
     data: { locale, early_access: true, audience: request.audience },
   });
@@ -83,8 +86,15 @@ export async function inviteEarlyAccessAction(formData: FormData) {
   if (inviteError) {
     // Avoid phantom users after a delivery failure.
     const created = await findUserByEmail(admin, email);
-    if (created && !created.email_confirmed_at && !created.last_sign_in_at && created.user_metadata?.early_access === true) {
-      try { await admin.auth.admin.deleteUser(created.id); } catch {}
+    if (
+      created &&
+      !created.email_confirmed_at &&
+      !created.last_sign_in_at &&
+      created.user_metadata?.early_access === true
+    ) {
+      try {
+        await admin.auth.admin.deleteUser(created.id);
+      } catch {}
     }
     console.error("Early Access invitation delivery failed", inviteError.message);
     revalidatePath("/admin/early-access");

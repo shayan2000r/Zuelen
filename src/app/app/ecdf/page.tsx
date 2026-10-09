@@ -7,34 +7,244 @@ import { getActiveFiscalYear } from "@/lib/fiscal-year";
 import { intlLocale, normalizeLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
-export const dynamic="force-dynamic";
-export default async function EcdfPage(){const w=await getWorkspace();if(!w.authenticated)redirect("/sign-in");if(!w.company)redirect("/setup");const locale=normalizeLocale(w.profile?.locale),fr=locale==="fr",intl=intlLocale(locale),s=await createClient(),year=await getActiveFiscalYear(w.company.fiscal_year_start_month);const{data:filing,error}=await s.from("filings").select("id,period_label,status,schema_version,rules_version,ledger_snapshot,snapshot_at,ledger_checksum,export_status,period_start,period_end").eq("company_id",w.company.id).eq("filing_type","ecdf_accounts").eq("period_label",String(year)).order("created_at",{ascending:false}).limit(1).maybeSingle();if(error)throw new Error(`${fr?"Impossible de charger la préparation des comptes annuels":"Could not load annual-account preparation"}: ${error.message}`);const snap=filing?.ledger_snapshot&&typeof filing.ledger_snapshot==="object"?filing.ledger_snapshot as Record<string,unknown>:null,tb=Array.isArray(snap?.trial_balance)?snap?.trial_balance:[],pl=snap?.profit_and_loss&&typeof snap.profit_and_loss==="object"?snap.profit_and_loss as Record<string,unknown>:null,bs=snap?.balance_sheet_control&&typeof snap.balance_sheet_control==="object"?snap.balance_sheet_control as Record<string,unknown>:null;
- const money=(value:number)=>new Intl.NumberFormat(intl,{style:"currency",currency:w.company!.base_currency||"EUR"}).format(value);
- return <V2Page className={styles.page}>
- <PageHeader
-  eyebrow={fr?`Préparation eCDF · comptes annuels · ${year}`:`eCDF preparation · annual accounts · ${year}`}
-  title={fr?"Préparer les données. Garder la soumission entre les mains de l’utilisateur.":"Prepare the data. Keep submission in the user's hands."}
-  description={fr?"Zuelen prépare des documents financiers figés et, après validation officielle du format, un fichier compatible eCDF. Zuelen ne soumet jamais de données à une autorité au nom de l’utilisateur.":"Zuelen prepares frozen financial documents and, after official format validation, an eCDF-compatible file. It never submits data to an authority on the user's behalf."}
-  meta={<StatusBadge tone={filing?"success":"warning"}>{filing?<BadgeCheck/>:<AlertTriangle/>}{filing?(fr?`Instantané ${year} disponible`:`${year} snapshot available`):(fr?"Instantané requis":"Snapshot required")}</StatusBadge>}
- />
- {!filing?
-  <DataEmptyState
-   icon={ShieldCheck}
-   title={fr?`Aucun instantané figé des comptes annuels ${year}.`:`No frozen ${year} annual-account snapshot yet.`}
-   description={fr?`Terminez la liste de contrôle de clôture ${year}, puis créez l’instantané. Zuelen figera la balance générale, le compte de profits et pertes et le contrôle du bilan utilisés par les documents et exports.`:`Finish the ${year} Year-end checklist, then create the snapshot. Zuelen will freeze the trial balance, P&L and balance-sheet control used by documents and exports.`}
-   action={<V2Button label={fr?"Ouvrir la clôture annuelle":"Open Year-end"} href="/app/year-end" variant="primary"/>}
-  />:
-  <>
-   <DataSummary label={fr?"Synthèse des comptes annuels":"Annual accounts summary"} items={[
-    {label:fr?"Instantané":"Snapshot",value:filing.snapshot_at?new Date(filing.snapshot_at).toLocaleString(intl,{dateStyle:"medium",timeStyle:"short"}):"—",description:`${filing.period_start} → ${filing.period_end}`,icon:BadgeCheck,tone:"success"},
-    {label:fr?"Comptes PCN figés":"Frozen PCN accounts",value:tb.length,description:fr?"Lignes de la balance générale":"Trial-balance lines",icon:FileCheck2},
-    {label:fr?"Résultat de l’exercice":"Current-year result",value:typeof pl?.result==="number"?money(pl.result):"—",description:fr?"Résultat figé du compte de profits et pertes":"Frozen P&L result",icon:FileCode2},
-    {label:fr?"Contrôle du bilan":"Balance control",value:typeof bs?.gap==="number"&&Math.abs(bs.gap)<.01?(fr?"Équilibré":"Balanced"):(fr?"À vérifier":"Review"),description:<>{fr?"Écart de l’instantané":"Snapshot gap"} {typeof bs?.gap==="number"?new Intl.NumberFormat(intl,{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(bs.gap)):"—"}</>,icon:Scale,tone:typeof bs?.gap==="number"&&Math.abs(bs.gap)<.01?"success":"warning"}
-   ]}/>
-   <section className={styles.grid}><article className={styles.card}><div className={styles.head}><div><p>{fr?`Dossier des comptes annuels · ${year}`:`Annual-account package · ${year}`}</p><h2>{fr?"État de préparation des données financières":"Financial data readiness"}</h2></div><FileCheck2/></div><div className={styles.row}><span>{fr?"Balance générale / soldes PCN":"Trial balance / PCN balances"}</span><strong>{fr?"Figés":"Frozen"}</strong></div><div className={styles.row}><span>{fr?"Données du compte de profits et pertes":"Profit & loss source data"}</span><strong>{fr?"Prêtes":"Ready"}</strong></div><div className={styles.row}><span>{fr?"Données du bilan":"Balance-sheet source data"}</span><strong>{fr?"Prêtes":"Ready"}</strong></div><div className={styles.row}><span>{fr?"Situation d’ouverture":"Opening position"}</span><strong>{snap?.opening_position_present?(fr?"Incluse":"Included"):(fr?"Non détectée":"Not detected")}</strong></div><div className={styles.row}><span>{fr?"Génération des PDF financiers":"Financial PDF generation"}</span><strong>{fr?"Disponible dans Documents":"Available in Documents"}</strong></div><div className={styles.row}><span>{fr?"Vérification narrative de l’Annexe":"Annexe narrative review"}</span><strong className={styles.pending}>{fr?"Vérification utilisateur requise":"User review required"}</strong></div></article>
- <article className={styles.card}><div className={styles.head}><div><p>{fr?"Export en libre-service":"Self-service export"}</p><h2>{fr?"Fichier de transfert compatible eCDF":"eCDF-compatible transfer file"}</h2></div><FileCode2/></div><div className={styles.row}><span>{fr?"Paquet XSD / schéma eCDF actuel":"Current eCDF XSD/schema package"}</span><strong className={styles.pending}>{fr?"Requis":"Required"}</strong></div><div className={styles.row}><span>{fr?"Validation de l’interface / export":"Interface/export validation"}</span><strong className={styles.pending}>{fr?"Requise":"Required"}</strong></div><div className={styles.row}><span>{fr?"Génération XML":"XML generation"}</span><strong>{fr?"Désactivée par sécurité":"Disabled safely"}</strong></div><div className={styles.row}><span>{fr?"Soumission automatique":"Automatic submission"}</span><strong>{fr?"Jamais":"Never"}</strong></div><div className={styles.notice}><AlertTriangle/><p>{fr?"Zuelen n’exposera un téléchargement XML eCDF qu’après validation du schéma officiel actif et des exigences d’interface. L’utilisateur reste responsable de l’import, de la vérification et de la soumission du fichier dans le système officiel.":"Zuelen will only expose an eCDF XML download after the active official schema and interface requirements are validated. The user remains responsible for importing, reviewing and submitting the file in the official system."}</p></div></article>
- <article className={styles.card}><div className={styles.head}><div><p>{fr?"Provenance de l’instantané":"Snapshot provenance"}</p><h2>{fr?"Base de chaque document généré":"What every generated document is based on"}</h2></div><FileText/></div><div className={styles.meta}><span>{fr?"ID de l’instantané":"Snapshot ID"}</span><code>{filing.id}</code><span>{fr?"Statut":"Status"}</span><code>{filing.status}</code><span>{fr?"État de l’export":"Export state"}</span><code>{filing.export_status}</code><span>{fr?"Règles":"Rules"}</span><code>{filing.rules_version||"—"}</code><span>{fr?"Empreinte du grand livre":"Ledger fingerprint"}</span><code>{filing.ledger_checksum?.slice(0,20)||"—"}</code></div></article></section>
-  </>
- }
- </V2Page>
+export const dynamic = "force-dynamic";
+export default async function EcdfPage() {
+  const w = await getWorkspace();
+  if (!w.authenticated) redirect("/sign-in");
+  if (!w.company) redirect("/setup");
+  const locale = normalizeLocale(w.profile?.locale),
+    fr = locale === "fr",
+    intl = intlLocale(locale),
+    s = await createClient(),
+    year = await getActiveFiscalYear(w.company.fiscal_year_start_month);
+  const { data: filing, error } = await s
+    .from("filings")
+    .select(
+      "id,period_label,status,schema_version,rules_version,ledger_snapshot,snapshot_at,ledger_checksum,export_status,period_start,period_end",
+    )
+    .eq("company_id", w.company.id)
+    .eq("filing_type", "ecdf_accounts")
+    .eq("period_label", String(year))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error)
+    throw new Error(
+      `${fr ? "Impossible de charger la préparation des comptes annuels" : "Could not load annual-account preparation"}: ${error.message}`,
+    );
+  const snap =
+      filing?.ledger_snapshot && typeof filing.ledger_snapshot === "object"
+        ? (filing.ledger_snapshot as Record<string, unknown>)
+        : null,
+    tb = Array.isArray(snap?.trial_balance) ? snap?.trial_balance : [],
+    pl =
+      snap?.profit_and_loss && typeof snap.profit_and_loss === "object"
+        ? (snap.profit_and_loss as Record<string, unknown>)
+        : null,
+    bs =
+      snap?.balance_sheet_control && typeof snap.balance_sheet_control === "object"
+        ? (snap.balance_sheet_control as Record<string, unknown>)
+        : null;
+  const money = (value: number) =>
+    new Intl.NumberFormat(intl, { style: "currency", currency: w.company!.base_currency || "EUR" }).format(value);
+  return (
+    <V2Page className={styles.page}>
+      <PageHeader
+        eyebrow={fr ? `Préparation eCDF · comptes annuels · ${year}` : `eCDF preparation · annual accounts · ${year}`}
+        title={
+          fr
+            ? "Préparer les données. Garder la soumission entre les mains de l’utilisateur."
+            : "Prepare the data. Keep submission in the user's hands."
+        }
+        description={
+          fr
+            ? "Zuelen prépare des documents financiers figés et, après validation officielle du format, un fichier compatible eCDF. Zuelen ne soumet jamais de données à une autorité au nom de l’utilisateur."
+            : "Zuelen prepares frozen financial documents and, after official format validation, an eCDF-compatible file. It never submits data to an authority on the user's behalf."
+        }
+        meta={
+          <StatusBadge tone={filing ? "success" : "warning"}>
+            {filing ? <BadgeCheck /> : <AlertTriangle />}
+            {filing
+              ? fr
+                ? `Instantané ${year} disponible`
+                : `${year} snapshot available`
+              : fr
+                ? "Instantané requis"
+                : "Snapshot required"}
+          </StatusBadge>
+        }
+      />
+      {!filing ? (
+        <DataEmptyState
+          icon={ShieldCheck}
+          title={
+            fr ? `Aucun instantané figé des comptes annuels ${year}.` : `No frozen ${year} annual-account snapshot yet.`
+          }
+          description={
+            fr
+              ? `Terminez la liste de contrôle de clôture ${year}, puis créez l’instantané. Zuelen figera la balance générale, le compte de profits et pertes et le contrôle du bilan utilisés par les documents et exports.`
+              : `Finish the ${year} Year-end checklist, then create the snapshot. Zuelen will freeze the trial balance, P&L and balance-sheet control used by documents and exports.`
+          }
+          action={
+            <V2Button
+              label={fr ? "Ouvrir la clôture annuelle" : "Open Year-end"}
+              href="/app/year-end"
+              variant="primary"
+            />
+          }
+        />
+      ) : (
+        <>
+          <DataSummary
+            label={fr ? "Synthèse des comptes annuels" : "Annual accounts summary"}
+            items={[
+              {
+                label: fr ? "Instantané" : "Snapshot",
+                value: filing.snapshot_at
+                  ? new Date(filing.snapshot_at).toLocaleString(intl, { dateStyle: "medium", timeStyle: "short" })
+                  : "—",
+                description: `${filing.period_start} → ${filing.period_end}`,
+                icon: BadgeCheck,
+                tone: "success",
+              },
+              {
+                label: fr ? "Comptes PCN figés" : "Frozen PCN accounts",
+                value: tb.length,
+                description: fr ? "Lignes de la balance générale" : "Trial-balance lines",
+                icon: FileCheck2,
+              },
+              {
+                label: fr ? "Résultat de l’exercice" : "Current-year result",
+                value: typeof pl?.result === "number" ? money(pl.result) : "—",
+                description: fr ? "Résultat figé du compte de profits et pertes" : "Frozen P&L result",
+                icon: FileCode2,
+              },
+              {
+                label: fr ? "Contrôle du bilan" : "Balance control",
+                value:
+                  typeof bs?.gap === "number" && Math.abs(bs.gap) < 0.01
+                    ? fr
+                      ? "Équilibré"
+                      : "Balanced"
+                    : fr
+                      ? "À vérifier"
+                      : "Review",
+                description: (
+                  <>
+                    {fr ? "Écart de l’instantané" : "Snapshot gap"}{" "}
+                    {typeof bs?.gap === "number"
+                      ? new Intl.NumberFormat(intl, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                          Number(bs.gap),
+                        )
+                      : "—"}
+                  </>
+                ),
+                icon: Scale,
+                tone: typeof bs?.gap === "number" && Math.abs(bs.gap) < 0.01 ? "success" : "warning",
+              },
+            ]}
+          />
+          <section className={styles.grid}>
+            <article className={styles.card}>
+              <div className={styles.head}>
+                <div>
+                  <p>{fr ? `Dossier des comptes annuels · ${year}` : `Annual-account package · ${year}`}</p>
+                  <h2>{fr ? "État de préparation des données financières" : "Financial data readiness"}</h2>
+                </div>
+                <FileCheck2 />
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Balance générale / soldes PCN" : "Trial balance / PCN balances"}</span>
+                <strong>{fr ? "Figés" : "Frozen"}</strong>
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Données du compte de profits et pertes" : "Profit & loss source data"}</span>
+                <strong>{fr ? "Prêtes" : "Ready"}</strong>
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Données du bilan" : "Balance-sheet source data"}</span>
+                <strong>{fr ? "Prêtes" : "Ready"}</strong>
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Situation d’ouverture" : "Opening position"}</span>
+                <strong>
+                  {snap?.opening_position_present
+                    ? fr
+                      ? "Incluse"
+                      : "Included"
+                    : fr
+                      ? "Non détectée"
+                      : "Not detected"}
+                </strong>
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Génération des PDF financiers" : "Financial PDF generation"}</span>
+                <strong>{fr ? "Disponible dans Documents" : "Available in Documents"}</strong>
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Vérification narrative de l’Annexe" : "Annexe narrative review"}</span>
+                <strong className={styles.pending}>
+                  {fr ? "Vérification utilisateur requise" : "User review required"}
+                </strong>
+              </div>
+            </article>
+            <article className={styles.card}>
+              <div className={styles.head}>
+                <div>
+                  <p>{fr ? "Export en libre-service" : "Self-service export"}</p>
+                  <h2>{fr ? "Fichier de transfert compatible eCDF" : "eCDF-compatible transfer file"}</h2>
+                </div>
+                <FileCode2 />
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Paquet XSD / schéma eCDF actuel" : "Current eCDF XSD/schema package"}</span>
+                <strong className={styles.pending}>{fr ? "Requis" : "Required"}</strong>
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Validation de l’interface / export" : "Interface/export validation"}</span>
+                <strong className={styles.pending}>{fr ? "Requise" : "Required"}</strong>
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Génération XML" : "XML generation"}</span>
+                <strong>{fr ? "Désactivée par sécurité" : "Disabled safely"}</strong>
+              </div>
+              <div className={styles.row}>
+                <span>{fr ? "Soumission automatique" : "Automatic submission"}</span>
+                <strong>{fr ? "Jamais" : "Never"}</strong>
+              </div>
+              <div className={styles.notice}>
+                <AlertTriangle />
+                <p>
+                  {fr
+                    ? "Zuelen n’exposera un téléchargement XML eCDF qu’après validation du schéma officiel actif et des exigences d’interface. L’utilisateur reste responsable de l’import, de la vérification et de la soumission du fichier dans le système officiel."
+                    : "Zuelen will only expose an eCDF XML download after the active official schema and interface requirements are validated. The user remains responsible for importing, reviewing and submitting the file in the official system."}
+                </p>
+              </div>
+            </article>
+            <article className={styles.card}>
+              <div className={styles.head}>
+                <div>
+                  <p>{fr ? "Provenance de l’instantané" : "Snapshot provenance"}</p>
+                  <h2>{fr ? "Base de chaque document généré" : "What every generated document is based on"}</h2>
+                </div>
+                <FileText />
+              </div>
+              <div className={styles.meta}>
+                <span>{fr ? "ID de l’instantané" : "Snapshot ID"}</span>
+                <code>{filing.id}</code>
+                <span>{fr ? "Statut" : "Status"}</span>
+                <code>{filing.status}</code>
+                <span>{fr ? "État de l’export" : "Export state"}</span>
+                <code>{filing.export_status}</code>
+                <span>{fr ? "Règles" : "Rules"}</span>
+                <code>{filing.rules_version || "—"}</code>
+                <span>{fr ? "Empreinte du grand livre" : "Ledger fingerprint"}</span>
+                <code>{filing.ledger_checksum?.slice(0, 20) || "—"}</code>
+              </div>
+            </article>
+          </section>
+        </>
+      )}
+    </V2Page>
+  );
 }

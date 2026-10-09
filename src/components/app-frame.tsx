@@ -76,14 +76,40 @@ type AppFrameProps = {
 };
 
 function initials(value: string) {
-  return value.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("");
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join("");
 }
 
 export function AppFrame(props: AppFrameProps) {
-  return <LocaleProvider locale={props.locale} accountTranslations={props.accountTranslations}><AppFrameInner {...props} /></LocaleProvider>;
+  return (
+    <LocaleProvider locale={props.locale} accountTranslations={props.accountTranslations}>
+      <AppFrameInner {...props} />
+    </LocaleProvider>
+  );
 }
 
-function AppFrameInner({ children, companyName, fiscalYear, fiscalYears, email, userName, userRole, userAvatarUrl, attentionCount = 0, locale, plan, entityKind, capabilities, workspaces, activeWorkspaceId, hasProfessionalWorkspace }: AppFrameProps) {
+function AppFrameInner({
+  children,
+  companyName,
+  fiscalYear,
+  fiscalYears,
+  email,
+  userName,
+  userRole,
+  userAvatarUrl,
+  attentionCount = 0,
+  locale,
+  plan,
+  entityKind,
+  capabilities,
+  workspaces,
+  activeWorkspaceId,
+  hasProfessionalWorkspace,
+}: AppFrameProps) {
   const pathname = usePathname();
   const [mobileNav, setMobileNav] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -96,83 +122,675 @@ function AppFrameInner({ children, companyName, fiscalYear, fiscalYears, email, 
   const [switchingLocale, startLocaleTransition] = useTransition();
   const accountRef = useRef<HTMLDivElement>(null);
   const tx = (key: MessageKey) => t(locale, key);
-  const l = (en: string, fr: string) => locale === "fr" ? fr : en;
+  const l = (en: string, fr: string) => (locale === "fr" ? fr : en);
 
   const independent = entityKind === "independent";
-  const overview = useMemo<NavItem>(() => ({ label: tx("overview"), description: independent ? l("Activity snapshot", "Vue de l’activité") : tx("companySnapshot"), icon: LayoutDashboard, href: "/app" }), [locale, independent]);
-  const accountingGroup = useMemo<CollapsibleGroup>(() => ({ key: "accounting", label: l("Accounting", "Comptabilité"), icon: BookOpen, items: [
-    { label: l("Ledger", "Grand livre"), description: l("Journal and double-entry ledger", "Journal et comptabilité en partie double"), icon: BookOpen, href: "/app/accounting" },
-    { label: tx("transactions"), description: tx("reviewPostActivity"), icon: WalletCards, href: "/app/transactions" },
-    { label: tx("banking"), description: tx("statementsReconciliation"), icon: Landmark, href: "/app/banking" },
-    { label: tx("invoices"), description: tx("salesReceivables"), icon: ReceiptText, href: "/app/invoices" },
-  ] }), [locale]);
-  const taxesGroup = useMemo<CollapsibleGroup>(() => ({ key: "taxes", label: l("Taxes", "Fiscalité"), icon: Landmark, items: [
-    { label: l("Tax overview", "Vue fiscale"), description: independent ? l("Personal fiscal profile and notices", "Profil fiscal personnel et avis") : l("Tax estimates and reserves", "Estimations et réserves fiscales"), icon: Landmark, href: "/app/taxes" },
-    { label: "CCSS", description: l("Personal social-security planning", "Planification de la sécurité sociale personnelle"), icon: HeartHandshake, href: "/app/ccss" },
-    ...(capabilities.hasVat ? [{ label: l("VAT", "TVA"), description: tx("vatReadiness"), icon: ReceiptText, href: "/app/vat" }] : []),
-    ...(capabilities.hasCompanyYearEnd ? [{ label: l("Year-end", "Clôture"), description: l("Close the year and prepare annual accounts", "Clôturer l’exercice et préparer les comptes annuels"), icon: CalendarCheck2, href: "/app/year-end", premium: true }] : []),
-    { label: l("Calendar", "Calendrier"), description: tx("deadlinesObligations"), icon: FileCheck2, href: "/app/compliance" },
-  ] }), [locale, independent, capabilities.hasVat, capabilities.hasCompanyYearEnd]);
-  const standaloneItems = useMemo<NavItem[]>(() => [
-    { label: tx("reports"), description: tx("financialAnalyticsStatements"), icon: BarChart3, href: "/app/reports", premium: true },
-    { label: tx("documents"), description: independent ? l("Activity document vault", "Documents de l’activité") : tx("companyDocumentVault"), icon: FileText, href: "/app/documents" },
-    { label: tx("copilot"), description: tx("askYourBooks"), icon: Sparkles, href: "/app/copilot", premium: true },
-    { label: l("Find an Accountant", "Trouver un comptable"), description: l("Browse independent accounting professionals", "Parcourir les professionnels comptables indépendants"), icon: BriefcaseBusiness, href: "/app/accountants" },
-  ], [locale, independent]);
-  const settingsGroup = useMemo<CollapsibleGroup>(() => ({ key: "settings", label: tx("settings"), icon: Settings, items: [
-    { label: independent ? l("Activity", "Activité") : l("Company", "Entreprise"), description: independent ? l("Activity profile and registrations", "Profil de l’activité et immatriculations") : tx("companyProfilePreferences"), icon: Settings, href: "/app/settings" },
-    { label: tx("myProfile"), description: l("Your profile and preferences", "Votre profil et préférences"), icon: UserRound, href: "/app/settings/profile" },
-    { label: l("Security", "Sécurité"), description: l("Password and optional two-factor authentication", "Mot de passe et double authentification facultative"), icon: ShieldCheck, href: "/app/settings/security" },
-    { label: l("Team & access", "Équipe & accès"), description: l("Members, roles and invitations", "Membres, rôles et invitations"), icon: UsersRound, href: "/app/settings/team" },
-    { label: l("Usage", "Utilisation"), description: l("Plan limits and current usage", "Limites de la formule et utilisation"), icon: Gauge, href: "/app/settings/usage" },
-    { label: l("Subscription & Billing", "Abonnement & Facturation"), description: l("Plan, seats and payment settings", "Formule, sièges et paiements"), icon: CreditCard, href: "/app/settings/billing" },
-  ] }), [locale, independent]);
+  const overview = useMemo<NavItem>(
+    () => ({
+      label: tx("overview"),
+      description: independent ? l("Activity snapshot", "Vue de l’activité") : tx("companySnapshot"),
+      icon: LayoutDashboard,
+      href: "/app",
+    }),
+    [locale, independent],
+  );
+  const accountingGroup = useMemo<CollapsibleGroup>(
+    () => ({
+      key: "accounting",
+      label: l("Accounting", "Comptabilité"),
+      icon: BookOpen,
+      items: [
+        {
+          label: l("Ledger", "Grand livre"),
+          description: l("Journal and double-entry ledger", "Journal et comptabilité en partie double"),
+          icon: BookOpen,
+          href: "/app/accounting",
+        },
+        {
+          label: tx("transactions"),
+          description: tx("reviewPostActivity"),
+          icon: WalletCards,
+          href: "/app/transactions",
+        },
+        { label: tx("banking"), description: tx("statementsReconciliation"), icon: Landmark, href: "/app/banking" },
+        { label: tx("invoices"), description: tx("salesReceivables"), icon: ReceiptText, href: "/app/invoices" },
+      ],
+    }),
+    [locale],
+  );
+  const taxesGroup = useMemo<CollapsibleGroup>(
+    () => ({
+      key: "taxes",
+      label: l("Taxes", "Fiscalité"),
+      icon: Landmark,
+      items: [
+        {
+          label: l("Tax overview", "Vue fiscale"),
+          description: independent
+            ? l("Personal fiscal profile and notices", "Profil fiscal personnel et avis")
+            : l("Tax estimates and reserves", "Estimations et réserves fiscales"),
+          icon: Landmark,
+          href: "/app/taxes",
+        },
+        {
+          label: "CCSS",
+          description: l("Personal social-security planning", "Planification de la sécurité sociale personnelle"),
+          icon: HeartHandshake,
+          href: "/app/ccss",
+        },
+        ...(capabilities.hasVat
+          ? [{ label: l("VAT", "TVA"), description: tx("vatReadiness"), icon: ReceiptText, href: "/app/vat" }]
+          : []),
+        ...(capabilities.hasCompanyYearEnd
+          ? [
+              {
+                label: l("Year-end", "Clôture"),
+                description: l(
+                  "Close the year and prepare annual accounts",
+                  "Clôturer l’exercice et préparer les comptes annuels",
+                ),
+                icon: CalendarCheck2,
+                href: "/app/year-end",
+                premium: true,
+              },
+            ]
+          : []),
+        {
+          label: l("Calendar", "Calendrier"),
+          description: tx("deadlinesObligations"),
+          icon: FileCheck2,
+          href: "/app/compliance",
+        },
+      ],
+    }),
+    [locale, independent, capabilities.hasVat, capabilities.hasCompanyYearEnd],
+  );
+  const standaloneItems = useMemo<NavItem[]>(
+    () => [
+      {
+        label: tx("reports"),
+        description: tx("financialAnalyticsStatements"),
+        icon: BarChart3,
+        href: "/app/reports",
+        premium: true,
+      },
+      {
+        label: tx("documents"),
+        description: independent ? l("Activity document vault", "Documents de l’activité") : tx("companyDocumentVault"),
+        icon: FileText,
+        href: "/app/documents",
+      },
+      { label: tx("copilot"), description: tx("askYourBooks"), icon: Sparkles, href: "/app/copilot", premium: true },
+      {
+        label: l("Find an Accountant", "Trouver un comptable"),
+        description: l(
+          "Browse independent accounting professionals",
+          "Parcourir les professionnels comptables indépendants",
+        ),
+        icon: BriefcaseBusiness,
+        href: "/app/accountants",
+      },
+    ],
+    [locale, independent],
+  );
+  const settingsGroup = useMemo<CollapsibleGroup>(
+    () => ({
+      key: "settings",
+      label: tx("settings"),
+      icon: Settings,
+      items: [
+        {
+          label: independent ? l("Activity", "Activité") : l("Company", "Entreprise"),
+          description: independent
+            ? l("Activity profile and registrations", "Profil de l’activité et immatriculations")
+            : tx("companyProfilePreferences"),
+          icon: Settings,
+          href: "/app/settings",
+        },
+        {
+          label: tx("myProfile"),
+          description: l("Your profile and preferences", "Votre profil et préférences"),
+          icon: UserRound,
+          href: "/app/settings/profile",
+        },
+        {
+          label: l("Security", "Sécurité"),
+          description: l(
+            "Password and optional two-factor authentication",
+            "Mot de passe et double authentification facultative",
+          ),
+          icon: ShieldCheck,
+          href: "/app/settings/security",
+        },
+        {
+          label: l("Team & access", "Équipe & accès"),
+          description: l("Members, roles and invitations", "Membres, rôles et invitations"),
+          icon: UsersRound,
+          href: "/app/settings/team",
+        },
+        {
+          label: l("Usage", "Utilisation"),
+          description: l("Plan limits and current usage", "Limites de la formule et utilisation"),
+          icon: Gauge,
+          href: "/app/settings/usage",
+        },
+        {
+          label: l("Subscription & Billing", "Abonnement & Facturation"),
+          description: l("Plan, seats and payment settings", "Formule, sièges et paiements"),
+          icon: CreditCard,
+          href: "/app/settings/billing",
+        },
+      ],
+    }),
+    [locale, independent],
+  );
 
   const groups = useMemo(() => [accountingGroup, taxesGroup], [accountingGroup, taxesGroup]);
-  const allItems = useMemo(() => [overview, ...groups.flatMap(group => group.items), ...standaloneItems, ...settingsGroup.items], [overview, groups, standaloneItems, settingsGroup]);
+  const allItems = useMemo(
+    () => [overview, ...groups.flatMap(group => group.items), ...standaloneItems, ...settingsGroup.items],
+    [overview, groups, standaloneItems, settingsGroup],
+  );
   const [openGroups, setOpenGroups] = useState<Record<GroupKey, boolean>>({
-    accounting: pathname.startsWith("/app/accounting") || pathname.startsWith("/app/transactions") || pathname.startsWith("/app/banking") || pathname.startsWith("/app/invoices"),
-    taxes: pathname.startsWith("/app/taxes") || pathname.startsWith("/app/ccss") || pathname.startsWith("/app/vat") || pathname.startsWith("/app/year-end") || pathname.startsWith("/app/ecdf") || pathname.startsWith("/app/compliance"),
+    accounting:
+      pathname.startsWith("/app/accounting") ||
+      pathname.startsWith("/app/transactions") ||
+      pathname.startsWith("/app/banking") ||
+      pathname.startsWith("/app/invoices"),
+    taxes:
+      pathname.startsWith("/app/taxes") ||
+      pathname.startsWith("/app/ccss") ||
+      pathname.startsWith("/app/vat") ||
+      pathname.startsWith("/app/year-end") ||
+      pathname.startsWith("/app/ecdf") ||
+      pathname.startsWith("/app/compliance"),
     settings: pathname.startsWith("/app/settings"),
   });
   const userLabel = useMemo(() => userName?.trim() || email?.split("@")[0] || tx("member"), [userName, email, locale]);
-  const results = useMemo(() => { const normalized = query.trim().toLowerCase(); return normalized ? allItems.filter(item => `${item.label} ${item.description}`.toLowerCase().includes(normalized)) : allItems.slice(0, 9); }, [query, allItems]);
+  const results = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return normalized
+      ? allItems.filter(item => `${item.label} ${item.description}`.toLowerCase().includes(normalized))
+      : allItems.slice(0, 9);
+  }, [query, allItems]);
 
-  useEffect(() => { const stored = window.localStorage.getItem("zuelen-theme"); const initialTheme: Theme = stored === "dark" ? "dark" : "light"; setTheme(initialTheme); document.documentElement.dataset.zuelenTheme = initialTheme; }, []);
-  useEffect(() => { for (const group of [...groups, settingsGroup]) { if (group.items.some(item => item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href))) setOpenGroups(current => ({ ...current, [group.key]: true })); } }, [pathname, groups, settingsGroup]);
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } if (event.key === "Escape") { setMobileNav(false); setSearchOpen(false); setNotificationsOpen(false); setLanguageOpen(false); setAccountOpen(false); } };
-    const onMouse = (event: MouseEvent) => { if (accountRef.current && !accountRef.current.contains(event.target as Node)) setAccountOpen(false); };
-    window.addEventListener("keydown", onKey); document.addEventListener("mousedown", onMouse); return () => { window.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onMouse); };
+    const stored = window.localStorage.getItem("zuelen-theme");
+    const initialTheme: Theme = stored === "dark" ? "dark" : "light";
+    setTheme(initialTheme);
+    document.documentElement.dataset.zuelenTheme = initialTheme;
+  }, []);
+  useEffect(() => {
+    for (const group of [...groups, settingsGroup]) {
+      if (group.items.some(item => (item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href))))
+        setOpenGroups(current => ({ ...current, [group.key]: true }));
+    }
+  }, [pathname, groups, settingsGroup]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+      if (event.key === "Escape") {
+        setMobileNav(false);
+        setSearchOpen(false);
+        setNotificationsOpen(false);
+        setLanguageOpen(false);
+        setAccountOpen(false);
+      }
+    };
+    const onMouse = (event: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) setAccountOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onMouse);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onMouse);
+    };
   }, []);
 
-  function applyTheme(next: Theme) { setTheme(next); window.localStorage.setItem("zuelen-theme", next); document.documentElement.dataset.zuelenTheme = next; }
-  function changeFiscalYear(next: number) { if (!Number.isInteger(next) || next === fiscalYear) return; setSwitchingYear(true); document.cookie = `zuelen-fiscal-year=${next}; Path=/; Max-Age=31536000; SameSite=Lax`; window.location.reload(); }
-  function changeLocale(next: Locale) { if (next === locale || switchingLocale) return; setLanguageOpen(false); startLocaleTransition(async () => { await setLocalePreference(next); window.location.reload(); }); }
+  function applyTheme(next: Theme) {
+    setTheme(next);
+    window.localStorage.setItem("zuelen-theme", next);
+    document.documentElement.dataset.zuelenTheme = next;
+  }
+  function changeFiscalYear(next: number) {
+    if (!Number.isInteger(next) || next === fiscalYear) return;
+    setSwitchingYear(true);
+    document.cookie = `zuelen-fiscal-year=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    window.location.reload();
+  }
+  function changeLocale(next: Locale) {
+    if (next === locale || switchingLocale) return;
+    setLanguageOpen(false);
+    startLocaleTransition(async () => {
+      await setLocalePreference(next);
+      window.location.reload();
+    });
+  }
 
-  const navLink = (item: NavItem, nested = false) => { const active = item.href === "/app" || item.href === "/app/settings" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`); return <Link key={item.href} href={item.href} className={`nav-item ${active ? "nav-active" : ""} ${nested ? frame.nestedNavItem : ""}`} onClick={() => setMobileNav(false)}><item.icon size={nested ? 14 : 16}/><span>{item.label}</span>{plan === "basic" && item.premium ? <span className={frame.premiumNavBadge}>Premium</span> : item.href === "/app/transactions" && attentionCount > 0 ? <em>{attentionCount}</em> : null}</Link>; };
-  const renderGroup = (group: CollapsibleGroup) => { const isOpen = openGroups[group.key]; const hasActiveChild = group.items.some(item => pathname === item.href || pathname.startsWith(`${item.href}/`) || (item.href === "/app/year-end" && pathname.startsWith("/app/ecdf"))); return <div className={frame.navGroup} key={group.key}><button type="button" className={`${frame.groupButton} ${hasActiveChild ? frame.groupButtonActive : ""}`} onClick={() => setOpenGroups(current => ({ ...current, [group.key]: !current[group.key] }))} aria-expanded={isOpen}><group.icon size={16}/><span>{group.label}</span><ChevronDown className={isOpen ? frame.chevronOpen : ""} size={14}/></button><div className={`${frame.groupChildren} ${isOpen ? frame.groupChildrenOpen : ""}`}><div>{group.items.map(item => navLink(item, true))}</div></div></div>; };
+  const navLink = (item: NavItem, nested = false) => {
+    const active =
+      item.href === "/app" || item.href === "/app/settings"
+        ? pathname === item.href
+        : pathname === item.href || pathname.startsWith(`${item.href}/`);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`nav-item ${active ? "nav-active" : ""} ${nested ? frame.nestedNavItem : ""}`}
+        onClick={() => setMobileNav(false)}
+      >
+        <item.icon size={nested ? 14 : 16} />
+        <span>{item.label}</span>
+        {plan === "basic" && item.premium ? (
+          <span className={frame.premiumNavBadge}>Premium</span>
+        ) : item.href === "/app/transactions" && attentionCount > 0 ? (
+          <em>{attentionCount}</em>
+        ) : null}
+      </Link>
+    );
+  };
+  const renderGroup = (group: CollapsibleGroup) => {
+    const isOpen = openGroups[group.key];
+    const hasActiveChild = group.items.some(
+      item =>
+        pathname === item.href ||
+        pathname.startsWith(`${item.href}/`) ||
+        (item.href === "/app/year-end" && pathname.startsWith("/app/ecdf")),
+    );
+    return (
+      <div className={frame.navGroup} key={group.key}>
+        <button
+          type="button"
+          className={`${frame.groupButton} ${hasActiveChild ? frame.groupButtonActive : ""}`}
+          onClick={() => setOpenGroups(current => ({ ...current, [group.key]: !current[group.key] }))}
+          aria-expanded={isOpen}
+        >
+          <group.icon size={16} />
+          <span>{group.label}</span>
+          <ChevronDown className={isOpen ? frame.chevronOpen : ""} size={14} />
+        </button>
+        <div className={`${frame.groupChildren} ${isOpen ? frame.groupChildrenOpen : ""}`}>
+          <div>{group.items.map(item => navLink(item, true))}</div>
+        </div>
+      </div>
+    );
+  };
 
-  return <RoleProvider role={userRole}>
-    <main className="app-shell" data-role={userRole ?? "member"} data-locale={locale} data-plan={plan} data-entity-kind={entityKind}>
-      <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
-        <div className="brand-row"><Link href="/app" className={styles.brandLink}><span className={frame.brandMark}><Image src="/zuelen-icon.png" alt="" width={31} height={31} priority /></span><div className="brand-word">Zuelen</div><span className={frame.brandBadge}>LU</span></Link><button className="icon-btn mobile-only" onClick={() => setMobileNav(false)} aria-label={tx("closeNavigation")}><X size={18}/></button></div>
-        <nav className="nav-list" aria-label={locale === "fr" ? "Navigation principale" : "Primary navigation"}><p className={frame.navHeading}>{l("Menu", "Menu")}</p><div className={frame.primaryNav}>{navLink(overview)}</div>{groups.map(renderGroup)}<p className={frame.navHeading}>{l("Tools", "Outils")}</p><div className={frame.primaryNav}>{standaloneItems.map(item => navLink(item))}</div><p className={frame.navHeading}>{l("Account", "Compte")}</p>{renderGroup(settingsGroup)}</nav>
-        <div className="sidebar-spacer"/>
-        {plan === "basic" ? <Link href="/app/settings/billing" className={frame.planPromo} onClick={() => setMobileNav(false)}><span className={frame.planPromoIcon}><Sparkles size={15}/></span><span><strong>{l("Upgrade to Premium", "Passer à Premium")}</strong><small>{l("Copilot, reports and year-end", "Copilot, rapports et clôture")}</small></span><ArrowRight size={15}/></Link> : null}
-        <div className={frame.themeRow}><span>{tx("appearance")}</span><div className={frame.themeToggle} role="group" aria-label={tx("appearance")}><button type="button" className={theme === "light" ? frame.themeActive : ""} onClick={() => applyTheme("light")} aria-label={tx("lightMode")}><Sun size={14}/></button><button type="button" className={theme === "dark" ? frame.themeActive : ""} onClick={() => applyTheme("dark")} aria-label={tx("darkMode")}><Moon size={14}/></button></div></div>
-      </aside>
+  return (
+    <RoleProvider role={userRole}>
+      <main
+        className="app-shell"
+        data-role={userRole ?? "member"}
+        data-locale={locale}
+        data-plan={plan}
+        data-entity-kind={entityKind}
+      >
+        <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
+          <div className="brand-row">
+            <Link href="/app" className={styles.brandLink}>
+              <span className={frame.brandMark}>
+                <Image src="/zuelen-icon.png" alt="" width={31} height={31} priority />
+              </span>
+              <div className="brand-word">Zuelen</div>
+              <span className={frame.brandBadge}>LU</span>
+            </Link>
+            <button
+              className="icon-btn mobile-only"
+              onClick={() => setMobileNav(false)}
+              aria-label={tx("closeNavigation")}
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <nav className="nav-list" aria-label={locale === "fr" ? "Navigation principale" : "Primary navigation"}>
+            <p className={frame.navHeading}>{l("Menu", "Menu")}</p>
+            <div className={frame.primaryNav}>{navLink(overview)}</div>
+            {groups.map(renderGroup)}
+            <p className={frame.navHeading}>{l("Tools", "Outils")}</p>
+            <div className={frame.primaryNav}>{standaloneItems.map(item => navLink(item))}</div>
+            <p className={frame.navHeading}>{l("Account", "Compte")}</p>
+            {renderGroup(settingsGroup)}
+          </nav>
+          <div className="sidebar-spacer" />
+          {plan === "basic" ? (
+            <Link href="/app/settings/billing" className={frame.planPromo} onClick={() => setMobileNav(false)}>
+              <span className={frame.planPromoIcon}>
+                <Sparkles size={15} />
+              </span>
+              <span>
+                <strong>{l("Upgrade to Premium", "Passer à Premium")}</strong>
+                <small>{l("Copilot, reports and year-end", "Copilot, rapports et clôture")}</small>
+              </span>
+              <ArrowRight size={15} />
+            </Link>
+          ) : null}
+          <div className={frame.themeRow}>
+            <span>{tx("appearance")}</span>
+            <div className={frame.themeToggle} role="group" aria-label={tx("appearance")}>
+              <button
+                type="button"
+                className={theme === "light" ? frame.themeActive : ""}
+                onClick={() => applyTheme("light")}
+                aria-label={tx("lightMode")}
+              >
+                <Sun size={14} />
+              </button>
+              <button
+                type="button"
+                className={theme === "dark" ? frame.themeActive : ""}
+                onClick={() => applyTheme("dark")}
+                aria-label={tx("darkMode")}
+              >
+                <Moon size={14} />
+              </button>
+            </div>
+          </div>
+        </aside>
 
-      {mobileNav ? <button className="scrim" aria-label={tx("closeNavigation")} onClick={() => setMobileNav(false)}/> : null}
-      <section className="workspace">
-        <header className="topbar"><div className="topbar-left"><button className="icon-btn mobile-only" onClick={() => setMobileNav(true)} aria-label={tx("openNavigation")}><Menu size={18}/></button><button type="button" className={frame.searchField} onClick={() => setSearchOpen(true)} aria-label={tx("searchZuelen")}><Search size={16}/><span>{tx("searchPlaceholder")}</span><kbd>⌘K</kbd></button></div><div className="topbar-actions">
-          <div className={frame.languageWrap}><button type="button" className={frame.languageButton} onClick={() => setLanguageOpen(value => !value)} aria-expanded={languageOpen} aria-label={tx("language")}><span className={frame.languageFlag}>{locale === "fr" ? "🇫🇷" : "🇬🇧"}</span><span>{locale.toUpperCase()}</span><ChevronDown size={13} className={languageOpen ? frame.chevronOpen : ""}/></button>{languageOpen ? <div className={frame.languageSheet}><button type="button" className={locale === "en" ? frame.languageChoiceActive : ""} onClick={() => changeLocale("en")} disabled={switchingLocale}><span>🇬🇧</span><span><strong>English</strong><small>EN</small></span></button><button type="button" className={locale === "fr" ? frame.languageChoiceActive : ""} onClick={() => changeLocale("fr")} disabled={switchingLocale}><span>🇫🇷</span><span><strong>Français</strong><small>FR</small></span></button></div> : null}</div>
-          <button className={`search-btn ${frame.searchIconOnly}`} type="button" onClick={() => setSearchOpen(true)} aria-label={tx("searchZuelen")} title={`${tx("searchZuelen")} (⌘K)`}><Search size={17}/></button>
-          <div className={frame.notificationWrap}><button className="icon-btn" type="button" aria-label={tx("notifications")} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(value => !value)}><Bell size={17}/>{attentionCount > 0 ? <span className="notification-dot"/> : null}</button>{notificationsOpen ? <div className={frame.notificationSheet}><div><strong>{tx("notifications")}</strong><button onClick={() => setNotificationsOpen(false)} aria-label={tx("closeNotifications")}><X size={14}/></button></div>{attentionCount ? <Link href="/app/transactions" onClick={() => setNotificationsOpen(false)}><span className={frame.bellIcon}><WalletCards size={15}/></span><span><strong>{locale === "fr" ? `${attentionCount} transaction${attentionCount === 1 ? "" : "s"} à vérifier` : `${attentionCount} transaction${attentionCount === 1 ? "" : "s"} need review`}</strong><small>{locale === "fr" ? `Ouvrir la vérification des transactions pour ${fiscalYear}` : `Open transaction review for ${fiscalYear}`}</small></span></Link> : <p>{locale === "fr" ? `Tout est à jour pour ${fiscalYear}.` : `You’re all caught up for ${fiscalYear}.`}</p>}<Link href="/app/compliance" onClick={() => setNotificationsOpen(false)}><span className={frame.bellIcon}><CalendarCheck2 size={15}/></span><span><strong>{tx("complianceCenter")}</strong><small>{locale === "fr" ? `Vérifier les obligations ${fiscalYear}` : `Review ${fiscalYear} obligations`}</small></span></Link></div> : null}</div>
-          <div className={frame.businessAccountWrap} ref={accountRef}><button type="button" className={frame.businessAccountButton} onClick={() => setAccountOpen(value => !value)} aria-expanded={accountOpen} aria-label={l(`Open account menu for ${userLabel}`, `Ouvrir le menu du compte de ${userLabel}`)}>{userAvatarUrl ? <span className={frame.businessAvatar}><img src={userAvatarUrl} alt=""/></span> : <span className={frame.businessAvatar}>{initials(userLabel)}</span>}<div><strong>{userLabel}</strong><small>{companyName} · {fiscalYear}</small></div><ChevronDown size={14}/></button>{accountOpen ? <div className={frame.accountSheet}><div className={frame.businessAccountHead}><div><strong>{userLabel}</strong><span>{email}</span></div><b className={frame.accountPlanBadge}>{plan === "premium" ? "Premium" : "Basic"}</b></div><div className={frame.businessAccountSection}><span>{l("Activities & workspaces", "Activités et espaces")}</span>{workspaces.map(item=><form action={switchWorkspaceAction} key={item.companyId}><input type="hidden" name="company_id" value={item.companyId}/><input type="hidden" name="return_to" value="/app"/><button type="submit" className={item.companyId===activeWorkspaceId?frame.businessCurrentWorkspace:""}><span className={frame.workspaceIcon}>{item.entityKind==="independent"?<UserRound size={15}/>:<Building2 size={15}/>}</span><div><strong className={frame.workspaceName}>{item.displayName}{item.companyId===activeWorkspaceId?<Check size={14}/>:null}</strong><small>{item.entityKind==="independent"?l("Independent activity","Activité indépendante"):`${l("Company","Société")} · ${item.legalForm}`}</small></div></button></form>)}<Link href="/setup?add=1" onClick={()=>setAccountOpen(false)}><Plus size={15}/><div><strong>{l("Add another activity","Ajouter une activité")}</strong><small>{l("Create another business or independent workspace","Créer un autre espace société ou indépendant")}</small></div></Link>{hasProfessionalWorkspace ? <Link href="/professional" onClick={()=>setAccountOpen(false)}><BriefcaseBusiness size={15}/><div><strong>{l("Accountant workspace", "Espace comptable")}</strong><small>{l("Open your professional workspace", "Ouvrir votre espace professionnel")}</small></div></Link> : null}</div><div className={frame.accountPreferences}><label><span>{tx("financialYear")}</span><select value={fiscalYear} disabled={switchingYear} onChange={event=>changeFiscalYear(Number(event.target.value))}>{fiscalYears.map(year=><option key={year} value={year}>{year}</option>)}</select></label></div><div className={frame.businessAccountSection}><Link href="/app/settings" onClick={()=>setAccountOpen(false)}><Settings size={15}/><div><strong>{tx("settings")}</strong><small>{l("Profile, security and account preferences", "Profil, sécurité et préférences du compte")}</small></div></Link><form action="/auth/signout" method="post"><button type="submit"><LogOut size={15}/><span>{tx("signOut")}</span></button></form></div></div> : null}</div>
-        </div></header>{children}
-      </section>
-      {searchOpen ? <div className={frame.searchOverlay} role="dialog" aria-modal="true" aria-label={tx("searchZuelen")} onMouseDown={event => { if (event.currentTarget === event.target) setSearchOpen(false); }}><div className={frame.searchDialog}><div className={frame.searchInput}><Search size={18}/><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder={tx("searchPlaceholder")}/><button onClick={() => setSearchOpen(false)}><kbd>ESC</kbd></button></div><div className={frame.searchResults}><p>{query ? tx("results") : tx("quickNavigation")}</p>{results.map(item => <Link href={item.href} key={item.href} onClick={() => setSearchOpen(false)}><span><item.icon size={17}/></span><div><strong>{item.label}</strong><small>{item.description}</small></div></Link>)}{results.length === 0 ? <div className={frame.noResults}>{tx("noMatchingWorkspace")}</div> : null}</div></div></div> : null}
-    </main>
-  </RoleProvider>;
+        {mobileNav ? (
+          <button className="scrim" aria-label={tx("closeNavigation")} onClick={() => setMobileNav(false)} />
+        ) : null}
+        <section className="workspace">
+          <header className="topbar">
+            <div className="topbar-left">
+              <button
+                className="icon-btn mobile-only"
+                onClick={() => setMobileNav(true)}
+                aria-label={tx("openNavigation")}
+              >
+                <Menu size={18} />
+              </button>
+              <button
+                type="button"
+                className={frame.searchField}
+                onClick={() => setSearchOpen(true)}
+                aria-label={tx("searchZuelen")}
+              >
+                <Search size={16} />
+                <span>{tx("searchPlaceholder")}</span>
+                <kbd>⌘K</kbd>
+              </button>
+            </div>
+            <div className="topbar-actions">
+              <div className={frame.languageWrap}>
+                <button
+                  type="button"
+                  className={frame.languageButton}
+                  onClick={() => setLanguageOpen(value => !value)}
+                  aria-expanded={languageOpen}
+                  aria-label={tx("language")}
+                >
+                  <span className={frame.languageFlag}>{locale === "fr" ? "🇫🇷" : "🇬🇧"}</span>
+                  <span>{locale.toUpperCase()}</span>
+                  <ChevronDown size={13} className={languageOpen ? frame.chevronOpen : ""} />
+                </button>
+                {languageOpen ? (
+                  <div className={frame.languageSheet}>
+                    <button
+                      type="button"
+                      className={locale === "en" ? frame.languageChoiceActive : ""}
+                      onClick={() => changeLocale("en")}
+                      disabled={switchingLocale}
+                    >
+                      <span>🇬🇧</span>
+                      <span>
+                        <strong>English</strong>
+                        <small>EN</small>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className={locale === "fr" ? frame.languageChoiceActive : ""}
+                      onClick={() => changeLocale("fr")}
+                      disabled={switchingLocale}
+                    >
+                      <span>🇫🇷</span>
+                      <span>
+                        <strong>Français</strong>
+                        <small>FR</small>
+                      </span>
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <button
+                className={`search-btn ${frame.searchIconOnly}`}
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                aria-label={tx("searchZuelen")}
+                title={`${tx("searchZuelen")} (⌘K)`}
+              >
+                <Search size={17} />
+              </button>
+              <div className={frame.notificationWrap}>
+                <button
+                  className="icon-btn"
+                  type="button"
+                  aria-label={tx("notifications")}
+                  aria-expanded={notificationsOpen}
+                  onClick={() => setNotificationsOpen(value => !value)}
+                >
+                  <Bell size={17} />
+                  {attentionCount > 0 ? <span className="notification-dot" /> : null}
+                </button>
+                {notificationsOpen ? (
+                  <div className={frame.notificationSheet}>
+                    <div>
+                      <strong>{tx("notifications")}</strong>
+                      <button onClick={() => setNotificationsOpen(false)} aria-label={tx("closeNotifications")}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                    {attentionCount ? (
+                      <Link href="/app/transactions" onClick={() => setNotificationsOpen(false)}>
+                        <span className={frame.bellIcon}>
+                          <WalletCards size={15} />
+                        </span>
+                        <span>
+                          <strong>
+                            {locale === "fr"
+                              ? `${attentionCount} transaction${attentionCount === 1 ? "" : "s"} à vérifier`
+                              : `${attentionCount} transaction${attentionCount === 1 ? "" : "s"} need review`}
+                          </strong>
+                          <small>
+                            {locale === "fr"
+                              ? `Ouvrir la vérification des transactions pour ${fiscalYear}`
+                              : `Open transaction review for ${fiscalYear}`}
+                          </small>
+                        </span>
+                      </Link>
+                    ) : (
+                      <p>
+                        {locale === "fr"
+                          ? `Tout est à jour pour ${fiscalYear}.`
+                          : `You’re all caught up for ${fiscalYear}.`}
+                      </p>
+                    )}
+                    <Link href="/app/compliance" onClick={() => setNotificationsOpen(false)}>
+                      <span className={frame.bellIcon}>
+                        <CalendarCheck2 size={15} />
+                      </span>
+                      <span>
+                        <strong>{tx("complianceCenter")}</strong>
+                        <small>
+                          {locale === "fr"
+                            ? `Vérifier les obligations ${fiscalYear}`
+                            : `Review ${fiscalYear} obligations`}
+                        </small>
+                      </span>
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+              <div className={frame.businessAccountWrap} ref={accountRef}>
+                <button
+                  type="button"
+                  className={frame.businessAccountButton}
+                  onClick={() => setAccountOpen(value => !value)}
+                  aria-expanded={accountOpen}
+                  aria-label={l(`Open account menu for ${userLabel}`, `Ouvrir le menu du compte de ${userLabel}`)}
+                >
+                  {userAvatarUrl ? (
+                    <span className={frame.businessAvatar}>
+                      <img src={userAvatarUrl} alt="" />
+                    </span>
+                  ) : (
+                    <span className={frame.businessAvatar}>{initials(userLabel)}</span>
+                  )}
+                  <div>
+                    <strong>{userLabel}</strong>
+                    <small>
+                      {companyName} · {fiscalYear}
+                    </small>
+                  </div>
+                  <ChevronDown size={14} />
+                </button>
+                {accountOpen ? (
+                  <div className={frame.accountSheet}>
+                    <div className={frame.businessAccountHead}>
+                      <div>
+                        <strong>{userLabel}</strong>
+                        <span>{email}</span>
+                      </div>
+                      <b className={frame.accountPlanBadge}>{plan === "premium" ? "Premium" : "Basic"}</b>
+                    </div>
+                    <div className={frame.businessAccountSection}>
+                      <span>{l("Activities & workspaces", "Activités et espaces")}</span>
+                      {workspaces.map(item => (
+                        <form action={switchWorkspaceAction} key={item.companyId}>
+                          <input type="hidden" name="company_id" value={item.companyId} />
+                          <input type="hidden" name="return_to" value="/app" />
+                          <button
+                            type="submit"
+                            className={item.companyId === activeWorkspaceId ? frame.businessCurrentWorkspace : ""}
+                          >
+                            <span className={frame.workspaceIcon}>
+                              {item.entityKind === "independent" ? <UserRound size={15} /> : <Building2 size={15} />}
+                            </span>
+                            <div>
+                              <strong className={frame.workspaceName}>
+                                {item.displayName}
+                                {item.companyId === activeWorkspaceId ? <Check size={14} /> : null}
+                              </strong>
+                              <small>
+                                {item.entityKind === "independent"
+                                  ? l("Independent activity", "Activité indépendante")
+                                  : `${l("Company", "Société")} · ${item.legalForm}`}
+                              </small>
+                            </div>
+                          </button>
+                        </form>
+                      ))}
+                      <Link href="/setup?add=1" onClick={() => setAccountOpen(false)}>
+                        <Plus size={15} />
+                        <div>
+                          <strong>{l("Add another activity", "Ajouter une activité")}</strong>
+                          <small>
+                            {l(
+                              "Create another business or independent workspace",
+                              "Créer un autre espace société ou indépendant",
+                            )}
+                          </small>
+                        </div>
+                      </Link>
+                      {hasProfessionalWorkspace ? (
+                        <Link href="/professional" onClick={() => setAccountOpen(false)}>
+                          <BriefcaseBusiness size={15} />
+                          <div>
+                            <strong>{l("Accountant workspace", "Espace comptable")}</strong>
+                            <small>{l("Open your professional workspace", "Ouvrir votre espace professionnel")}</small>
+                          </div>
+                        </Link>
+                      ) : null}
+                    </div>
+                    <div className={frame.accountPreferences}>
+                      <label>
+                        <span>{tx("financialYear")}</span>
+                        <select
+                          value={fiscalYear}
+                          disabled={switchingYear}
+                          onChange={event => changeFiscalYear(Number(event.target.value))}
+                        >
+                          {fiscalYears.map(year => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <div className={frame.businessAccountSection}>
+                      <Link href="/app/settings" onClick={() => setAccountOpen(false)}>
+                        <Settings size={15} />
+                        <div>
+                          <strong>{tx("settings")}</strong>
+                          <small>
+                            {l(
+                              "Profile, security and account preferences",
+                              "Profil, sécurité et préférences du compte",
+                            )}
+                          </small>
+                        </div>
+                      </Link>
+                      <form action="/auth/signout" method="post">
+                        <button type="submit">
+                          <LogOut size={15} />
+                          <span>{tx("signOut")}</span>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </header>
+          {children}
+        </section>
+        {searchOpen ? (
+          <div
+            className={frame.searchOverlay}
+            role="dialog"
+            aria-modal="true"
+            aria-label={tx("searchZuelen")}
+            onMouseDown={event => {
+              if (event.currentTarget === event.target) setSearchOpen(false);
+            }}
+          >
+            <div className={frame.searchDialog}>
+              <div className={frame.searchInput}>
+                <Search size={18} />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={event => setQuery(event.target.value)}
+                  placeholder={tx("searchPlaceholder")}
+                />
+                <button onClick={() => setSearchOpen(false)}>
+                  <kbd>ESC</kbd>
+                </button>
+              </div>
+              <div className={frame.searchResults}>
+                <p>{query ? tx("results") : tx("quickNavigation")}</p>
+                {results.map(item => (
+                  <Link href={item.href} key={item.href} onClick={() => setSearchOpen(false)}>
+                    <span>
+                      <item.icon size={17} />
+                    </span>
+                    <div>
+                      <strong>{item.label}</strong>
+                      <small>{item.description}</small>
+                    </div>
+                  </Link>
+                ))}
+                {results.length === 0 ? <div className={frame.noResults}>{tx("noMatchingWorkspace")}</div> : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </main>
+    </RoleProvider>
+  );
 }

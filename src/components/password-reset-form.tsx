@@ -15,7 +15,7 @@ export function PasswordResetForm({
   onboardingAfterReset?: boolean;
 }) {
   const fr = locale === "fr";
-  const l = (en: string, french: string) => fr ? french : en;
+  const l = (en: string, french: string) => (fr ? french : en);
   const router = useRouter();
   const appSupabase = useMemo(() => createClient(), []);
   const recoverySupabase = useMemo(() => createRecoveryClient(), []);
@@ -39,37 +39,40 @@ export function PasswordResetForm({
       }
     });
 
-    void Promise.all([
-      recoverySupabase.auth.getSession(),
-      appSupabase.auth.getSession(),
-    ]).then(([recoveryResult, appResult]) => {
-      if (!active) return;
+    void Promise.all([recoverySupabase.auth.getSession(), appSupabase.auth.getSession()])
+      .then(([recoveryResult, appResult]) => {
+        if (!active) return;
 
-      if (appResult.data.session) {
-        sessionMode.current = "app";
-        setReady(true);
-        setMessage(null);
-        return;
-      }
+        if (appResult.data.session) {
+          sessionMode.current = "app";
+          setReady(true);
+          setMessage(null);
+          return;
+        }
 
-      if (recoveryResult.data.session) {
-        sessionMode.current = "recovery";
-        setReady(true);
-        setMessage(null);
-        return;
-      }
+        if (recoveryResult.data.session) {
+          sessionMode.current = "recovery";
+          setReady(true);
+          setMessage(null);
+          return;
+        }
 
-      setMessage(l(
-        "This password link or invitation is invalid or has expired. Request a new link from the sign-in page.",
-        "Ce lien de mot de passe ou cette invitation est invalide ou a expiré. Demandez un nouveau lien depuis la page de connexion.",
-      ));
-    }).catch(() => {
-      if (!active) return;
-      setMessage(l(
-        "This password link or invitation is invalid or has expired. Request a new link from the sign-in page.",
-        "Ce lien de mot de passe ou cette invitation est invalide ou a expiré. Demandez un nouveau lien depuis la page de connexion.",
-      ));
-    });
+        setMessage(
+          l(
+            "This password link or invitation is invalid or has expired. Request a new link from the sign-in page.",
+            "Ce lien de mot de passe ou cette invitation est invalide ou a expiré. Demandez un nouveau lien depuis la page de connexion.",
+          ),
+        );
+      })
+      .catch(() => {
+        if (!active) return;
+        setMessage(
+          l(
+            "This password link or invitation is invalid or has expired. Request a new link from the sign-in page.",
+            "Ce lien de mot de passe ou cette invitation est invalide ou a expiré. Demandez un nouveau lien depuis la page de connexion.",
+          ),
+        );
+      });
 
     return () => {
       active = false;
@@ -82,19 +85,23 @@ export function PasswordResetForm({
     setMessage(null);
 
     if (!ready) {
-      setMessage(l(
-        "Open a fresh password link from your email first.",
-        "Ouvrez d’abord un nouveau lien de mot de passe reçu par e-mail.",
-      ));
+      setMessage(
+        l(
+          "Open a fresh password link from your email first.",
+          "Ouvrez d’abord un nouveau lien de mot de passe reçu par e-mail.",
+        ),
+      );
       return;
     }
 
     const mode = sessionMode.current;
     if (!mode) {
-      setMessage(l(
-        "Open a fresh password link from your email first.",
-        "Ouvrez d’abord un nouveau lien de mot de passe reçu par e-mail.",
-      ));
+      setMessage(
+        l(
+          "Open a fresh password link from your email first.",
+          "Ouvrez d’abord un nouveau lien de mot de passe reçu par e-mail.",
+        ),
+      );
       return;
     }
     if (password.length < 8) {
@@ -118,15 +125,14 @@ export function PasswordResetForm({
         return;
       }
 
-      await Promise.allSettled([
-        recoverySupabase.auth.signOut(),
-        appSupabase.auth.signOut(),
-      ]);
+      await Promise.allSettled([recoverySupabase.auth.signOut(), appSupabase.auth.signOut()]);
       setComplete(true);
     } catch (error) {
-      setMessage(error instanceof Error
-        ? error.message
-        : l("The password could not be updated.", "Le mot de passe n’a pas pu être mis à jour."));
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : l("The password could not be updated.", "Le mot de passe n’a pas pu être mis à jour."),
+      );
     } finally {
       setBusy(false);
     }
@@ -138,10 +144,12 @@ export function PasswordResetForm({
         <Check size={20} />
         <div>
           <strong>{l("Password updated", "Mot de passe mis à jour")}</strong>
-          <p>{l(
-            "Your new password is active. Sign in with your email and new password.",
-            "Votre nouveau mot de passe est actif. Connectez-vous avec votre e-mail et votre nouveau mot de passe.",
-          )}</p>
+          <p>
+            {l(
+              "Your new password is active. Sign in with your email and new password.",
+              "Votre nouveau mot de passe est actif. Connectez-vous avec votre e-mail et votre nouveau mot de passe.",
+            )}
+          </p>
           <Link href="/sign-in">{l("Return to sign in", "Retour à la connexion")}</Link>
         </div>
       </div>
@@ -150,16 +158,20 @@ export function PasswordResetForm({
 
   return (
     <form className={styles.resetForm} onSubmit={submit}>
-      <div className={styles.resetIcon}><LockKeyhole size={20} /></div>
+      <div className={styles.resetIcon}>
+        <LockKeyhole size={20} />
+      </div>
       <h1>{l("Choose a new password", "Choisissez un nouveau mot de passe")}</h1>
-      <p>{l(
-        onboardingAfterReset
-          ? "Create your password to activate your Zuelen access."
-          : "Use a unique password you do not reuse on another service.",
-        onboardingAfterReset
-          ? "Créez votre mot de passe pour activer votre accès à Zuelen."
-          : "Utilisez un mot de passe unique que vous ne réutilisez pas sur un autre service.",
-      )}</p>
+      <p>
+        {l(
+          onboardingAfterReset
+            ? "Create your password to activate your Zuelen access."
+            : "Use a unique password you do not reuse on another service.",
+          onboardingAfterReset
+            ? "Créez votre mot de passe pour activer votre accès à Zuelen."
+            : "Utilisez un mot de passe unique que vous ne réutilisez pas sur un autre service.",
+        )}
+      </p>
       <label>
         <span>{l("New password", "Nouveau mot de passe")}</span>
         <input
@@ -184,10 +196,17 @@ export function PasswordResetForm({
           disabled={!ready || busy}
         />
       </label>
-      {message ? <div className={styles.error} role="alert">{message}</div> : null}
+      {message ? (
+        <div className={styles.error} role="alert">
+          {message}
+        </div>
+      ) : null}
       <button type="submit" disabled={!ready || busy}>
         {busy ? <LoaderCircle className={styles.spin} size={16} /> : null}
-        {l(onboardingAfterReset ? "Set password & continue" : "Update password", onboardingAfterReset ? "Définir le mot de passe et continuer" : "Mettre à jour le mot de passe")}
+        {l(
+          onboardingAfterReset ? "Set password & continue" : "Update password",
+          onboardingAfterReset ? "Définir le mot de passe et continuer" : "Mettre à jour le mot de passe",
+        )}
       </button>
     </form>
   );

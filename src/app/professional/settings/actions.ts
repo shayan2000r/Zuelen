@@ -17,12 +17,15 @@ export async function saveProfessionalSettingsAction(formData: FormData) {
 
   const locale = normalizeLocale(text(formData, "locale"));
   const professionalEmailUpdates = formData.get("professional_email_updates") === "on";
-  const { error } = await supabase.from("user_profiles").upsert({
-    user_id: workspace.userId,
-    locale,
-    professional_email_updates: professionalEmailUpdates,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "user_id" });
+  const { error } = await supabase.from("user_profiles").upsert(
+    {
+      user_id: workspace.userId,
+      locale,
+      professional_email_updates: professionalEmailUpdates,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
   if (error) throw new Error(error.message);
 
   revalidatePath("/professional", "layout");
@@ -43,7 +46,11 @@ export async function deleteProfessionalProfileAction(formData: FormData) {
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.from("accountant_profiles").delete().eq("id", profile.id).eq("user_id", workspace.userId);
+  const { error } = await admin
+    .from("accountant_profiles")
+    .delete()
+    .eq("id", profile.id)
+    .eq("user_id", workspace.userId);
   if (error) throw new Error(error.message);
 
   revalidatePath("/professional", "layout");

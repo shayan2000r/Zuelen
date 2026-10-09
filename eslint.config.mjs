@@ -14,6 +14,7 @@ export default defineConfig([
       "react-hooks/purity": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
       "prefer-const": "warn",
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),

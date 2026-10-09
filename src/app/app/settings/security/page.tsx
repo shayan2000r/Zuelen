@@ -12,5 +12,19 @@ export default async function SecuritySettingsPage() {
   if (!workspace.authenticated) redirect("/sign-in");
   const locale = normalizeLocale(workspace.profile?.locale);
   const fr = locale === "fr";
-  return <V2Page><PageHeader eyebrow={fr ? "Paramètres · sécurité" : "Settings · security"} title={fr ? "Sécurité du compte" : "Account security"} description={fr ? "Protégez votre identité Zuelen et tous les espaces qui y sont rattachés." : "Protect your Zuelen identity and every workspace attached to it."} actions={[{ label: fr ? "Paramètres" : "Settings", href: "/app/settings", icon: ArrowLeft, variant: "ghost" }]}/><MfaSettings locale={locale}/></V2Page>;
+  return (
+    <V2Page>
+      <PageHeader
+        eyebrow={fr ? "Paramètres · sécurité" : "Settings · security"}
+        title={fr ? "Sécurité du compte" : "Account security"}
+        description={
+          fr
+            ? "Protégez votre identité Zuelen et tous les espaces qui y sont rattachés."
+            : "Protect your Zuelen identity and every workspace attached to it."
+        }
+        actions={[{ label: fr ? "Paramètres" : "Settings", href: "/app/settings", icon: ArrowLeft, variant: "ghost" }]}
+      />
+      <MfaSettings locale={locale} />
+    </V2Page>
+  );
 }

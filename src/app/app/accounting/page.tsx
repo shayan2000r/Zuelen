@@ -1,10 +1,25 @@
-import { ArrowRight, BookOpen, CheckCircle2, ChevronDown, Eye, LockKeyhole, Scale, Search, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  Eye,
+  LockKeyhole,
+  Scale,
+  Search,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { redirect } from "next/navigation";
 import { AccountingYearControls } from "@/components/accounting-year-controls";
 import { DataEmptyState, DataPanel, DataPanelHeader, DataSummary, DataToolbar } from "@/components/zuelen-data-ui-v2";
 import { PageHeader, StatusBadge, V2Button, V2Page } from "@/components/zuelen-ui-v2";
 import { TransactionRowActions } from "@/components/transaction-row-actions";
-import { AccountingInvoiceActions, AccountingPaymentActions, AccountingReadOnlyAction } from "@/components/accounting-entry-actions";
+import {
+  AccountingInvoiceActions,
+  AccountingPaymentActions,
+  AccountingReadOnlyAction,
+} from "@/components/accounting-entry-actions";
 import { fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { intlLocale, localizedAccountLabel, normalizeLocale, type Locale } from "@/lib/i18n";
 import { canAccount } from "@/lib/permissions";
@@ -12,75 +27,554 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import styles from "./accounting.module.css";
 
-export const dynamic="force-dynamic";
-type JournalLine={id:string;journal_entry_id:string;company_account_id:string;description:string|null;debit:number|string;credit:number|string;currency:string};
-type Account={id:string;code:string;label:string;label_en:string|null;label_fr:string|null;account_type:string};
-type SourceTransaction={id:string;occurred_on:string;direction:string;amount_gross:number|string;vat_amount:number|string|null;counterparty_name:string|null;description:string|null;classification_status:string;posted_journal_entry_id:string|null};
-type Invoice={id:string;status:string;payment_status:string};
-type Payment={id:string;invoice_id:string;amount:number|string;paid_on:string;reference:string|null;bank_transaction_id:string|null;journal_entry_id:string};
-type Params=Promise<{q?:string;kind?:string;from?:string;to?:string;opening?:string}>;
-function money(value:number,currency:string,locale:Locale){return new Intl.NumberFormat(intlLocale(locale),{style:"currency",currency,minimumFractionDigits:2}).format(value)}
-function validDate(value:string|undefined){return value&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value:""}function within(value:string,bounds:{start:string;end:string},fallback:string){return value&&value>=bounds.start&&value<=bounds.end?value:fallback}
+export const dynamic = "force-dynamic";
+type JournalLine = {
+  id: string;
+  journal_entry_id: string;
+  company_account_id: string;
+  description: string | null;
+  debit: number | string;
+  credit: number | string;
+  currency: string;
+};
+type Account = {
+  id: string;
+  code: string;
+  label: string;
+  label_en: string | null;
+  label_fr: string | null;
+  account_type: string;
+};
+type SourceTransaction = {
+  id: string;
+  occurred_on: string;
+  direction: string;
+  amount_gross: number | string;
+  vat_amount: number | string | null;
+  counterparty_name: string | null;
+  description: string | null;
+  classification_status: string;
+  posted_journal_entry_id: string | null;
+};
+type Invoice = { id: string; status: string; payment_status: string };
+type Payment = {
+  id: string;
+  invoice_id: string;
+  amount: number | string;
+  paid_on: string;
+  reference: string | null;
+  bank_transaction_id: string | null;
+  journal_entry_id: string;
+};
+type Params = Promise<{ q?: string; kind?: string; from?: string; to?: string; opening?: string }>;
+function money(value: number, currency: string, locale: Locale) {
+  return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency, minimumFractionDigits: 2 }).format(
+    value,
+  );
+}
+function validDate(value: string | undefined) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+}
+function within(value: string, bounds: { start: string; end: string }, fallback: string) {
+  return value && value >= bounds.start && value <= bounds.end ? value : fallback;
+}
 
 function leadWithOpening<T>(items: T[], missing: boolean) {
   return missing ? [items[items.length - 1], ...items.slice(0, -1)] : items;
 }
 
-export default async function AccountingPage({searchParams}:{searchParams:Params}){
- const params=await searchParams,q=(params.q??"").trim().toLowerCase(),kind=["all","revenue","expense","manual","invoice","payment","reversal","opening"].includes(params.kind??"")?params.kind!:"all",workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",dateLocale=intlLocale(locale),editable=canAccount(workspace.role),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),from=within(validDate(params.from),bounds,bounds.start),to=within(validDate(params.to),bounds,bounds.end),supabase=await createClient();
- const[{data:entryData,error:entryError},{data:accountData,error:accountError}]=await Promise.all([supabase.from("journal_entries").select("id,entry_number,entry_date,description,source_type,source_id,status,posted_at,reversal_of").eq("company_id",workspace.company.id).gte("entry_date",from).lte("entry_date",to).order("entry_number",{ascending:false}).limit(1000),supabase.from("company_accounts").select("id,code,label,label_en,label_fr,account_type").eq("company_id",workspace.company.id).eq("is_active",true).order("code")]);if(entryError)throw new Error(`${fr?"Impossible de charger les écritures":"Could not load journal entries"}: ${entryError.message}`);if(accountError)throw new Error(`${fr?"Impossible de charger le plan comptable":"Could not load chart of accounts"}: ${accountError.message}`);
- const entries=entryData??[],entryIds=entries.map(entry=>entry.id);let lineRows:JournalLine[]=[];if(entryIds.length){const{data,error}=await supabase.from("journal_lines").select("id,journal_entry_id,company_account_id,description,debit,credit,currency").in("journal_entry_id",entryIds).order("created_at",{ascending:true});if(error)throw new Error(`${fr?"Impossible de charger les lignes de journal":"Could not load journal lines"}: ${error.message}`);lineRows=(data??[]) as JournalLine[]}
- const manualSourceIds=entries.filter(entry=>entry.source_type==="manual"&&entry.source_id).map(entry=>entry.source_id as string),invoiceSourceIds=entries.filter(entry=>entry.source_type==="invoice"&&entry.source_id).map(entry=>entry.source_id as string),bankEntryIds=entries.filter(entry=>entry.source_type==="bank").map(entry=>entry.id);let sourceRows:SourceTransaction[]=[],invoiceRows:Invoice[]=[],paymentRows:Payment[]=[];
- if(manualSourceIds.length){const{data,error}=await supabase.from("source_transactions").select("id,occurred_on,direction,amount_gross,vat_amount,counterparty_name,description,classification_status,posted_journal_entry_id").in("id",manualSourceIds);if(error)throw new Error(error.message);sourceRows=(data??[]) as SourceTransaction[]}if(invoiceSourceIds.length){const{data,error}=await supabase.from("sales_invoices").select("id,status,payment_status").in("id",invoiceSourceIds);if(error)throw new Error(error.message);invoiceRows=(data??[]) as Invoice[]}if(bankEntryIds.length){const{data,error}=await supabase.from("invoice_payments").select("id,invoice_id,amount,paid_on,reference,bank_transaction_id,journal_entry_id").in("journal_entry_id",bankEntryIds);if(error)throw new Error(error.message);paymentRows=(data??[]) as Payment[]}
- const accounts=((accountData??[]) as Account[]).map(account=>({...account,label:localizedAccountLabel(locale,account)})),openingAccounts=accounts.filter(account=>["asset","liability","equity"].includes(account.account_type)),accountMap=new Map(accounts.map(account=>[account.id,account])),sourceMap=new Map(sourceRows.map(row=>[row.id,row])),invoiceMap=new Map(invoiceRows.map(row=>[row.id,row])),paymentByEntry=new Map(paymentRows.map(row=>[row.journal_entry_id,row])),linesByEntry=new Map<string,JournalLine[]>();for(const line of lineRows){const group=linesByEntry.get(line.journal_entry_id)??[];group.push(line);linesByEntry.set(line.journal_entry_id,group)}
- function hasType(entryId:string,type:string){return(linesByEntry.get(entryId)??[]).some(line=>accountMap.get(line.company_account_id)?.account_type===type)}
- const revenueCount=entries.filter(entry=>hasType(entry.id,"revenue")).length,expenseCount=entries.filter(entry=>hasType(entry.id,"expense")).length,openingPosted=entries.some(entry=>entry.source_type==="import"&&entry.description===`Opening balances · ${year}`),currency=workspace.company.base_currency||"EUR",visible=entries.filter(entry=>{if(kind==="revenue"&&!hasType(entry.id,"revenue"))return false;if(kind==="expense"&&!hasType(entry.id,"expense"))return false;if(kind==="manual"&&entry.source_type!=="manual")return false;if(kind==="invoice"&&entry.source_type!=="invoice")return false;if(kind==="payment"&&!(entry.source_type==="bank"&&paymentByEntry.has(entry.id)))return false;if(kind==="reversal"&&!(entry.source_type==="reversal"||entry.reversal_of))return false;if(kind==="opening"&&!(entry.source_type==="import"&&entry.description===`Opening balances · ${year}`))return false;if(!q)return true;const lines=linesByEntry.get(entry.id)??[],haystack=[entry.description,entry.source_type,...lines.flatMap(line=>{const account=accountMap.get(line.company_account_id);return[account?.code,account?.label,line.description]})].filter(Boolean).join(" ").toLowerCase();return haystack.includes(q)});
- return <V2Page className={styles.page}>
-  <PageHeader
-   eyebrow={fr ? "Grand livre en partie double · " + year : "Double-entry ledger · " + year}
-   title={fr ? "Comptabilité" : "Accounting"}
-   description={editable
-    ? (fr ? "Un grand livre neutre et lisible, avec chaque écriture, sa source et son historique d’audit." : "A neutral, readable ledger with every entry, its source and complete audit history.")
-    : (fr ? "Accès en lecture seule au grand livre, aux mouvements de comptes et à l’historique d’audit." : "Read-only access to the ledger, account movements and audit history.")}
-   meta={<StatusBadge tone={editable ? "info" : "neutral"}>{editable ? <LockKeyhole size={13}/> : <Eye size={13}/>} {editable ? (fr ? entries.length + " écritures · " + from + " → " + to : entries.length + " entries · " + from + " → " + to) : (fr ? "Lecteur · " + entries.length + " écritures" : "Viewer · " + entries.length + " entries")}</StatusBadge>}
-  />
+export default async function AccountingPage({ searchParams }: { searchParams: Params }) {
+  const params = await searchParams,
+    q = (params.q ?? "").trim().toLowerCase(),
+    kind = ["all", "revenue", "expense", "manual", "invoice", "payment", "reversal", "opening"].includes(
+      params.kind ?? "",
+    )
+      ? params.kind!
+      : "all",
+    workspace = await getWorkspace();
+  if (!workspace.authenticated) redirect("/sign-in");
+  if (!workspace.company) redirect("/setup");
+  const locale = normalizeLocale(workspace.profile?.locale),
+    fr = locale === "fr",
+    dateLocale = intlLocale(locale),
+    editable = canAccount(workspace.role),
+    year = await getActiveFiscalYear(workspace.company.fiscal_year_start_month),
+    bounds = fiscalYearBounds(year, workspace.company.fiscal_year_start_month),
+    from = within(validDate(params.from), bounds, bounds.start),
+    to = within(validDate(params.to), bounds, bounds.end),
+    supabase = await createClient();
+  const [{ data: entryData, error: entryError }, { data: accountData, error: accountError }] = await Promise.all([
+    supabase
+      .from("journal_entries")
+      .select("id,entry_number,entry_date,description,source_type,source_id,status,posted_at,reversal_of")
+      .eq("company_id", workspace.company.id)
+      .gte("entry_date", from)
+      .lte("entry_date", to)
+      .order("entry_number", { ascending: false })
+      .limit(1000),
+    supabase
+      .from("company_accounts")
+      .select("id,code,label,label_en,label_fr,account_type")
+      .eq("company_id", workspace.company.id)
+      .eq("is_active", true)
+      .order("code"),
+  ]);
+  if (entryError)
+    throw new Error(
+      `${fr ? "Impossible de charger les écritures" : "Could not load journal entries"}: ${entryError.message}`,
+    );
+  if (accountError)
+    throw new Error(
+      `${fr ? "Impossible de charger le plan comptable" : "Could not load chart of accounts"}: ${accountError.message}`,
+    );
+  const entries = entryData ?? [],
+    entryIds = entries.map(entry => entry.id);
+  let lineRows: JournalLine[] = [];
+  if (entryIds.length) {
+    const { data, error } = await supabase
+      .from("journal_lines")
+      .select("id,journal_entry_id,company_account_id,description,debit,credit,currency")
+      .in("journal_entry_id", entryIds)
+      .order("created_at", { ascending: true });
+    if (error)
+      throw new Error(
+        `${fr ? "Impossible de charger les lignes de journal" : "Could not load journal lines"}: ${error.message}`,
+      );
+    lineRows = (data ?? []) as JournalLine[];
+  }
+  const manualSourceIds = entries
+      .filter(entry => entry.source_type === "manual" && entry.source_id)
+      .map(entry => entry.source_id as string),
+    invoiceSourceIds = entries
+      .filter(entry => entry.source_type === "invoice" && entry.source_id)
+      .map(entry => entry.source_id as string),
+    bankEntryIds = entries.filter(entry => entry.source_type === "bank").map(entry => entry.id);
+  let sourceRows: SourceTransaction[] = [],
+    invoiceRows: Invoice[] = [],
+    paymentRows: Payment[] = [];
+  if (manualSourceIds.length) {
+    const { data, error } = await supabase
+      .from("source_transactions")
+      .select(
+        "id,occurred_on,direction,amount_gross,vat_amount,counterparty_name,description,classification_status,posted_journal_entry_id",
+      )
+      .in("id", manualSourceIds);
+    if (error) throw new Error(error.message);
+    sourceRows = (data ?? []) as SourceTransaction[];
+  }
+  if (invoiceSourceIds.length) {
+    const { data, error } = await supabase
+      .from("sales_invoices")
+      .select("id,status,payment_status")
+      .in("id", invoiceSourceIds);
+    if (error) throw new Error(error.message);
+    invoiceRows = (data ?? []) as Invoice[];
+  }
+  if (bankEntryIds.length) {
+    const { data, error } = await supabase
+      .from("invoice_payments")
+      .select("id,invoice_id,amount,paid_on,reference,bank_transaction_id,journal_entry_id")
+      .in("journal_entry_id", bankEntryIds);
+    if (error) throw new Error(error.message);
+    paymentRows = (data ?? []) as Payment[];
+  }
+  const accounts = ((accountData ?? []) as Account[]).map(account => ({
+      ...account,
+      label: localizedAccountLabel(locale, account),
+    })),
+    openingAccounts = accounts.filter(account => ["asset", "liability", "equity"].includes(account.account_type)),
+    accountMap = new Map(accounts.map(account => [account.id, account])),
+    sourceMap = new Map(sourceRows.map(row => [row.id, row])),
+    invoiceMap = new Map(invoiceRows.map(row => [row.id, row])),
+    paymentByEntry = new Map(paymentRows.map(row => [row.journal_entry_id, row])),
+    linesByEntry = new Map<string, JournalLine[]>();
+  for (const line of lineRows) {
+    const group = linesByEntry.get(line.journal_entry_id) ?? [];
+    group.push(line);
+    linesByEntry.set(line.journal_entry_id, group);
+  }
+  function hasType(entryId: string, type: string) {
+    return (linesByEntry.get(entryId) ?? []).some(
+      line => accountMap.get(line.company_account_id)?.account_type === type,
+    );
+  }
+  const revenueCount = entries.filter(entry => hasType(entry.id, "revenue")).length,
+    expenseCount = entries.filter(entry => hasType(entry.id, "expense")).length,
+    openingPosted = entries.some(
+      entry => entry.source_type === "import" && entry.description === `Opening balances · ${year}`,
+    ),
+    currency = workspace.company.base_currency || "EUR",
+    visible = entries.filter(entry => {
+      if (kind === "revenue" && !hasType(entry.id, "revenue")) return false;
+      if (kind === "expense" && !hasType(entry.id, "expense")) return false;
+      if (kind === "manual" && entry.source_type !== "manual") return false;
+      if (kind === "invoice" && entry.source_type !== "invoice") return false;
+      if (kind === "payment" && !(entry.source_type === "bank" && paymentByEntry.has(entry.id))) return false;
+      if (kind === "reversal" && !(entry.source_type === "reversal" || entry.reversal_of)) return false;
+      if (kind === "opening" && !(entry.source_type === "import" && entry.description === `Opening balances · ${year}`))
+        return false;
+      if (!q) return true;
+      const lines = linesByEntry.get(entry.id) ?? [],
+        haystack = [
+          entry.description,
+          entry.source_type,
+          ...lines.flatMap(line => {
+            const account = accountMap.get(line.company_account_id);
+            return [account?.code, account?.label, line.description];
+          }),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+      return haystack.includes(q);
+    });
+  return (
+    <V2Page className={styles.page}>
+      <PageHeader
+        eyebrow={fr ? "Grand livre en partie double · " + year : "Double-entry ledger · " + year}
+        title={fr ? "Comptabilité" : "Accounting"}
+        description={
+          editable
+            ? fr
+              ? "Un grand livre neutre et lisible, avec chaque écriture, sa source et son historique d’audit."
+              : "A neutral, readable ledger with every entry, its source and complete audit history."
+            : fr
+              ? "Accès en lecture seule au grand livre, aux mouvements de comptes et à l’historique d’audit."
+              : "Read-only access to the ledger, account movements and audit history."
+        }
+        meta={
+          <StatusBadge tone={editable ? "info" : "neutral"}>
+            {editable ? <LockKeyhole size={13} /> : <Eye size={13} />}{" "}
+            {editable
+              ? fr
+                ? entries.length + " écritures · " + from + " → " + to
+                : entries.length + " entries · " + from + " → " + to
+              : fr
+                ? "Lecteur · " + entries.length + " écritures"
+                : "Viewer · " + entries.length + " entries"}
+          </StatusBadge>
+        }
+      />
 
-  {editable ? <AccountingYearControls year={year} currency={currency} legalName={workspace.company.legal_name} accounts={openingAccounts} openingPosted={openingPosted} initialOpeningMode={params.opening==="upload"||params.opening==="manual"?params.opening:null}/> : null}
+      {editable ? (
+        <AccountingYearControls
+          year={year}
+          currency={currency}
+          legalName={workspace.company.legal_name}
+          accounts={openingAccounts}
+          openingPosted={openingPosted}
+          initialOpeningMode={params.opening === "upload" || params.opening === "manual" ? params.opening : null}
+        />
+      ) : null}
 
-  <DataSummary
-   label={fr ? "Résumé du grand livre" : "Ledger summary"}
-   items={leadWithOpening([
-    {label:fr ? "Écritures de journal" : "Journal entries",value:entries.length,description:String(year),icon:BookOpen},
-    {label:fr ? "Liées aux produits" : "Revenue-related",value:revenueCount,description:fr ? "Écritures touchant des comptes de produits" : "Entries touching revenue accounts",icon:TrendingUp,tone:"success"},
-    {label:fr ? "Liées aux charges" : "Expense-related",value:expenseCount,description:fr ? "Écritures touchant des comptes de charges" : "Entries touching expense accounts",icon:TrendingDown,tone:"danger"},
-    {label:fr ? "Situation d’ouverture" : "Opening position",value:openingPosted ? (fr ? "Prête" : "Ready") : (fr ? "Manquante" : "Missing"),description:openingPosted ? (fr ? "Report du bilan comptabilisé" : "Balance sheet carry-forward posted") : (fr ? "Nécessaire pour un bilan complet" : "Needed for a complete balance sheet"),icon:Scale,tone:openingPosted ? "success" : "warning"}
-   ], !openingPosted)}
-  />
+      <DataSummary
+        label={fr ? "Résumé du grand livre" : "Ledger summary"}
+        items={leadWithOpening(
+          [
+            {
+              label: fr ? "Écritures de journal" : "Journal entries",
+              value: entries.length,
+              description: String(year),
+              icon: BookOpen,
+            },
+            {
+              label: fr ? "Liées aux produits" : "Revenue-related",
+              value: revenueCount,
+              description: fr ? "Écritures touchant des comptes de produits" : "Entries touching revenue accounts",
+              icon: TrendingUp,
+              tone: "success",
+            },
+            {
+              label: fr ? "Liées aux charges" : "Expense-related",
+              value: expenseCount,
+              description: fr ? "Écritures touchant des comptes de charges" : "Entries touching expense accounts",
+              icon: TrendingDown,
+              tone: "danger",
+            },
+            {
+              label: fr ? "Situation d’ouverture" : "Opening position",
+              value: openingPosted ? (fr ? "Prête" : "Ready") : fr ? "Manquante" : "Missing",
+              description: openingPosted
+                ? fr
+                  ? "Report du bilan comptabilisé"
+                  : "Balance sheet carry-forward posted"
+                : fr
+                  ? "Nécessaire pour un bilan complet"
+                  : "Needed for a complete balance sheet",
+              icon: Scale,
+              tone: openingPosted ? "success" : "warning",
+            },
+          ],
+          !openingPosted,
+        )}
+      />
 
-  <DataPanel>
-   <DataPanelHeader
-    eyebrow={fr ? "Journal auditable" : "Auditable journal"}
-    title={fr ? "Écritures comptables" : "Accounting entries"}
-    meta={fr ? visible.length + " affichées" : visible.length + " shown"}
-   />
-   <DataToolbar>
-    <form className={styles.journalFilters} method="get">
-     <label className={styles.search}><Search size={15}/><input name="q" defaultValue={params.q??""} placeholder={fr ? "Rechercher dans le journal " + year : "Search " + year + " journal"}/></label>
-     <label><span className={styles.srOnly}>{fr ? "Type d’écriture" : "Entry type"}</span><select name="kind" defaultValue={kind}><option value="all">{fr ? "Toute l’activité" : "All activity"}</option><option value="revenue">{fr ? "Produits" : "Revenue"}</option><option value="expense">{fr ? "Charges" : "Expenses"}</option><option value="manual">Transactions</option><option value="invoice">{fr ? "Factures" : "Invoices"}</option><option value="payment">{fr ? "Paiements" : "Payments"}</option><option value="opening">{fr ? "Situation d’ouverture" : "Opening position"}</option><option value="reversal">{fr ? "Extournes" : "Reversals"}</option></select></label>
-     <label><span className={styles.srOnly}>{fr ? "Date de début" : "From date"}</span><input name="from" type="date" min={bounds.start} max={bounds.end} defaultValue={from} aria-label={fr ? "Date de début" : "From date"}/></label>
-     <label><span className={styles.srOnly}>{fr ? "Date de fin" : "To date"}</span><input name="to" type="date" min={bounds.start} max={bounds.end} defaultValue={to} aria-label={fr ? "Date de fin" : "To date"}/></label>
-     <button type="submit">{fr ? "Appliquer" : "Apply"}</button>
-    </form>
-   </DataToolbar>
+      <DataPanel>
+        <DataPanelHeader
+          eyebrow={fr ? "Journal auditable" : "Auditable journal"}
+          title={fr ? "Écritures comptables" : "Accounting entries"}
+          meta={fr ? visible.length + " affichées" : visible.length + " shown"}
+        />
+        <DataToolbar>
+          <form className={styles.journalFilters} method="get">
+            <label className={styles.search}>
+              <Search size={15} />
+              <input
+                name="q"
+                defaultValue={params.q ?? ""}
+                placeholder={fr ? "Rechercher dans le journal " + year : "Search " + year + " journal"}
+              />
+            </label>
+            <label>
+              <span className={styles.srOnly}>{fr ? "Type d’écriture" : "Entry type"}</span>
+              <select name="kind" defaultValue={kind}>
+                <option value="all">{fr ? "Toute l’activité" : "All activity"}</option>
+                <option value="revenue">{fr ? "Produits" : "Revenue"}</option>
+                <option value="expense">{fr ? "Charges" : "Expenses"}</option>
+                <option value="manual">Transactions</option>
+                <option value="invoice">{fr ? "Factures" : "Invoices"}</option>
+                <option value="payment">{fr ? "Paiements" : "Payments"}</option>
+                <option value="opening">{fr ? "Situation d’ouverture" : "Opening position"}</option>
+                <option value="reversal">{fr ? "Extournes" : "Reversals"}</option>
+              </select>
+            </label>
+            <label>
+              <span className={styles.srOnly}>{fr ? "Date de début" : "From date"}</span>
+              <input
+                name="from"
+                type="date"
+                min={bounds.start}
+                max={bounds.end}
+                defaultValue={from}
+                aria-label={fr ? "Date de début" : "From date"}
+              />
+            </label>
+            <label>
+              <span className={styles.srOnly}>{fr ? "Date de fin" : "To date"}</span>
+              <input
+                name="to"
+                type="date"
+                min={bounds.start}
+                max={bounds.end}
+                defaultValue={to}
+                aria-label={fr ? "Date de fin" : "To date"}
+              />
+            </label>
+            <button type="submit">{fr ? "Appliquer" : "Apply"}</button>
+          </form>
+        </DataToolbar>
 
-   {visible.length===0 ? <DataEmptyState
-    icon={BookOpen}
-    title={entries.length ? (fr ? "Aucune écriture ne correspond à ces filtres." : "No journal entries match these filters.") : (fr ? "Aucune écriture comptable pour cet exercice." : "No accounting entries for this financial year yet.")}
-    description={entries.length ? (fr ? "Modifiez la période, le type ou les termes de recherche." : "Change the period, type or search terms.") : openingPosted ? (fr ? "Comptabilisez une transaction ou émettez une facture pour créer la prochaine écriture équilibrée." : "Post a transaction or issue an invoice to create the next balanced entry.") : (fr ? "Commencez par la situation d’ouverture, puis ajoutez l’activité." : "Start with the opening position, then add activity.")}
-    action={!entries.length && editable ? <V2Button label={fr ? "Ouvrir les transactions" : "Open transactions"} href="/app/transactions" icon={ArrowRight} variant="primary"/> : undefined}
-   /> : <section className={styles.journal}>{visible.map(entry=>{const lines=linesByEntry.get(entry.id)??[],totalDebit=lines.reduce((sum,line)=>sum+Number(line.debit),0),totalCredit=lines.reduce((sum,line)=>sum+Number(line.credit),0),entryCurrency=lines[0]?.currency||currency,source=entry.source_type==="manual"&&entry.source_id?sourceMap.get(entry.source_id):undefined,invoice=entry.source_type==="invoice"&&entry.source_id?invoiceMap.get(entry.source_id):undefined,payment=paymentByEntry.get(entry.id),isCurrent=Boolean(source&&source.posted_journal_entry_id===entry.id&&source.classification_status==="posted"),flow=hasType(entry.id,"revenue")?"in":hasType(entry.id,"expense")?"out":"neutral";let sourceLabel=fr?"Écriture comptable générée par le système":"System-generated accounting entry",sourceActions=<AccountingReadOnlyAction>{fr?"Écriture d'audit · lecture seule":"Audit entry · read only"}</AccountingReadOnlyAction>;
-   if(editable&&entry.source_type==="manual"){sourceLabel=source?(fr?"Transaction source":"Source transaction"):(fr?"Source de transaction historique":"Historical transaction source");sourceActions=source&&isCurrent?<TransactionRowActions row={source}/>:<AccountingReadOnlyAction>{source?(fr?"Comptabilisation remplacée · historique d'audit":"Superseded posting · audit history"):(fr?"Source supprimée · extourne conservée":"Source deleted · reversal retained")}</AccountingReadOnlyAction>}else if(editable&&entry.source_type==="invoice"){sourceLabel=fr?"Facture de vente":"Sales invoice";sourceActions=invoice?<AccountingInvoiceActions invoiceId={invoice.id} status={invoice.status} paymentStatus={invoice.payment_status}/>:<AccountingReadOnlyAction>{fr?"Écriture de facture historique":"Historical invoice entry"}</AccountingReadOnlyAction>}else if(editable&&entry.source_type==="bank"&&payment){sourceLabel=fr?"Paiement de facture":"Invoice payment";sourceActions=<AccountingPaymentActions payment={payment}/>}else if(entry.source_type==="reversal"){sourceLabel=fr?"Écriture d'extourne":"Reversal entry";sourceActions=<AccountingReadOnlyAction>{fr?"Extourne · historique d'audit":"Reversal · audit history"}</AccountingReadOnlyAction>}else if(entry.source_type==="bank"){sourceLabel=fr?"Écriture bancaire / de règlement":"Bank / settlement entry";sourceActions=<AccountingReadOnlyAction>{editable?(fr?"Gérée par rapprochement":"Reconciliation-managed"):(fr?"Écriture en lecture seule":"Read-only entry")}</AccountingReadOnlyAction>}else if(entry.source_type==="import"){sourceLabel=entry.description===`Opening balances · ${year}`?(fr?`Situation d'ouverture · ${year}`:`Opening position · ${year}`):(fr?"Écriture comptable importée":"Imported accounting entry");sourceActions=<AccountingReadOnlyAction>{fr?"Écriture d'ouverture/import · lecture seule":"Opening/import entry · read only"}</AccountingReadOnlyAction>}else if(!editable){sourceActions=<AccountingReadOnlyAction>{fr?"Lecteur · lecture seule":"Viewer · read only"}</AccountingReadOnlyAction>}
-   return <details className={styles.entry} data-flow={flow} key={entry.id}><summary className={styles.summary}><span className={styles.number}>J{String(entry.entry_number).padStart(4,"0")}</span><span className={styles.copy}><strong>{entry.description}</strong><small>{entry.reversal_of?(fr?"Extourne · historique d'audit":"Reversal · audit history"):sourceLabel}</small></span><span className={styles.source}>{entry.source_type}</span><span className={styles.date}>{new Date(`${entry.entry_date}T12:00:00`).toLocaleDateString(dateLocale,{day:"2-digit",month:"short",year:"numeric"})}</span><span className={styles.total}>{money(Math.max(totalDebit,totalCredit),entryCurrency,locale)}</span><ChevronDown className={styles.chevron} size={16}/></summary><div className={styles.details}><div className={styles.lineHeader}><span>{fr?"Compte":"Account"}</span><span>{fr?"Débit":"Debit"}</span><span>{fr?"Crédit":"Credit"}</span></div>{lines.map(line=>{const account=accountMap.get(line.company_account_id),lineFlow=account?.account_type==="revenue"?"in":account?.account_type==="expense"?"out":"neutral";return <div className={styles.line} data-flow={lineFlow} key={line.id}><span className={styles.account}><b>{account?.code??"—"}</b><span>{account?.label??line.description??(fr?"Compte":"Account")}</span></span><span>{Number(line.debit)>0?money(Number(line.debit),line.currency,locale):"—"}</span><span>{Number(line.credit)>0?money(Number(line.credit),line.currency,locale):"—"}</span></div>})}<div className={styles.balance}><span>{fr?"Écriture équilibrée":"Balanced entry"}</span><strong><CheckCircle2 size={12}/> {fr?"Déb.":"Dr"} {money(totalDebit,entryCurrency,locale)} = {fr?"Créd.":"Cr"} {money(totalCredit,entryCurrency,locale)}</strong></div><div className={styles.sourceBar}><div className={styles.sourceCopy}><span>{fr?"Source":"Source"}</span><strong>{sourceLabel}</strong></div>{sourceActions}</div></div></details>})}</section>}
-  </DataPanel>
- </V2Page>;
+        {visible.length === 0 ? (
+          <DataEmptyState
+            icon={BookOpen}
+            title={
+              entries.length
+                ? fr
+                  ? "Aucune écriture ne correspond à ces filtres."
+                  : "No journal entries match these filters."
+                : fr
+                  ? "Aucune écriture comptable pour cet exercice."
+                  : "No accounting entries for this financial year yet."
+            }
+            description={
+              entries.length
+                ? fr
+                  ? "Modifiez la période, le type ou les termes de recherche."
+                  : "Change the period, type or search terms."
+                : openingPosted
+                  ? fr
+                    ? "Comptabilisez une transaction ou émettez une facture pour créer la prochaine écriture équilibrée."
+                    : "Post a transaction or issue an invoice to create the next balanced entry."
+                  : fr
+                    ? "Commencez par la situation d’ouverture, puis ajoutez l’activité."
+                    : "Start with the opening position, then add activity."
+            }
+            action={
+              !entries.length && editable ? (
+                <V2Button
+                  label={fr ? "Ouvrir les transactions" : "Open transactions"}
+                  href="/app/transactions"
+                  icon={ArrowRight}
+                  variant="primary"
+                />
+              ) : undefined
+            }
+          />
+        ) : (
+          <section className={styles.journal}>
+            {visible.map(entry => {
+              const lines = linesByEntry.get(entry.id) ?? [],
+                totalDebit = lines.reduce((sum, line) => sum + Number(line.debit), 0),
+                totalCredit = lines.reduce((sum, line) => sum + Number(line.credit), 0),
+                entryCurrency = lines[0]?.currency || currency,
+                source = entry.source_type === "manual" && entry.source_id ? sourceMap.get(entry.source_id) : undefined,
+                invoice =
+                  entry.source_type === "invoice" && entry.source_id ? invoiceMap.get(entry.source_id) : undefined,
+                payment = paymentByEntry.get(entry.id),
+                isCurrent = Boolean(
+                  source && source.posted_journal_entry_id === entry.id && source.classification_status === "posted",
+                ),
+                flow = hasType(entry.id, "revenue") ? "in" : hasType(entry.id, "expense") ? "out" : "neutral";
+              let sourceLabel = fr ? "Écriture comptable générée par le système" : "System-generated accounting entry",
+                sourceActions = (
+                  <AccountingReadOnlyAction>
+                    {fr ? "Écriture d'audit · lecture seule" : "Audit entry · read only"}
+                  </AccountingReadOnlyAction>
+                );
+              if (editable && entry.source_type === "manual") {
+                sourceLabel = source
+                  ? fr
+                    ? "Transaction source"
+                    : "Source transaction"
+                  : fr
+                    ? "Source de transaction historique"
+                    : "Historical transaction source";
+                sourceActions =
+                  source && isCurrent ? (
+                    <TransactionRowActions row={source} />
+                  ) : (
+                    <AccountingReadOnlyAction>
+                      {source
+                        ? fr
+                          ? "Comptabilisation remplacée · historique d'audit"
+                          : "Superseded posting · audit history"
+                        : fr
+                          ? "Source supprimée · extourne conservée"
+                          : "Source deleted · reversal retained"}
+                    </AccountingReadOnlyAction>
+                  );
+              } else if (editable && entry.source_type === "invoice") {
+                sourceLabel = fr ? "Facture de vente" : "Sales invoice";
+                sourceActions = invoice ? (
+                  <AccountingInvoiceActions
+                    invoiceId={invoice.id}
+                    status={invoice.status}
+                    paymentStatus={invoice.payment_status}
+                  />
+                ) : (
+                  <AccountingReadOnlyAction>
+                    {fr ? "Écriture de facture historique" : "Historical invoice entry"}
+                  </AccountingReadOnlyAction>
+                );
+              } else if (editable && entry.source_type === "bank" && payment) {
+                sourceLabel = fr ? "Paiement de facture" : "Invoice payment";
+                sourceActions = <AccountingPaymentActions payment={payment} />;
+              } else if (entry.source_type === "reversal") {
+                sourceLabel = fr ? "Écriture d'extourne" : "Reversal entry";
+                sourceActions = (
+                  <AccountingReadOnlyAction>
+                    {fr ? "Extourne · historique d'audit" : "Reversal · audit history"}
+                  </AccountingReadOnlyAction>
+                );
+              } else if (entry.source_type === "bank") {
+                sourceLabel = fr ? "Écriture bancaire / de règlement" : "Bank / settlement entry";
+                sourceActions = (
+                  <AccountingReadOnlyAction>
+                    {editable
+                      ? fr
+                        ? "Gérée par rapprochement"
+                        : "Reconciliation-managed"
+                      : fr
+                        ? "Écriture en lecture seule"
+                        : "Read-only entry"}
+                  </AccountingReadOnlyAction>
+                );
+              } else if (entry.source_type === "import") {
+                sourceLabel =
+                  entry.description === `Opening balances · ${year}`
+                    ? fr
+                      ? `Situation d'ouverture · ${year}`
+                      : `Opening position · ${year}`
+                    : fr
+                      ? "Écriture comptable importée"
+                      : "Imported accounting entry";
+                sourceActions = (
+                  <AccountingReadOnlyAction>
+                    {fr ? "Écriture d'ouverture/import · lecture seule" : "Opening/import entry · read only"}
+                  </AccountingReadOnlyAction>
+                );
+              } else if (!editable) {
+                sourceActions = (
+                  <AccountingReadOnlyAction>
+                    {fr ? "Lecteur · lecture seule" : "Viewer · read only"}
+                  </AccountingReadOnlyAction>
+                );
+              }
+              return (
+                <details className={styles.entry} data-flow={flow} key={entry.id}>
+                  <summary className={styles.summary}>
+                    <span className={styles.number}>J{String(entry.entry_number).padStart(4, "0")}</span>
+                    <span className={styles.copy}>
+                      <strong>{entry.description}</strong>
+                      <small>
+                        {entry.reversal_of
+                          ? fr
+                            ? "Extourne · historique d'audit"
+                            : "Reversal · audit history"
+                          : sourceLabel}
+                      </small>
+                    </span>
+                    <span className={styles.source}>{entry.source_type}</span>
+                    <span className={styles.date}>
+                      {new Date(`${entry.entry_date}T12:00:00`).toLocaleDateString(dateLocale, {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <span className={styles.total}>
+                      {money(Math.max(totalDebit, totalCredit), entryCurrency, locale)}
+                    </span>
+                    <ChevronDown className={styles.chevron} size={16} />
+                  </summary>
+                  <div className={styles.details}>
+                    <div className={styles.lineHeader}>
+                      <span>{fr ? "Compte" : "Account"}</span>
+                      <span>{fr ? "Débit" : "Debit"}</span>
+                      <span>{fr ? "Crédit" : "Credit"}</span>
+                    </div>
+                    {lines.map(line => {
+                      const account = accountMap.get(line.company_account_id),
+                        lineFlow =
+                          account?.account_type === "revenue"
+                            ? "in"
+                            : account?.account_type === "expense"
+                              ? "out"
+                              : "neutral";
+                      return (
+                        <div className={styles.line} data-flow={lineFlow} key={line.id}>
+                          <span className={styles.account}>
+                            <b>{account?.code ?? "—"}</b>
+                            <span>{account?.label ?? line.description ?? (fr ? "Compte" : "Account")}</span>
+                          </span>
+                          <span>{Number(line.debit) > 0 ? money(Number(line.debit), line.currency, locale) : "—"}</span>
+                          <span>
+                            {Number(line.credit) > 0 ? money(Number(line.credit), line.currency, locale) : "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <div className={styles.balance}>
+                      <span>{fr ? "Écriture équilibrée" : "Balanced entry"}</span>
+                      <strong>
+                        <CheckCircle2 size={12} /> {fr ? "Déb." : "Dr"} {money(totalDebit, entryCurrency, locale)} ={" "}
+                        {fr ? "Créd." : "Cr"} {money(totalCredit, entryCurrency, locale)}
+                      </strong>
+                    </div>
+                    <div className={styles.sourceBar}>
+                      <div className={styles.sourceCopy}>
+                        <span>{fr ? "Source" : "Source"}</span>
+                        <strong>{sourceLabel}</strong>
+                      </div>
+                      {sourceActions}
+                    </div>
+                  </div>
+                </details>
+              );
+            })}
+          </section>
+        )}
+      </DataPanel>
+    </V2Page>
+  );
 }

@@ -1,4 +1,14 @@
-import { AlertTriangle, BadgeCheck, CheckCircle2, CircleHelp, ExternalLink, FileOutput, Landmark, ReceiptText, Scale } from "lucide-react";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  CheckCircle2,
+  CircleHelp,
+  ExternalLink,
+  FileOutput,
+  Landmark,
+  ReceiptText,
+  Scale,
+} from "lucide-react";
 import { redirect } from "next/navigation";
 import { VatFilingAction } from "@/components/vat-filing-action";
 import { DataSummary } from "@/components/zuelen-data-ui-v2";
@@ -8,58 +18,458 @@ import { fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { intlLocale, normalizeLocale, type Locale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
-export const dynamic="force-dynamic";
-function money(v:number,c:string,l:Locale){return new Intl.NumberFormat(intlLocale(l),{style:"currency",currency:c,minimumFractionDigits:2}).format(v)}
-type RateBucket={base:number;vat:number};
-export default async function VatFilingPage(){
- const w=await getWorkspace();if(!w.authenticated)redirect("/sign-in");if(!w.company)redirect("/setup");if(!w.capabilities?.hasVat)redirect("/app/taxes?not_applicable=vat");const locale=normalizeLocale(w.profile?.locale),fr=locale==="fr",dateLocale=intlLocale(locale),s=await createClient(),year=await getActiveFiscalYear(w.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,w.company.fiscal_year_start_month),currency=w.company.base_currency||"EUR",from=bounds.start,to=bounds.end,frequency=w.company.vat_filing_frequency||"annual";
- const[{data:accounts},{data:entries},{data:invoices},{count:pendingCount},{data:taxMeta},{data:filings}]=await Promise.all([
-  s.from("company_accounts").select("id,code").eq("company_id",w.company.id).in("code",["421611","461411"]),
-  s.from("journal_entries").select("id").eq("company_id",w.company.id).eq("status","posted").gte("entry_date",from).lte("entry_date",to),
-  s.from("sales_invoices").select("id,vat_treatment,subtotal,vat_total,total,customer_snapshot").eq("company_id",w.company.id).eq("status","issued").gte("service_date",from).lte("service_date",to),
-  s.from("source_transactions").select("id",{count:"exact",head:true}).eq("company_id",w.company.id).in("classification_status",["unclassified","review","classified"]).gte("occurred_on",from).lte("occurred_on",to),
-  s.from("source_transactions").select("id,source_type,vat_treatment,vat_rate,counterparty_country,transaction_kind,direction,vat_amount,amount_net,amount_gross").eq("company_id",w.company.id).eq("classification_status","posted").gte("occurred_on",from).lte("occurred_on",to),
-  s.from("filings").select("id,status,period_label,snapshot_at,export_status,payload,period_start,period_end").eq("company_id",w.company.id).eq("filing_type","vat_return").gte("period_start",from).lte("period_end",to).order("created_at",{ascending:false}).limit(5)
- ]);
- const map=new Map((accounts??[]).map(a=>[a.id,a.code]));let output=0,input=0;if(entries?.length&&accounts?.length){const{data:lines}=await s.from("journal_lines").select("company_account_id,debit,credit").in("journal_entry_id",entries.map(e=>e.id)).in("company_account_id",accounts.map(a=>a.id));for(const l of lines??[]){const code=map.get(l.company_account_id);if(code==="461411")output+=Number(l.credit)-Number(l.debit);if(code==="421611")input+=Number(l.debit)-Number(l.credit)}}
- const invoiceIds=(invoices??[]).map(i=>i.id),salesRates=new Map<number,RateBucket>(),purchaseRates=new Map<number,RateBucket>();if(invoiceIds.length){const{data:lines}=await s.from("sales_invoice_lines").select("invoice_id,vat_rate,net_amount,vat_amount").in("invoice_id",invoiceIds);const domestic=new Set((invoices??[]).filter(i=>i.vat_treatment==="domestic").map(i=>i.id));for(const l of lines??[]){if(!domestic.has(l.invoice_id))continue;const rate=Number(l.vat_rate),r=salesRates.get(rate)??{base:0,vat:0};r.base+=Number(l.net_amount);r.vat+=Number(l.vat_amount);salesRates.set(rate,r)}}
- for(const t of taxMeta??[]){if(t.direction!=="expense"||t.source_type==="invoice"||t.vat_treatment!=="domestic"||Number(t.vat_amount)<=0)continue;const rate=Number(t.vat_rate??0),r=purchaseRates.get(rate)??{base:0,vat:0};r.base+=Number(t.amount_net??0);r.vat+=Number(t.vat_amount??0);purchaseRates.set(rate,r)}
- const eu=(invoices??[]).filter(i=>i.vat_treatment==="eu_b2b_reverse_charge"),euBase=eu.reduce((x,i)=>x+Number(i.subtotal),0),bankEvidenceMissing=(taxMeta??[]).filter(t=>t.source_type==="bank"&&t.vat_treatment==="unknown").length,unknownNonBank=(taxMeta??[]).filter(t=>t.source_type!=="bank"&&t.vat_treatment==="unknown").length,explicitVat=(taxMeta??[]).filter(t=>Number(t.vat_amount)>0).length,net=output-input,ready=(pendingCount??0)===0&&bankEvidenceMissing===0&&unknownNonBank===0;
- const freqLabel=fr?(frequency==="annual"?"annuelle":frequency==="quarterly"?"trimestrielle":"mensuelle"):frequency,due=frequency==="annual"?(fr?`Avant le 1er mars ${year+1}`:`Before 1 Mar ${year+1}`):frequency==="quarterly"?(fr?"Avant le 15 suivant chaque trimestre · récapitulatif annuel avant le 1er mai":"Before the 15th after each quarter · annual recap before 1 May"):(fr?"Avant le 15 du mois suivant · récapitulatif annuel avant le 1er mai":"Before the 15th of the following month · annual recap before 1 May");
- return <V2Page className={styles.page}>
-  <PageHeader
-   eyebrow={fr ? "Déclarations TVA · " + year : "VAT filing · " + year}
-   title={fr ? "TVA" : "VAT"}
-   description={fr ? "La position TVA, les justificatifs par taux et la préparation de la déclaration dans un même workflow financier." : "Your VAT position, evidence by rate and filing readiness in one financial workflow."}
-   meta={<StatusBadge tone={ready ? "success" : "warning"}><BadgeCheck size={13}/>{fr ? "TVA LU · " + freqLabel : "LU VAT · " + freqLabel}</StatusBadge>}
-  />
+import { vatRatesOn } from "@/lib/tax-rules/vat";
+export const dynamic = "force-dynamic";
+function money(v: number, c: string, l: Locale) {
+  return new Intl.NumberFormat(intlLocale(l), { style: "currency", currency: c, minimumFractionDigits: 2 }).format(v);
+}
+type RateBucket = { base: number; vat: number };
+export default async function VatFilingPage() {
+  const w = await getWorkspace();
+  if (!w.authenticated) redirect("/sign-in");
+  if (!w.company) redirect("/setup");
+  if (!w.capabilities?.hasVat) redirect("/app/taxes?not_applicable=vat");
+  const locale = normalizeLocale(w.profile?.locale),
+    fr = locale === "fr",
+    dateLocale = intlLocale(locale),
+    s = await createClient(),
+    year = await getActiveFiscalYear(w.company.fiscal_year_start_month),
+    bounds = fiscalYearBounds(year, w.company.fiscal_year_start_month),
+    currency = w.company.base_currency || "EUR",
+    from = bounds.start,
+    to = bounds.end,
+    frequency = w.company.vat_filing_frequency || "annual";
+  const [
+    { data: accounts },
+    { data: entries },
+    { data: invoices },
+    { count: pendingCount },
+    { data: taxMeta },
+    { data: filings },
+  ] = await Promise.all([
+    s.from("company_accounts").select("id,code").eq("company_id", w.company.id).in("code", ["421611", "461411"]),
+    s
+      .from("journal_entries")
+      .select("id")
+      .eq("company_id", w.company.id)
+      .eq("status", "posted")
+      .gte("entry_date", from)
+      .lte("entry_date", to),
+    s
+      .from("sales_invoices")
+      .select("id,vat_treatment,subtotal,vat_total,total,customer_snapshot")
+      .eq("company_id", w.company.id)
+      .eq("status", "issued")
+      .gte("service_date", from)
+      .lte("service_date", to),
+    s
+      .from("source_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", w.company.id)
+      .in("classification_status", ["unclassified", "review", "classified"])
+      .gte("occurred_on", from)
+      .lte("occurred_on", to),
+    s
+      .from("source_transactions")
+      .select(
+        "id,source_type,vat_treatment,vat_rate,counterparty_country,transaction_kind,direction,vat_amount,amount_net,amount_gross",
+      )
+      .eq("company_id", w.company.id)
+      .eq("classification_status", "posted")
+      .gte("occurred_on", from)
+      .lte("occurred_on", to),
+    s
+      .from("filings")
+      .select("id,status,period_label,snapshot_at,export_status,payload,period_start,period_end")
+      .eq("company_id", w.company.id)
+      .eq("filing_type", "vat_return")
+      .gte("period_start", from)
+      .lte("period_end", to)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+  const map = new Map((accounts ?? []).map(a => [a.id, a.code]));
+  let output = 0,
+    input = 0;
+  if (entries?.length && accounts?.length) {
+    const { data: lines } = await s
+      .from("journal_lines")
+      .select("company_account_id,debit,credit")
+      .in(
+        "journal_entry_id",
+        entries.map(e => e.id),
+      )
+      .in(
+        "company_account_id",
+        accounts.map(a => a.id),
+      );
+    for (const l of lines ?? []) {
+      const code = map.get(l.company_account_id);
+      if (code === "461411") output += Number(l.credit) - Number(l.debit);
+      if (code === "421611") input += Number(l.debit) - Number(l.credit);
+    }
+  }
+  const invoiceIds = (invoices ?? []).map(i => i.id),
+    salesRates = new Map<number, RateBucket>(),
+    purchaseRates = new Map<number, RateBucket>();
+  if (invoiceIds.length) {
+    const { data: lines } = await s
+      .from("sales_invoice_lines")
+      .select("invoice_id,vat_rate,net_amount,vat_amount")
+      .in("invoice_id", invoiceIds);
+    const domestic = new Set((invoices ?? []).filter(i => i.vat_treatment === "domestic").map(i => i.id));
+    for (const l of lines ?? []) {
+      if (!domestic.has(l.invoice_id)) continue;
+      const rate = Number(l.vat_rate),
+        r = salesRates.get(rate) ?? { base: 0, vat: 0 };
+      r.base += Number(l.net_amount);
+      r.vat += Number(l.vat_amount);
+      salesRates.set(rate, r);
+    }
+  }
+  for (const t of taxMeta ?? []) {
+    if (
+      t.direction !== "expense" ||
+      t.source_type === "invoice" ||
+      t.vat_treatment !== "domestic" ||
+      Number(t.vat_amount) <= 0
+    )
+      continue;
+    const rate = Number(t.vat_rate ?? 0),
+      r = purchaseRates.get(rate) ?? { base: 0, vat: 0 };
+    r.base += Number(t.amount_net ?? 0);
+    r.vat += Number(t.vat_amount ?? 0);
+    purchaseRates.set(rate, r);
+  }
+  const eu = (invoices ?? []).filter(i => i.vat_treatment === "eu_b2b_reverse_charge"),
+    euBase = eu.reduce((x, i) => x + Number(i.subtotal), 0),
+    bankEvidenceMissing = (taxMeta ?? []).filter(t => t.source_type === "bank" && t.vat_treatment === "unknown").length,
+    unknownNonBank = (taxMeta ?? []).filter(t => t.source_type !== "bank" && t.vat_treatment === "unknown").length,
+    explicitVat = (taxMeta ?? []).filter(t => Number(t.vat_amount) > 0).length,
+    net = output - input,
+    ready = (pendingCount ?? 0) === 0 && bankEvidenceMissing === 0 && unknownNonBank === 0;
+  const freqLabel = fr
+      ? frequency === "annual"
+        ? "annuelle"
+        : frequency === "quarterly"
+          ? "trimestrielle"
+          : "mensuelle"
+      : frequency,
+    due =
+      frequency === "annual"
+        ? fr
+          ? `Avant le 1er mars ${year + 1}`
+          : `Before 1 Mar ${year + 1}`
+        : frequency === "quarterly"
+          ? fr
+            ? "Avant le 15 suivant chaque trimestre · récapitulatif annuel avant le 1er mai"
+            : "Before the 15th after each quarter · annual recap before 1 May"
+          : fr
+            ? "Avant le 15 du mois suivant · récapitulatif annuel avant le 1er mai"
+            : "Before the 15th of the following month · annual recap before 1 May";
+  return (
+    <V2Page className={styles.page}>
+      <PageHeader
+        eyebrow={fr ? "Déclarations TVA · " + year : "VAT filing · " + year}
+        title={fr ? "TVA" : "VAT"}
+        description={
+          fr
+            ? "La position TVA, les justificatifs par taux et la préparation de la déclaration dans un même workflow financier."
+            : "Your VAT position, evidence by rate and filing readiness in one financial workflow."
+        }
+        meta={
+          <StatusBadge tone={ready ? "success" : "warning"}>
+            <BadgeCheck size={13} />
+            {fr ? "TVA LU · " + freqLabel : "LU VAT · " + freqLabel}
+          </StatusBadge>
+        }
+      />
 
-  <section className={styles.contextGuide}>
-   <div className={styles.contextLead}>
-    <span><CircleHelp size={18}/></span>
-    <div><p>{fr?"Comprendre cette page":"What this page is telling you"}</p><h2>{ready?(fr?"Votre TVA est prête à être vérifiée":"Your VAT is ready for review"):(fr?"Il reste des éléments à confirmer avant la déclaration":"Some items still need attention before filing")}</h2><small>{fr?"Zuelen calcule votre position TVA à partir des écritures comptabilisées et des justificatifs disponibles. Une transaction bancaire seule ne prouve pas une TVA déductible.":"Zuelen builds your VAT position from posted bookkeeping and available evidence. A bank transaction on its own does not prove deductible VAT."}</small></div>
-   </div>
-   <div className={styles.contextSteps}>
-    <div><strong>{fr?"TVA collectée":"Output VAT"}</strong><span>{fr?"TVA facturée à vos clients sur les ventes taxables.":"VAT charged to customers on taxable sales."}</span></div>
-    <div><strong>{fr?"TVA déductible":"Recoverable input VAT"}</strong><span>{fr?"TVA sur les achats professionnels lorsqu’elle est correctement justifiée et déductible.":"VAT on business purchases when it is properly evidenced and deductible."}</span></div>
-    <div><strong>{fr?"À vérifier maintenant":"What to check now"}</strong><span>{ready?(fr?"Aucun élément bloquant détecté ; vérifiez les montants avant de préparer la déclaration.":"No blocking items detected; review the figures before preparing the filing."):(fr?`${pendingCount??0} transaction(s) à vérifier · ${bankEvidenceMissing+unknownNonBank} traitement(s) TVA encore inconnu(s).`:`${pendingCount??0} transaction(s) need review · ${bankEvidenceMissing+unknownNonBank} item(s) still have unknown VAT treatment.`)}</span></div>
-   </div>
-   <div className={styles.contextFoot}><span>{fr?"Les taux luxembourgeois actuellement utilisés par Zuelen sont 17 %, 14 %, 8 % et 3 %. Ne choisissez pas un taux au hasard : utilisez le justificatif ou confirmez le traitement applicable.":"Zuelen currently uses Luxembourg VAT rates of 17%, 14%, 8% and 3%. Do not guess a rate: use the supporting document or confirm the applicable treatment."}</span><a href="https://guichet.public.lu/en/entreprises/fiscalite/impots-benefices/tva/notions/tva.html" target="_blank" rel="noreferrer">{fr?"Guide TVA officiel":"Official VAT guide"} <ExternalLink size={11}/></a></div>
-  </section>
+      <section className={styles.contextGuide}>
+        <div className={styles.contextLead}>
+          <span>
+            <CircleHelp size={18} />
+          </span>
+          <div>
+            <p>{fr ? "Comprendre cette page" : "What this page is telling you"}</p>
+            <h2>
+              {ready
+                ? fr
+                  ? "Votre TVA est prête à être vérifiée"
+                  : "Your VAT is ready for review"
+                : fr
+                  ? "Il reste des éléments à confirmer avant la déclaration"
+                  : "Some items still need attention before filing"}
+            </h2>
+            <small>
+              {fr
+                ? "Zuelen calcule votre position TVA à partir des écritures comptabilisées et des justificatifs disponibles. Une transaction bancaire seule ne prouve pas une TVA déductible."
+                : "Zuelen builds your VAT position from posted bookkeeping and available evidence. A bank transaction on its own does not prove deductible VAT."}
+            </small>
+          </div>
+        </div>
+        <div className={styles.contextSteps}>
+          <div>
+            <strong>{fr ? "TVA collectée" : "Output VAT"}</strong>
+            <span>
+              {fr
+                ? "TVA facturée à vos clients sur les ventes taxables."
+                : "VAT charged to customers on taxable sales."}
+            </span>
+          </div>
+          <div>
+            <strong>{fr ? "TVA déductible" : "Recoverable input VAT"}</strong>
+            <span>
+              {fr
+                ? "TVA sur les achats professionnels lorsqu’elle est correctement justifiée et déductible."
+                : "VAT on business purchases when it is properly evidenced and deductible."}
+            </span>
+          </div>
+          <div>
+            <strong>{fr ? "À vérifier maintenant" : "What to check now"}</strong>
+            <span>
+              {ready
+                ? fr
+                  ? "Aucun élément bloquant détecté ; vérifiez les montants avant de préparer la déclaration."
+                  : "No blocking items detected; review the figures before preparing the filing."
+                : fr
+                  ? `${pendingCount ?? 0} transaction(s) à vérifier · ${bankEvidenceMissing + unknownNonBank} traitement(s) TVA encore inconnu(s).`
+                  : `${pendingCount ?? 0} transaction(s) need review · ${bankEvidenceMissing + unknownNonBank} item(s) still have unknown VAT treatment.`}
+            </span>
+          </div>
+        </div>
+        <div className={styles.contextFoot}>
+          <span>
+            {fr
+              ? `Taux luxembourgeois en vigueur au ${bounds.end} : ${vatRatesOn(bounds.end)
+                  .filter(r => r > 0)
+                  .join(
+                    " %, ",
+                  )} %. Ne choisissez pas un taux au hasard : utilisez le justificatif ou confirmez le traitement applicable.`
+              : `Luxembourg VAT rates in force on ${bounds.end}: ${vatRatesOn(bounds.end)
+                  .filter(r => r > 0)
+                  .join(
+                    "%, ",
+                  )}%. Do not guess a rate: use the supporting document or confirm the applicable treatment.`}
+          </span>
+          <a
+            href="https://guichet.public.lu/en/entreprises/fiscalite/impots-benefices/tva/notions/tva.html"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {fr ? "Guide TVA officiel" : "Official VAT guide"} <ExternalLink size={11} />
+          </a>
+        </div>
+      </section>
 
-  <DataSummary
-   label={fr ? "Résumé TVA" : "VAT summary"}
-   items={[
-    {label:fr ? "Position nette TVA" : "Net VAT position",value:money(Math.abs(net),currency,locale),description:net>0 ? (fr ? "À payer à l’AED" : "Payable to AED") : net<0 ? (fr ? "Crédit TVA récupérable" : "Recoverable VAT credit") : (fr ? "Position équilibrée" : "Balanced position"),icon:Scale,tone:net>0 ? "warning" : net<0 ? "info" : "success"},
-    {label:fr ? "TVA collectée" : "Output VAT",value:money(output,currency,locale),description:fr ? "Ventes taxables documentées" : "Documented taxable sales",icon:ReceiptText,tone:"info"},
-    {label:fr ? "TVA déductible" : "Recoverable input VAT",value:money(input,currency,locale),description:fr ? "Achats appuyés par des justificatifs" : "Purchases supported by evidence",icon:CheckCircle2,tone:"success"},
-    {label:fr ? "Échéance de déclaration" : "Filing deadline",value:due,description:fr ? "Profil " + freqLabel : frequency + " profile",icon:Landmark,tone:"warning"}
-   ]}
-  />
+      <DataSummary
+        label={fr ? "Résumé TVA" : "VAT summary"}
+        items={[
+          {
+            label: fr ? "Position nette TVA" : "Net VAT position",
+            value: money(Math.abs(net), currency, locale),
+            description:
+              net > 0
+                ? fr
+                  ? "À payer à l’AED"
+                  : "Payable to AED"
+                : net < 0
+                  ? fr
+                    ? "Crédit TVA récupérable"
+                    : "Recoverable VAT credit"
+                  : fr
+                    ? "Position équilibrée"
+                    : "Balanced position",
+            icon: Scale,
+            tone: net > 0 ? "warning" : net < 0 ? "info" : "success",
+          },
+          {
+            label: fr ? "TVA collectée" : "Output VAT",
+            value: money(output, currency, locale),
+            description: fr ? "Ventes taxables documentées" : "Documented taxable sales",
+            icon: ReceiptText,
+            tone: "info",
+          },
+          {
+            label: fr ? "TVA déductible" : "Recoverable input VAT",
+            value: money(input, currency, locale),
+            description: fr ? "Achats appuyés par des justificatifs" : "Purchases supported by evidence",
+            icon: CheckCircle2,
+            tone: "success",
+          },
+          {
+            label: fr ? "Échéance de déclaration" : "Filing deadline",
+            value: due,
+            description: fr ? "Profil " + freqLabel : frequency + " profile",
+            icon: Landmark,
+            tone: "warning",
+          },
+        ]}
+      />
 
-  <section className={styles.grid}>
-  <article className={styles.card}><div className={styles.head}><div><p>{fr?`Justificatifs par taux · ${year}`:`Evidence by rate · ${year}`}</p><h2>{fr?"Ventes et achats taxables":"Taxable sales & purchases"}</h2></div><ReceiptText/></div>{[17,14,8,3,0].map(rate=>{const sale=salesRates.get(rate)??{base:0,vat:0},purchase=purchaseRates.get(rate)??{base:0,vat:0};return <div key={rate}><div className={styles.row}><span><b>{rate}%</b> {fr?"ventes documentées":"documented sales"}</span><strong>{money(sale.base,currency,locale)}<small>{fr?"TVA collectée":"Output VAT"} {money(sale.vat,currency,locale)}</small></strong></div><div className={styles.row}><span><b>{rate}%</b> {fr?"achats documentés":"documented purchases"}</span><strong>{money(purchase.base,currency,locale)}<small>{fr?"TVA déductible":"Input VAT"} {money(purchase.vat,currency,locale)}</small></strong></div></div>})}<div className={styles.total}><span>{fr?"TVA nette du grand livre":"Net VAT from ledger"}</span><strong>{money(net,currency,locale)}</strong></div></article>
-  <article className={styles.card}><div className={styles.head}><div><p>{fr?"Déclarations UE":"EU reporting"}</p><h2>{fr?"Signal pour l'état récapitulatif":"Recapitulative statement signal"}</h2></div><Landmark/></div><div className={styles.big}>{money(euBase,currency,locale)}<small>{eu.length} {fr?`facture${eu.length===1?"":"s"} en autoliquidation`:`reverse-charge invoice${eu.length===1?"":"s"}`}</small></div>{euBase>0?<div className={styles.notice}><AlertTriangle/>{fr?"Des services B2B UE ont été détectés. Vérifiez le flux séparé de l'état récapitulatif.":"EU B2B services were detected. Review the separate recapitulative-statement workflow."}</div>:<div className={styles.clear}><CheckCircle2/>{fr?"Aucune vente de services B2B UE détectée dans les factures émises.":"No EU B2B service sales detected in issued invoices."}</div>}</article>
-  <article className={styles.card}><div className={styles.head}><div><p>{fr?`Préparation des justificatifs · ${year}`:`Evidence readiness · ${year}`}</p><h2>{ready?(fr?"Prêt pour la vérification de la déclaration":"Ready for filing review"):(fr?"Documents encore nécessaires":"Documents still needed")}</h2></div>{ready?<CheckCircle2/>:<AlertTriangle/>}</div><div className={styles.check}><span>{fr?"Comptabilité non vérifiée":"Unreviewed bookkeeping"}</span><strong>{pendingCount??0}</strong></div><div className={styles.check}><span>{fr?"Mouvements bancaires sans justificatif TVA":"Bank movements without VAT evidence"}</span><strong>{bankEvidenceMissing}</strong></div><div className={styles.check}><span>{fr?"Éléments non bancaires au traitement inconnu":"Non-bank items with unknown treatment"}</span><strong>{unknownNonBank}</strong></div><div className={styles.check}><span>{fr?"Transactions avec TVA explicite":"Transactions carrying explicit VAT"}</span><strong>{explicitVat}</strong></div>{bankEvidenceMissing>0?<div className={styles.notice}><AlertTriangle/>{fr?"Il ne s'agit pas d'erreurs TVA '349'. Une ligne bancaire seule ne prouve pas une TVA déductible ou collectée. Joignez les factures ou reçus, ou confirmez que la transaction est hors TVA, avant le dépôt.":"These are not 349 VAT errors. A bank line alone does not prove deductible/output VAT. Attach invoices or receipts, or confirm the transaction is outside VAT, before filing."}</div>:<div className={styles.clear}><CheckCircle2/>{fr?"Toute l'activité bancaire comptabilisée possède un traitement TVA/justificatif explicite.":"All posted bank activity has an explicit VAT/evidence treatment."}</div>}<VatFilingAction start={from} end={to} ready={ready}/>{(filings??[]).length?<div style={{marginTop:12,borderTop:"1px solid var(--z-border)",paddingTop:10}}><strong style={{fontSize:12}}>{fr?`Instantanés ${year} préparés`:`Prepared ${year} snapshots`}</strong>{(filings??[]).slice(0,3).map(f=><div key={f.id} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12,padding:"6px 0"}}><span>{f.snapshot_at?new Date(f.snapshot_at).toLocaleDateString(dateLocale):f.period_label}</span><b>{f.export_status}</b></div>)}</div>:null}<div className={styles.export}><FileOutput/><div><strong>{fr?"La soumission reste sous votre contrôle":"Submission stays controlled"}</strong><p>{fr?"Zuelen prépare et fige les justificatifs comptables. Le dépôt reste une étape séparée et confirmée par l'utilisateur.":"Zuelen prepares and freezes accounting evidence. Filing remains a separate confirmed step."}</p></div></div></article>
- </section>
- </V2Page>}
+      <section className={styles.grid}>
+        <article className={styles.card}>
+          <div className={styles.head}>
+            <div>
+              <p>{fr ? `Justificatifs par taux · ${year}` : `Evidence by rate · ${year}`}</p>
+              <h2>{fr ? "Ventes et achats taxables" : "Taxable sales & purchases"}</h2>
+            </div>
+            <ReceiptText />
+          </div>
+          {Array.from(
+            new Set([
+              ...vatRatesOn(bounds.start),
+              ...vatRatesOn(bounds.end),
+              ...salesRates.keys(),
+              ...purchaseRates.keys(),
+            ]),
+          )
+            .sort((a, b) => b - a)
+            .map(rate => {
+              const sale = salesRates.get(rate) ?? { base: 0, vat: 0 },
+                purchase = purchaseRates.get(rate) ?? { base: 0, vat: 0 };
+              return (
+                <div key={rate}>
+                  <div className={styles.row}>
+                    <span>
+                      <b>{rate}%</b> {fr ? "ventes documentées" : "documented sales"}
+                    </span>
+                    <strong>
+                      {money(sale.base, currency, locale)}
+                      <small>
+                        {fr ? "TVA collectée" : "Output VAT"} {money(sale.vat, currency, locale)}
+                      </small>
+                    </strong>
+                  </div>
+                  <div className={styles.row}>
+                    <span>
+                      <b>{rate}%</b> {fr ? "achats documentés" : "documented purchases"}
+                    </span>
+                    <strong>
+                      {money(purchase.base, currency, locale)}
+                      <small>
+                        {fr ? "TVA déductible" : "Input VAT"} {money(purchase.vat, currency, locale)}
+                      </small>
+                    </strong>
+                  </div>
+                </div>
+              );
+            })}
+          <div className={styles.total}>
+            <span>{fr ? "TVA nette du grand livre" : "Net VAT from ledger"}</span>
+            <strong>{money(net, currency, locale)}</strong>
+          </div>
+        </article>
+        <article className={styles.card}>
+          <div className={styles.head}>
+            <div>
+              <p>{fr ? "Déclarations UE" : "EU reporting"}</p>
+              <h2>{fr ? "Signal pour l'état récapitulatif" : "Recapitulative statement signal"}</h2>
+            </div>
+            <Landmark />
+          </div>
+          <div className={styles.big}>
+            {money(euBase, currency, locale)}
+            <small>
+              {eu.length}{" "}
+              {fr
+                ? `facture${eu.length === 1 ? "" : "s"} en autoliquidation`
+                : `reverse-charge invoice${eu.length === 1 ? "" : "s"}`}
+            </small>
+          </div>
+          {euBase > 0 ? (
+            <div className={styles.notice}>
+              <AlertTriangle />
+              {fr
+                ? "Des services B2B UE ont été détectés. Vérifiez le flux séparé de l'état récapitulatif."
+                : "EU B2B services were detected. Review the separate recapitulative-statement workflow."}
+            </div>
+          ) : (
+            <div className={styles.clear}>
+              <CheckCircle2 />
+              {fr
+                ? "Aucune vente de services B2B UE détectée dans les factures émises."
+                : "No EU B2B service sales detected in issued invoices."}
+            </div>
+          )}
+        </article>
+        <article className={styles.card}>
+          <div className={styles.head}>
+            <div>
+              <p>{fr ? `Préparation des justificatifs · ${year}` : `Evidence readiness · ${year}`}</p>
+              <h2>
+                {ready
+                  ? fr
+                    ? "Prêt pour la vérification de la déclaration"
+                    : "Ready for filing review"
+                  : fr
+                    ? "Documents encore nécessaires"
+                    : "Documents still needed"}
+              </h2>
+            </div>
+            {ready ? <CheckCircle2 /> : <AlertTriangle />}
+          </div>
+          <div className={styles.check}>
+            <span>{fr ? "Comptabilité non vérifiée" : "Unreviewed bookkeeping"}</span>
+            <strong>{pendingCount ?? 0}</strong>
+          </div>
+          <div className={styles.check}>
+            <span>{fr ? "Mouvements bancaires sans justificatif TVA" : "Bank movements without VAT evidence"}</span>
+            <strong>{bankEvidenceMissing}</strong>
+          </div>
+          <div className={styles.check}>
+            <span>{fr ? "Éléments non bancaires au traitement inconnu" : "Non-bank items with unknown treatment"}</span>
+            <strong>{unknownNonBank}</strong>
+          </div>
+          <div className={styles.check}>
+            <span>{fr ? "Transactions avec TVA explicite" : "Transactions carrying explicit VAT"}</span>
+            <strong>{explicitVat}</strong>
+          </div>
+          {bankEvidenceMissing > 0 ? (
+            <div className={styles.notice}>
+              <AlertTriangle />
+              {fr
+                ? "Il ne s'agit pas d'erreurs TVA '349'. Une ligne bancaire seule ne prouve pas une TVA déductible ou collectée. Joignez les factures ou reçus, ou confirmez que la transaction est hors TVA, avant le dépôt."
+                : "These are not 349 VAT errors. A bank line alone does not prove deductible/output VAT. Attach invoices or receipts, or confirm the transaction is outside VAT, before filing."}
+            </div>
+          ) : (
+            <div className={styles.clear}>
+              <CheckCircle2 />
+              {fr
+                ? "Toute l'activité bancaire comptabilisée possède un traitement TVA/justificatif explicite."
+                : "All posted bank activity has an explicit VAT/evidence treatment."}
+            </div>
+          )}
+          <VatFilingAction start={from} end={to} ready={ready} />
+          {(filings ?? []).length ? (
+            <div style={{ marginTop: 12, borderTop: "1px solid var(--z-border)", paddingTop: 10 }}>
+              <strong style={{ fontSize: 12 }}>
+                {fr ? `Instantanés ${year} préparés` : `Prepared ${year} snapshots`}
+              </strong>
+              {(filings ?? []).slice(0, 3).map(f => (
+                <div
+                  key={f.id}
+                  style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, padding: "6px 0" }}
+                >
+                  <span>{f.snapshot_at ? new Date(f.snapshot_at).toLocaleDateString(dateLocale) : f.period_label}</span>
+                  <b>{f.export_status}</b>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className={styles.export}>
+            <FileOutput />
+            <div>
+              <strong>{fr ? "La soumission reste sous votre contrôle" : "Submission stays controlled"}</strong>
+              <p>
+                {fr
+                  ? "Zuelen prépare et fige les montants et justificatifs (TVA en aval, TVA en amont, solde). Ce n'est pas le formulaire officiel : la déclaration se dépose sur MyGuichet / eCDF avec ces montants, puis vous la marquez comme déposée."
+                  : "Zuelen prepares and freezes the amounts and evidence (output VAT, input VAT, balance). This is not the official form: file the return on MyGuichet / eCDF using these amounts, then mark it as filed."}
+              </p>
+            </div>
+          </div>
+        </article>
+      </section>
+    </V2Page>
+  );
+}

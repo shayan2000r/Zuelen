@@ -1,85 +1,584 @@
 "use client";
 
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronDown, CircleHelp, LoaderCircle, Search, Sparkles, X } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CheckCircle2,
+  ChevronDown,
+  CircleHelp,
+  LoaderCircle,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { type TransactionActionState } from "@/app/app/transactions/actions";
 import { postSmartSourceTransaction } from "@/app/app/transactions/smart-actions";
 import styles from "./transaction-review-card.module.css";
 
-type Account={id:string;code:string;label:string;account_type:string};
-type PcnAccount={id:string;code:string;label:string;account_type:string;account_class:number|null;parent_code:string|null};
-type Transaction={id:string;occurred_on:string;direction:string;amount_gross:number|string;amount_net:number|string|null;vat_amount:number|string|null;currency:string;exchange_rate_to_base?:number|string|null;counterparty_name:string|null;description:string|null;suggested_account_id?:string|null;suggestion_confidence?:number|string|null;suggestion_reason?:string|null;suggestion_kind?:string|null;display_name?:string|null;bank_evidence?:string|null};
-const initialTransactionState:TransactionActionState={status:"idle",message:""};
-function money(value:number,currency:string){return new Intl.NumberFormat("en-LU",{style:"currency",currency,minimumFractionDigits:2}).format(value)}
-function normalize(value:string){return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
-function aliases(account:PcnAccount){
-  const code=account.code,terms:string[]=[];
-  if(code==="6132")terms.push("software saas cloud hosting website web wix hostinger chatgpt openai it informatique logiciel abonnement subscription digital service");
-  if(code.startsWith("6151"))terms.push("marketing advertising ads facebook meta google ads campaign publicity publicite promotion social media");
-  if(code==="61333"||code==="61338")terms.push("bank fee bank charge banking commission post finance monthly account fee forfait mensuel pack pro frais bancaire frais compte commission");
-  if(code==="61334")terms.push("stripe payment processing card payment merchant fee electronic payment frais paiement electronique commission carte");
-  if(code==="61532")terms.push("phone mobile internet telecom telephone telecommunications");
-  if(code==="61348"||code==="6138")terms.push("professional fee consultant freelancer contractor honoraires consulting service provider upwork escrow refund remboursement");
-  if(code==="6413")terms.push("software licence license subscription app saas");
-  if(code==="4712")terms.push("shareholder current account owner loan shareholder contribution money put into company apport compte courant associe company owes shareholder remboursement associe paid shareholder back");
-  if(code==="4212")terms.push("shareholder owes company receivable from shareholder creance associe avance personnelle owner owes company");
-  if(code==="42148")terms.push("acd quarterly tax advance tax prepayment administration contributions directes avance fiscale acompte fiscal tax payment awaiting notice impots");
-  if(code==="42141")terms.push("corporate income tax irc advance acompte impôt revenu collectivites");
-  if(code==="42142")terms.push("municipal business tax icc advance impot commercial communal");
-  if(code==="42143")terms.push("net wealth tax if advance impot fortune");
-  if(code.startsWith("703"))terms.push("client payment service revenue sales invoice upwork freelance web design development customer income chiffre affaires prestation youtube adsense google creator platform payout monetization");
-  if(code.startsWith("611"))terms.push("rent rental lease office coworking loyer location");
-  if(code.startsWith("612"))terms.push("maintenance repair entretien reparation");
-  if(code.startsWith("614"))terms.push("insurance assurance");
-  if(code.startsWith("616"))terms.push("travel transport hotel restaurant meal deplacement voyage");
+type Account = { id: string; code: string; label: string; account_type: string };
+type PcnAccount = {
+  id: string;
+  code: string;
+  label: string;
+  account_type: string;
+  account_class: number | null;
+  parent_code: string | null;
+};
+type Transaction = {
+  id: string;
+  occurred_on: string;
+  direction: string;
+  amount_gross: number | string;
+  amount_net: number | string | null;
+  vat_amount: number | string | null;
+  currency: string;
+  exchange_rate_to_base?: number | string | null;
+  counterparty_name: string | null;
+  description: string | null;
+  suggested_account_id?: string | null;
+  suggestion_confidence?: number | string | null;
+  suggestion_reason?: string | null;
+  suggestion_kind?: string | null;
+  display_name?: string | null;
+  bank_evidence?: string | null;
+};
+const initialTransactionState: TransactionActionState = { status: "idle", message: "" };
+function money(value: number, currency: string) {
+  return new Intl.NumberFormat("en-LU", { style: "currency", currency, minimumFractionDigits: 2 }).format(value);
+}
+function normalize(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+function aliases(account: PcnAccount) {
+  const code = account.code,
+    terms: string[] = [];
+  if (code === "6132")
+    terms.push(
+      "software saas cloud hosting website web wix hostinger chatgpt openai it informatique logiciel abonnement subscription digital service",
+    );
+  if (code.startsWith("6151"))
+    terms.push(
+      "marketing advertising ads facebook meta google ads campaign publicity publicite promotion social media",
+    );
+  if (code === "61333" || code === "61338")
+    terms.push(
+      "bank fee bank charge banking commission post finance monthly account fee forfait mensuel pack pro frais bancaire frais compte commission",
+    );
+  if (code === "61334")
+    terms.push(
+      "stripe payment processing card payment merchant fee electronic payment frais paiement electronique commission carte",
+    );
+  if (code === "61532") terms.push("phone mobile internet telecom telephone telecommunications");
+  if (code === "61348" || code === "6138")
+    terms.push(
+      "professional fee consultant freelancer contractor honoraires consulting service provider upwork escrow refund remboursement",
+    );
+  if (code === "6413") terms.push("software licence license subscription app saas");
+  if (code === "4712")
+    terms.push(
+      "shareholder current account owner loan shareholder contribution money put into company apport compte courant associe company owes shareholder remboursement associe paid shareholder back",
+    );
+  if (code === "4212")
+    terms.push(
+      "shareholder owes company receivable from shareholder creance associe avance personnelle owner owes company",
+    );
+  if (code === "42148")
+    terms.push(
+      "acd quarterly tax advance tax prepayment administration contributions directes avance fiscale acompte fiscal tax payment awaiting notice impots",
+    );
+  if (code === "42141") terms.push("corporate income tax irc advance acompte impôt revenu collectivites");
+  if (code === "42142") terms.push("municipal business tax icc advance impot commercial communal");
+  if (code === "42143") terms.push("net wealth tax if advance impot fortune");
+  if (code.startsWith("703"))
+    terms.push(
+      "client payment service revenue sales invoice upwork freelance web design development customer income chiffre affaires prestation youtube adsense google creator platform payout monetization",
+    );
+  if (code.startsWith("611")) terms.push("rent rental lease office coworking loyer location");
+  if (code.startsWith("612")) terms.push("maintenance repair entretien reparation");
+  if (code.startsWith("614")) terms.push("insurance assurance");
+  if (code.startsWith("616")) terms.push("travel transport hotel restaurant meal deplacement voyage");
   return terms.join(" ");
 }
-function groupLabel(account:PcnAccount,fr:boolean){if(account.account_type==="expense")return fr?"Charge":"Expense";if(account.account_type==="revenue")return fr?"Produit":"Revenue";if(account.account_type==="asset")return fr?"Actif":"Asset";if(account.account_type==="liability")return fr?"Passif":"Liability";if(account.account_type==="equity")return fr?"Capitaux propres":"Equity";return fr?"Autre":"Other"}
-function scoreAccount(account:PcnAccount,query:string,context:string){const q=normalize(query),tokens=q.split(" ").filter(Boolean),label=normalize(`${account.code} ${account.label} ${aliases(account)}`),contextNorm=normalize(context);let score=0;if(!q)return 0;if(account.code===q)score+=180;else if(account.code.startsWith(q))score+=120;if(label.includes(q))score+=80;for(const token of tokens){if(label.includes(token))score+=28;if(contextNorm.includes(token)&&label.includes(token))score+=8}if(tokens.length&&tokens.every(token=>label.includes(token)))score+=35;return score}
-function guidanceTitle(kind:string|null|undefined,account:PcnAccount|undefined,fr:boolean){const value=(kind??"").toLowerCase();if(value.includes("shareholder"))return fr?"Compte courant d’associé":"Shareholder current account";if(value.includes("tax_advance"))return fr?"Avance fiscale ACD":"ACD tax prepayment";if(value.includes("tax_payment"))return fr?"Paiement fiscal ACD":"ACD tax payment";if(value.includes("payment_processor"))return fr?"Frais de traitement des paiements":"Payment processing fee";if(value.includes("refund"))return fr?"Remboursement — retrouver l’achat d’origine":"Refund — match the original purchase";return account?.label??(fr?"Vérification nécessaire":"Needs review")}
-function confidenceLabel(value:number|null,fr:boolean){if(value===null)return null;if(value>=90)return fr?"Confiance élevée":"High confidence";if(value>=75)return fr?"Confiance moyenne":"Medium confidence";return fr?"À vérifier":"Needs review"}
-function cleanReason(reason:string|null|undefined){if(!reason)return"";return reason.replace(/^AI\s*·\s*/i,"").replace(/\s*·\s*VAT evidence still required\.?/gi,"").replace(/\s*·\s*/g,". ").replace(/\s+/g," ").trim()}
-function suggestionSummary(kind:string|null|undefined,account:PcnAccount|undefined,title:string,reason:string|null|undefined,fr:boolean){const value=(kind??"").toLowerCase(),name=title|| (fr?"ce mouvement":"this movement");if(value.includes("refund"))return fr?"Le relevé bancaire indique un remboursement. Il doit être rattaché à l’achat d’origine, pas traité comme un nouveau revenu.":"The bank statement labels this as a refund. Match it to the original purchase rather than treating it as new revenue.";if(value.includes("shareholder"))return fr?"Ce mouvement ressemble à un transfert entre la société et un associé. Le compte courant d’associé est généralement le bon traitement.":"This looks like money moving between the company and a shareholder. The shareholder current account is usually the right treatment.";if(value.includes("tax_advance"))return fr?"Ce paiement ressemble à une avance ACD. Zuelen la garde comme paiement fiscal anticipé jusqu’à ce que l’avis précise l’impôt concerné.":"This looks like an ACD tax advance. Zuelen keeps it as a tax prepayment until the tax notice identifies the exact tax.";if(value.includes("tax_payment"))return fr?"Ce paiement est destiné à l’ACD. Zuelen le garde temporairement comme paiement fiscal jusqu’à son rapprochement avec l’avis concerné.":"This is a payment to the ACD. Zuelen keeps it temporarily as a tax payment until it is matched to the relevant notice.";if(value.includes("payment_processor"))return fr?"Ce débit ressemble à des frais Stripe ou de traitement des paiements.":"This looks like a Stripe or payment-processing fee.";if(account?.code==="6151")return fr?`${name} ressemble à une dépense de publicité ou de marketing.`:`${name} looks like an advertising or marketing charge.`;if(account?.code==="6132")return fr?`${name} ressemble à un logiciel ou un service numérique utilisé par l’entreprise.`:`${name} looks like software or an online service used by the business.`;if(account?.code==="61333")return fr?"Ce débit ressemble à des frais de tenue de compte ou à une commission bancaire.":"This looks like a bank account fee or bank commission.";if(account?.code==="61334")return fr?"Ce débit ressemble à des frais liés aux moyens de paiement électroniques.":"This looks like an electronic-payment processing fee.";if(account?.code==="61348")return fr?`${name} ressemble à des frais de plateforme ou de prestataire professionnel.`:`${name} looks like a professional platform or service-provider fee.`;if(account?.code.startsWith("703"))return fr?`${name} ressemble à un revenu lié à l’activité de l’entreprise.`:`${name} looks like revenue from the business activity.`;const cleaned=cleanReason(reason);return cleaned.length>180?`${cleaned.slice(0,177)}…`:cleaned}
+function groupLabel(account: PcnAccount, fr: boolean) {
+  if (account.account_type === "expense") return fr ? "Charge" : "Expense";
+  if (account.account_type === "revenue") return fr ? "Produit" : "Revenue";
+  if (account.account_type === "asset") return fr ? "Actif" : "Asset";
+  if (account.account_type === "liability") return fr ? "Passif" : "Liability";
+  if (account.account_type === "equity") return fr ? "Capitaux propres" : "Equity";
+  return fr ? "Autre" : "Other";
+}
+function scoreAccount(account: PcnAccount, query: string, context: string) {
+  const q = normalize(query),
+    tokens = q.split(" ").filter(Boolean),
+    label = normalize(`${account.code} ${account.label} ${aliases(account)}`),
+    contextNorm = normalize(context);
+  let score = 0;
+  if (!q) return 0;
+  if (account.code === q) score += 180;
+  else if (account.code.startsWith(q)) score += 120;
+  if (label.includes(q)) score += 80;
+  for (const token of tokens) {
+    if (label.includes(token)) score += 28;
+    if (contextNorm.includes(token) && label.includes(token)) score += 8;
+  }
+  if (tokens.length && tokens.every(token => label.includes(token))) score += 35;
+  return score;
+}
+function guidanceTitle(kind: string | null | undefined, account: PcnAccount | undefined, fr: boolean) {
+  const value = (kind ?? "").toLowerCase();
+  if (value.includes("shareholder")) return fr ? "Compte courant d’associé" : "Shareholder current account";
+  if (value.includes("tax_advance")) return fr ? "Avance fiscale ACD" : "ACD tax prepayment";
+  if (value.includes("tax_payment")) return fr ? "Paiement fiscal ACD" : "ACD tax payment";
+  if (value.includes("payment_processor")) return fr ? "Frais de traitement des paiements" : "Payment processing fee";
+  if (value.includes("refund"))
+    return fr ? "Remboursement — retrouver l’achat d’origine" : "Refund — match the original purchase";
+  return account?.label ?? (fr ? "Vérification nécessaire" : "Needs review");
+}
+function confidenceLabel(value: number | null, fr: boolean) {
+  if (value === null) return null;
+  if (value >= 90) return fr ? "Confiance élevée" : "High confidence";
+  if (value >= 75) return fr ? "Confiance moyenne" : "Medium confidence";
+  return fr ? "À vérifier" : "Needs review";
+}
+function cleanReason(reason: string | null | undefined) {
+  if (!reason) return "";
+  return reason
+    .replace(/^AI\s*·\s*/i, "")
+    .replace(/\s*·\s*VAT evidence still required\.?/gi, "")
+    .replace(/\s*·\s*/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function suggestionSummary(
+  kind: string | null | undefined,
+  account: PcnAccount | undefined,
+  title: string,
+  reason: string | null | undefined,
+  fr: boolean,
+) {
+  const value = (kind ?? "").toLowerCase(),
+    name = title || (fr ? "ce mouvement" : "this movement");
+  if (value.includes("refund"))
+    return fr
+      ? "Le relevé bancaire indique un remboursement. Il doit être rattaché à l’achat d’origine, pas traité comme un nouveau revenu."
+      : "The bank statement labels this as a refund. Match it to the original purchase rather than treating it as new revenue.";
+  if (value.includes("shareholder"))
+    return fr
+      ? "Ce mouvement ressemble à un transfert entre la société et un associé. Le compte courant d’associé est généralement le bon traitement."
+      : "This looks like money moving between the company and a shareholder. The shareholder current account is usually the right treatment.";
+  if (value.includes("tax_advance"))
+    return fr
+      ? "Ce paiement ressemble à une avance ACD. Zuelen la garde comme paiement fiscal anticipé jusqu’à ce que l’avis précise l’impôt concerné."
+      : "This looks like an ACD tax advance. Zuelen keeps it as a tax prepayment until the tax notice identifies the exact tax.";
+  if (value.includes("tax_payment"))
+    return fr
+      ? "Ce paiement est destiné à l’ACD. Zuelen le garde temporairement comme paiement fiscal jusqu’à son rapprochement avec l’avis concerné."
+      : "This is a payment to the ACD. Zuelen keeps it temporarily as a tax payment until it is matched to the relevant notice.";
+  if (value.includes("payment_processor"))
+    return fr
+      ? "Ce débit ressemble à des frais Stripe ou de traitement des paiements."
+      : "This looks like a Stripe or payment-processing fee.";
+  if (account?.code === "6151")
+    return fr
+      ? `${name} ressemble à une dépense de publicité ou de marketing.`
+      : `${name} looks like an advertising or marketing charge.`;
+  if (account?.code === "6132")
+    return fr
+      ? `${name} ressemble à un logiciel ou un service numérique utilisé par l’entreprise.`
+      : `${name} looks like software or an online service used by the business.`;
+  if (account?.code === "61333")
+    return fr
+      ? "Ce débit ressemble à des frais de tenue de compte ou à une commission bancaire."
+      : "This looks like a bank account fee or bank commission.";
+  if (account?.code === "61334")
+    return fr
+      ? "Ce débit ressemble à des frais liés aux moyens de paiement électroniques."
+      : "This looks like an electronic-payment processing fee.";
+  if (account?.code === "61348")
+    return fr
+      ? `${name} ressemble à des frais de plateforme ou de prestataire professionnel.`
+      : `${name} looks like a professional platform or service-provider fee.`;
+  if (account?.code.startsWith("703"))
+    return fr
+      ? `${name} ressemble à un revenu lié à l’activité de l’entreprise.`
+      : `${name} looks like revenue from the business activity.`;
+  const cleaned = cleanReason(reason);
+  return cleaned.length > 180 ? `${cleaned.slice(0, 177)}…` : cleaned;
+}
 
-export function TransactionReviewCard({transaction,accounts,pcnAccounts,locale="en",baseCurrency="EUR"}:{transaction:Transaction;accounts:Account[];pcnAccounts:PcnAccount[];locale?:"en"|"fr";baseCurrency?:string}){
-  const fr=locale==="fr",income=transaction.direction==="income";
-  const suggestedCompany=accounts.find(account=>account.id===transaction.suggested_account_id);
-  const suggested=pcnAccounts.find(account=>account.code===suggestedCompany?.code);
-  const[accountCode,setAccountCode]=useState("");
-  const[purpose,setPurpose]=useState("");
-  const[resultsOpen,setResultsOpen]=useState(false);
-  const[exchangeRate,setExchangeRate]=useState(transaction.exchange_rate_to_base?String(transaction.exchange_rate_to_base):"");
-  const[state,formAction,pending]=useActionState(postSmartSourceTransaction,initialTransactionState);
-  useEffect(()=>{setAccountCode("");setPurpose("");setResultsOpen(false);setExchangeRate(transaction.exchange_rate_to_base?String(transaction.exchange_rate_to_base):"")},[transaction.id,transaction.exchange_rate_to_base]);
-  const eligible=useMemo(()=>pcnAccounts.filter(account=>{if(["5131","421611","461411"].includes(account.code))return false;return income?["revenue","asset","liability","expense"].includes(account.account_type):["expense","asset","liability"].includes(account.account_type)}),[pcnAccounts,income]);
-  const selected=eligible.find(account=>account.code===accountCode);
-  const context=`${transaction.display_name??""} ${transaction.counterparty_name??""} ${transaction.description??""} ${transaction.bank_evidence??""}`;
-  const results=useMemo(()=>{if(normalize(purpose).length<2)return[];return eligible.map(account=>({account,score:scoreAccount(account,purpose,context)})).filter(item=>item.score>0).sort((a,b)=>b.score-a.score||a.account.code.localeCompare(b.account.code)).slice(0,8).map(item=>item.account)},[eligible,purpose,context]);
-  const gross=Number(transaction.amount_gross),vat=Number(transaction.vat_amount??0),net=Number(transaction.amount_net??gross-vat),isExpenseRefund=income&&selected?.account_type==="expense",txCurrency=transaction.currency.toUpperCase(),base=baseCurrency.toUpperCase(),foreign=txCurrency!==base,fx=Number(exchangeRate||transaction.exchange_rate_to_base||0),baseGross=foreign&&fx>0?gross*fx:gross,baseNet=foreign&&fx>0?net*fx:net,baseVat=foreign&&fx>0?vat*fx:vat;
-  const title=transaction.display_name||transaction.counterparty_name||transaction.description||(income?(fr?"Encaissement":"Money received"):(fr?"Décaissement":"Money paid"));
-  const confidence=transaction.suggestion_confidence==null?null:Math.round(Number(transaction.suggestion_confidence)*100),confidenceText=confidenceLabel(confidence,fr);
-  const hasGuidance=Boolean(suggested||transaction.suggestion_reason),summary=suggestionSummary(transaction.suggestion_kind,suggested,title,transaction.suggestion_reason,fr);
-  const reviewNeedTitle=suggested?(fr?"Confirmer la catégorie comptable":"Confirm accounting category"):(fr?"Catégorie comptable requise":"Accounting category required");
-  const reviewNeedText=suggested?(fr?"Zuelen a préparé une suggestion, mais la transaction ne sera pas comptabilisée tant que vous ne l’avez pas confirmée ou remplacée.":"Zuelen prepared a suggestion, but this transaction will not be posted until you confirm it or choose another category."):(fr?"Zuelen n’a pas pu déterminer la catégorie PCN avec suffisamment de confiance. Choisissez à quoi correspond cette transaction avant de la comptabiliser.":"Zuelen could not determine the PCN category with enough confidence. Choose what this transaction was for before it can be posted.");
-  const placeholder=income?(fr?"Ex. revenu YouTube, paiement client, apport d’associé…":"e.g. YouTube revenue, client payment, shareholder contribution…"):(fr?"Ex. avance fiscale ACD, frais Stripe, logiciel…":"e.g. ACD tax payment, Stripe fee, software subscription…");
-  return <article className={styles.card}>
-    <header className={styles.top}><p className={styles.stepTag}>{fr?"À vérifier":"Next to review"}</p><h2>{title}</h2><div className={styles.sub}><span>{new Date(`${transaction.occurred_on}T12:00:00`).toLocaleDateString(fr?"fr-LU":"en-LU",{day:"2-digit",month:"long",year:"numeric"})}</span>{transaction.description&&transaction.description!==title?<span className={styles.reference}>{transaction.description}</span>:null}</div></header>
-    <section className={styles.reviewReason}><span><CircleHelp size={16}/></span><div><strong>{reviewNeedTitle}</strong><p>{reviewNeedText}</p></div></section>
-    <div className={`${styles.movement} ${income?styles.movementIn:styles.movementOut}`}>
-      <span className={styles.movementIcon}>{income?<ArrowUpRight size={18}/>:<ArrowDownLeft size={18}/>}</span>
-      <div className={styles.movementCopy}><strong>{income?(fr?"Argent entrant":"Money in"):(fr?"Argent sortant":"Money out")}</strong><span>{income?(fr?"Le solde bancaire augmente.":"Bank balance increased."):(fr?"Le solde bancaire diminue.":"Bank balance decreased.")}</span></div>
-      <b className={styles.movementAmount}>{income?"+":"−"}{money(gross,transaction.currency)}</b>
-    </div>
-    {hasGuidance?<section className={styles.suggestion}><span className={styles.suggestionIcon}><Sparkles size={16}/></span><div className={styles.suggestionCopy}><div className={styles.suggestionHeading}><strong>{fr?"Suggestion Zuelen":"Zuelen suggestion"}: {guidanceTitle(transaction.suggestion_kind,suggested,fr)}</strong>{confidenceText?<span>{confidenceText}</span>:null}</div>{summary?<p>{summary}</p>:null}</div>{suggested?<button type="button" className={styles.useSuggestion} onClick={()=>{setAccountCode(suggested.code);setPurpose("");setResultsOpen(false)}}>{fr?"Utiliser":"Use"}</button>:null}</section>:null}
-    <form action={formAction} className={styles.form}><input type="hidden" name="source_transaction_id" value={transaction.id}/><input type="hidden" name="account_code" value={accountCode}/>{foreign?<input type="hidden" name="exchange_rate_to_base" value={exchangeRate}/>:null}
-      {foreign?<section className={styles.fxPrompt}><div><small>{fr?"Devise étrangère":"Foreign currency"}</small><strong>{txCurrency+" → "+base}</strong><span>{fx>0?("1 "+txCurrency+" = "+fx+" "+base):(fr?"Un taux de change est requis avant la comptabilisation.":"An exchange rate is required before posting.")}</span></div><label><span>{fr?"Taux de change":"Exchange rate"}</span><input type="number" min="0.00000001" step="0.00000001" inputMode="decimal" value={exchangeRate} onChange={event=>setExchangeRate(event.target.value)} placeholder="0.00000000" required/></label></section>:null}
-      <div className={styles.question}><strong>{hasGuidance?(fr?"Une autre catégorie ?":"Something else?"):(fr?"À quoi correspond cette transaction ?":"What was this transaction for?")}</strong><span>{hasGuidance?(fr?"Si la suggestion n’est pas correcte, décrivez simplement la transaction.":"If the suggestion is not right, describe the transaction in your own words."):(fr?"Décrivez simplement ce qui s’est passé. Zuelen cherchera la catégorie comptable adaptée.":"Describe what happened in normal business language. Zuelen will find the accounting category.")}</span></div>
-      <div className={styles.searchWrap}><Search size={16}/><input className={styles.search} value={purpose} onChange={event=>{const value=event.target.value;setPurpose(value);setResultsOpen(normalize(value).length>=2)}} placeholder={placeholder}/></div>
-      {resultsOpen&&results.length?<div className={styles.results}>{results.map(account=><button type="button" className={`${styles.result} ${account.code===accountCode?styles.resultActive:""}`} key={account.id} onClick={()=>{setAccountCode(account.code);setPurpose(account.label);setResultsOpen(false)}}><div><strong>{account.label}</strong><small>{groupLabel(account,fr)} · PCN {account.code}</small></div></button>)}</div>:resultsOpen&&purpose.trim().length>=2?<div className={styles.hint}>{fr?"Aucun résultat direct. Essayez des mots plus simples.":"No direct match yet. Try simpler words."}</div>:null}
-      {selected?<div className={styles.selected}><div><span>{fr?"Catégorie choisie":"Selected category"}</span><strong>{selected.label}</strong><small>{groupLabel(selected,fr)} · PCN {selected.code}</small></div><button type="button" className={styles.clear} onClick={()=>{setAccountCode("");setPurpose("");setResultsOpen(false)}}><X size={14}/> {fr?"Changer":"Change"}</button></div>:null}
-      {selected?<details className={styles.preview}><summary><span><ChevronDown size={14}/>{fr?"Aperçu comptable":"Accounting preview"}</span><small>PCN {selected.code}</small></summary><div className={styles.previewBody}>{income?<><div className={styles.line}><span><b>5131</b> Bank</span><strong>Dr {money(gross,transaction.currency)}</strong></div><div className={styles.line}><span><b>{selected.code}</b> {selected.label}</span><strong>Cr {money(net,transaction.currency)}</strong></div>{vat>0?<div className={styles.line}><span><b>{isExpenseRefund?"421611":"461411"}</b> {isExpenseRefund?"Input VAT reversal":"Output VAT"}</span><strong>Cr {money(baseVat,foreign?base:transaction.currency)}</strong></div>:null}</>:<><div className={styles.line}><span><b>{selected.code}</b> {selected.label}</span><strong>Dr {money(baseNet,foreign?base:transaction.currency)}</strong></div>{vat>0?<div className={styles.line}><span><b>421611</b> Input VAT</span><strong>Dr {money(baseVat,foreign?base:transaction.currency)}</strong></div>:null}<div className={styles.line}><span><b>5131</b> Bank</span><strong>Cr {money(baseGross,foreign?base:transaction.currency)}</strong></div></>}<div className={styles.balance}><CheckCircle2 size={13}/>{fr?"Écriture équilibrée":"Entry balances"} · {money(baseGross,foreign?base:transaction.currency)}{foreign&&fx>0?<span className={styles.originalAmount}> · {money(gross,txCurrency)} @ {fx}</span>:null}</div></div></details>:null}
-      {state.status==="error"&&state.message?<div className={`${styles.message} ${styles.error}`}>{state.message}</div>:null}
-      <button className={styles.submit} type="submit" disabled={pending||!selected||(foreign&&(!Number.isFinite(fx)||fx<=0))}>{pending?<LoaderCircle className={styles.spin} size={15}/>:<CheckCircle2 size={15}/>}<span>{pending?(fr?"Validation…":"Approving…"):(fr?"Approuver":"Approve")}</span></button>
-    </form>
-  </article>;
+export function TransactionReviewCard({
+  transaction,
+  accounts,
+  pcnAccounts,
+  locale = "en",
+  baseCurrency = "EUR",
+}: {
+  transaction: Transaction;
+  accounts: Account[];
+  pcnAccounts: PcnAccount[];
+  locale?: "en" | "fr";
+  baseCurrency?: string;
+}) {
+  const fr = locale === "fr",
+    income = transaction.direction === "income";
+  const suggestedCompany = accounts.find(account => account.id === transaction.suggested_account_id);
+  const suggested = pcnAccounts.find(account => account.code === suggestedCompany?.code);
+  const [accountCode, setAccountCode] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState(
+    transaction.exchange_rate_to_base ? String(transaction.exchange_rate_to_base) : "",
+  );
+  const [state, formAction, pending] = useActionState(postSmartSourceTransaction, initialTransactionState);
+  useEffect(() => {
+    setAccountCode("");
+    setPurpose("");
+    setResultsOpen(false);
+    setExchangeRate(transaction.exchange_rate_to_base ? String(transaction.exchange_rate_to_base) : "");
+  }, [transaction.id, transaction.exchange_rate_to_base]);
+  const eligible = useMemo(
+    () =>
+      pcnAccounts.filter(account => {
+        if (["5131", "421611", "461411"].includes(account.code)) return false;
+        return income
+          ? ["revenue", "asset", "liability", "expense"].includes(account.account_type)
+          : ["expense", "asset", "liability"].includes(account.account_type);
+      }),
+    [pcnAccounts, income],
+  );
+  const selected = eligible.find(account => account.code === accountCode);
+  const context = `${transaction.display_name ?? ""} ${transaction.counterparty_name ?? ""} ${transaction.description ?? ""} ${transaction.bank_evidence ?? ""}`;
+  const results = useMemo(() => {
+    if (normalize(purpose).length < 2) return [];
+    return eligible
+      .map(account => ({ account, score: scoreAccount(account, purpose, context) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score || a.account.code.localeCompare(b.account.code))
+      .slice(0, 8)
+      .map(item => item.account);
+  }, [eligible, purpose, context]);
+  const gross = Number(transaction.amount_gross),
+    vat = Number(transaction.vat_amount ?? 0),
+    net = Number(transaction.amount_net ?? gross - vat),
+    isExpenseRefund = income && selected?.account_type === "expense",
+    txCurrency = transaction.currency.toUpperCase(),
+    base = baseCurrency.toUpperCase(),
+    foreign = txCurrency !== base,
+    fx = Number(exchangeRate || transaction.exchange_rate_to_base || 0),
+    baseGross = foreign && fx > 0 ? gross * fx : gross,
+    baseNet = foreign && fx > 0 ? net * fx : net,
+    baseVat = foreign && fx > 0 ? vat * fx : vat;
+  const title =
+    transaction.display_name ||
+    transaction.counterparty_name ||
+    transaction.description ||
+    (income ? (fr ? "Encaissement" : "Money received") : fr ? "Décaissement" : "Money paid");
+  const confidence =
+      transaction.suggestion_confidence == null ? null : Math.round(Number(transaction.suggestion_confidence) * 100),
+    confidenceText = confidenceLabel(confidence, fr);
+  const hasGuidance = Boolean(suggested || transaction.suggestion_reason),
+    summary = suggestionSummary(transaction.suggestion_kind, suggested, title, transaction.suggestion_reason, fr);
+  const reviewNeedTitle = suggested
+    ? fr
+      ? "Confirmer la catégorie comptable"
+      : "Confirm accounting category"
+    : fr
+      ? "Catégorie comptable requise"
+      : "Accounting category required";
+  const reviewNeedText = suggested
+    ? fr
+      ? "Zuelen a préparé une suggestion, mais la transaction ne sera pas comptabilisée tant que vous ne l’avez pas confirmée ou remplacée."
+      : "Zuelen prepared a suggestion, but this transaction will not be posted until you confirm it or choose another category."
+    : fr
+      ? "Zuelen n’a pas pu déterminer la catégorie PCN avec suffisamment de confiance. Choisissez à quoi correspond cette transaction avant de la comptabiliser."
+      : "Zuelen could not determine the PCN category with enough confidence. Choose what this transaction was for before it can be posted.";
+  const placeholder = income
+    ? fr
+      ? "Ex. revenu YouTube, paiement client, apport d’associé…"
+      : "e.g. YouTube revenue, client payment, shareholder contribution…"
+    : fr
+      ? "Ex. avance fiscale ACD, frais Stripe, logiciel…"
+      : "e.g. ACD tax payment, Stripe fee, software subscription…";
+  return (
+    <article className={styles.card}>
+      <header className={styles.top}>
+        <p className={styles.stepTag}>{fr ? "À vérifier" : "Next to review"}</p>
+        <h2>{title}</h2>
+        <div className={styles.sub}>
+          <span>
+            {new Date(`${transaction.occurred_on}T12:00:00`).toLocaleDateString(fr ? "fr-LU" : "en-LU", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+          {transaction.description && transaction.description !== title ? (
+            <span className={styles.reference}>{transaction.description}</span>
+          ) : null}
+        </div>
+      </header>
+      <section className={styles.reviewReason}>
+        <span>
+          <CircleHelp size={16} />
+        </span>
+        <div>
+          <strong>{reviewNeedTitle}</strong>
+          <p>{reviewNeedText}</p>
+        </div>
+      </section>
+      <div className={`${styles.movement} ${income ? styles.movementIn : styles.movementOut}`}>
+        <span className={styles.movementIcon}>{income ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}</span>
+        <div className={styles.movementCopy}>
+          <strong>{income ? (fr ? "Argent entrant" : "Money in") : fr ? "Argent sortant" : "Money out"}</strong>
+          <span>
+            {income
+              ? fr
+                ? "Le solde bancaire augmente."
+                : "Bank balance increased."
+              : fr
+                ? "Le solde bancaire diminue."
+                : "Bank balance decreased."}
+          </span>
+        </div>
+        <b className={styles.movementAmount}>
+          {income ? "+" : "−"}
+          {money(gross, transaction.currency)}
+        </b>
+      </div>
+      {hasGuidance ? (
+        <section className={styles.suggestion}>
+          <span className={styles.suggestionIcon}>
+            <Sparkles size={16} />
+          </span>
+          <div className={styles.suggestionCopy}>
+            <div className={styles.suggestionHeading}>
+              <strong>
+                {fr ? "Suggestion Zuelen" : "Zuelen suggestion"}:{" "}
+                {guidanceTitle(transaction.suggestion_kind, suggested, fr)}
+              </strong>
+              {confidenceText ? <span>{confidenceText}</span> : null}
+            </div>
+            {summary ? <p>{summary}</p> : null}
+          </div>
+          {suggested ? (
+            <button
+              type="button"
+              className={styles.useSuggestion}
+              onClick={() => {
+                setAccountCode(suggested.code);
+                setPurpose("");
+                setResultsOpen(false);
+              }}
+            >
+              {fr ? "Utiliser" : "Use"}
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+      <form action={formAction} className={styles.form}>
+        <input type="hidden" name="source_transaction_id" value={transaction.id} />
+        <input type="hidden" name="account_code" value={accountCode} />
+        {foreign ? <input type="hidden" name="exchange_rate_to_base" value={exchangeRate} /> : null}
+        {foreign ? (
+          <section className={styles.fxPrompt}>
+            <div>
+              <small>{fr ? "Devise étrangère" : "Foreign currency"}</small>
+              <strong>{txCurrency + " → " + base}</strong>
+              <span>
+                {fx > 0
+                  ? "1 " + txCurrency + " = " + fx + " " + base
+                  : fr
+                    ? "Un taux de change est requis avant la comptabilisation."
+                    : "An exchange rate is required before posting."}
+              </span>
+            </div>
+            <label>
+              <span>{fr ? "Taux de change" : "Exchange rate"}</span>
+              <input
+                type="number"
+                min="0.00000001"
+                step="0.00000001"
+                inputMode="decimal"
+                value={exchangeRate}
+                onChange={event => setExchangeRate(event.target.value)}
+                placeholder="0.00000000"
+                required
+              />
+            </label>
+          </section>
+        ) : null}
+        <div className={styles.question}>
+          <strong>
+            {hasGuidance
+              ? fr
+                ? "Une autre catégorie ?"
+                : "Something else?"
+              : fr
+                ? "À quoi correspond cette transaction ?"
+                : "What was this transaction for?"}
+          </strong>
+          <span>
+            {hasGuidance
+              ? fr
+                ? "Si la suggestion n’est pas correcte, décrivez simplement la transaction."
+                : "If the suggestion is not right, describe the transaction in your own words."
+              : fr
+                ? "Décrivez simplement ce qui s’est passé. Zuelen cherchera la catégorie comptable adaptée."
+                : "Describe what happened in normal business language. Zuelen will find the accounting category."}
+          </span>
+        </div>
+        <div className={styles.searchWrap}>
+          <Search size={16} />
+          <input
+            className={styles.search}
+            value={purpose}
+            onChange={event => {
+              const value = event.target.value;
+              setPurpose(value);
+              setResultsOpen(normalize(value).length >= 2);
+            }}
+            placeholder={placeholder}
+          />
+        </div>
+        {resultsOpen && results.length ? (
+          <div className={styles.results}>
+            {results.map(account => (
+              <button
+                type="button"
+                className={`${styles.result} ${account.code === accountCode ? styles.resultActive : ""}`}
+                key={account.id}
+                onClick={() => {
+                  setAccountCode(account.code);
+                  setPurpose(account.label);
+                  setResultsOpen(false);
+                }}
+              >
+                <div>
+                  <strong>{account.label}</strong>
+                  <small>
+                    {groupLabel(account, fr)} · PCN {account.code}
+                  </small>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : resultsOpen && purpose.trim().length >= 2 ? (
+          <div className={styles.hint}>
+            {fr ? "Aucun résultat direct. Essayez des mots plus simples." : "No direct match yet. Try simpler words."}
+          </div>
+        ) : null}
+        {selected ? (
+          <div className={styles.selected}>
+            <div>
+              <span>{fr ? "Catégorie choisie" : "Selected category"}</span>
+              <strong>{selected.label}</strong>
+              <small>
+                {groupLabel(selected, fr)} · PCN {selected.code}
+              </small>
+            </div>
+            <button
+              type="button"
+              className={styles.clear}
+              onClick={() => {
+                setAccountCode("");
+                setPurpose("");
+                setResultsOpen(false);
+              }}
+            >
+              <X size={14} /> {fr ? "Changer" : "Change"}
+            </button>
+          </div>
+        ) : null}
+        {selected ? (
+          <details className={styles.preview}>
+            <summary>
+              <span>
+                <ChevronDown size={14} />
+                {fr ? "Aperçu comptable" : "Accounting preview"}
+              </span>
+              <small>PCN {selected.code}</small>
+            </summary>
+            <div className={styles.previewBody}>
+              {income ? (
+                <>
+                  <div className={styles.line}>
+                    <span>
+                      <b>5131</b> Bank
+                    </span>
+                    <strong>Dr {money(gross, transaction.currency)}</strong>
+                  </div>
+                  <div className={styles.line}>
+                    <span>
+                      <b>{selected.code}</b> {selected.label}
+                    </span>
+                    <strong>Cr {money(net, transaction.currency)}</strong>
+                  </div>
+                  {vat > 0 ? (
+                    <div className={styles.line}>
+                      <span>
+                        <b>{isExpenseRefund ? "421611" : "461411"}</b>{" "}
+                        {isExpenseRefund ? "Input VAT reversal" : "Output VAT"}
+                      </span>
+                      <strong>Cr {money(baseVat, foreign ? base : transaction.currency)}</strong>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <div className={styles.line}>
+                    <span>
+                      <b>{selected.code}</b> {selected.label}
+                    </span>
+                    <strong>Dr {money(baseNet, foreign ? base : transaction.currency)}</strong>
+                  </div>
+                  {vat > 0 ? (
+                    <div className={styles.line}>
+                      <span>
+                        <b>421611</b> Input VAT
+                      </span>
+                      <strong>Dr {money(baseVat, foreign ? base : transaction.currency)}</strong>
+                    </div>
+                  ) : null}
+                  <div className={styles.line}>
+                    <span>
+                      <b>5131</b> Bank
+                    </span>
+                    <strong>Cr {money(baseGross, foreign ? base : transaction.currency)}</strong>
+                  </div>
+                </>
+              )}
+              <div className={styles.balance}>
+                <CheckCircle2 size={13} />
+                {fr ? "Écriture équilibrée" : "Entry balances"} ·{" "}
+                {money(baseGross, foreign ? base : transaction.currency)}
+                {foreign && fx > 0 ? (
+                  <span className={styles.originalAmount}>
+                    {" "}
+                    · {money(gross, txCurrency)} @ {fx}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </details>
+        ) : null}
+        {state.status === "error" && state.message ? (
+          <div className={`${styles.message} ${styles.error}`}>{state.message}</div>
+        ) : null}
+        <button
+          className={styles.submit}
+          type="submit"
+          disabled={pending || !selected || (foreign && (!Number.isFinite(fx) || fx <= 0))}
+        >
+          {pending ? <LoaderCircle className={styles.spin} size={15} /> : <CheckCircle2 size={15} />}
+          <span>{pending ? (fr ? "Validation…" : "Approving…") : fr ? "Approuver" : "Approve"}</span>
+        </button>
+      </form>
+    </article>
+  );
 }

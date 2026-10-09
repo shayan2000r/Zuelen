@@ -50,10 +50,7 @@ export async function inviteTesterAction(formData: FormData) {
     redirect("/admin/users?tester=already-exists");
   }
 
-  const redirectTo =
-    APP_URL +
-    "/auth/complete?next=" +
-    encodeURIComponent("/account/password-reset?source=tester");
+  const redirectTo = APP_URL + "/auth/complete?next=" + encodeURIComponent("/account/password-reset?source=tester");
 
   const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo,
@@ -66,12 +63,7 @@ export async function inviteTesterAction(formData: FormData) {
 
   if (inviteError) {
     const created = await findUserByEmail(admin, email);
-    if (
-      created &&
-      !created.email_confirmed_at &&
-      !created.last_sign_in_at &&
-      created.user_metadata?.tester === true
-    ) {
+    if (created && !created.email_confirmed_at && !created.last_sign_in_at && created.user_metadata?.tester === true) {
       try {
         await admin.auth.admin.deleteUser(created.id);
       } catch {}

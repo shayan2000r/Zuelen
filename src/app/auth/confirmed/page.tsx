@@ -23,7 +23,7 @@ export default function AuthConfirmedPage() {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setSeconds((value) => Math.max(0, value - 1));
+      setSeconds(value => Math.max(0, value - 1));
     }, 1000);
 
     const timeout = window.setTimeout(() => {
@@ -44,8 +44,7 @@ export default function AuthConfirmedPage() {
         display: "grid",
         placeItems: "center",
         padding: 24,
-        background:
-          "radial-gradient(circle at top, rgba(93, 121, 73, 0.08), transparent 35%), #fafafa",
+        background: "radial-gradient(circle at top, rgba(93, 121, 73, 0.08), transparent 35%), #fafafa",
         color: "#22251f",
         fontFamily: "Inter, Arial, sans-serif",
       }}

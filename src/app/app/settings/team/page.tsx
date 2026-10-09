@@ -8,25 +8,247 @@ import { getWorkspace } from "@/lib/workspace";
 import { removeTeamMemberAction, revokeTeamInvitationAction, updateTeamMemberRoleAction } from "./actions";
 import styles from "./team.module.css";
 
-export const dynamic="force-dynamic";
-const editableRoles=["admin","accountant","bookkeeper","viewer"] as const;
-function initial(email:string){return(email.trim().charAt(0)||"?").toUpperCase()}
+export const dynamic = "force-dynamic";
+const editableRoles = ["admin", "accountant", "bookkeeper", "viewer"] as const;
+function initial(email: string) {
+  return (email.trim().charAt(0) || "?").toUpperCase();
+}
 
-export default async function TeamSettingsPage(){
- const workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.organization||!workspace.company)redirect("/setup");
- const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",intl=intlLocale(locale),supabase=await createClient();
- const roleCopy=fr?{owner:"Contrôle complet, y compris la propriété et l’accès à l’organisation.",admin:"Accès opérationnel complet avec gestion de l’équipe.",accountant:"Accès à la comptabilité, aux impôts, à la clôture et aux rapports sans administration de l’équipe.",bookkeeper:"Accès à la tenue quotidienne : transactions, banque, documents et factures.",viewer:"Accès en lecture seule à l’organisation."}:{owner:"Full control, including ownership and organization access.",admin:"Full operational access plus team management.",accountant:"Accounting, tax, year-end and reporting access without team administration.",bookkeeper:"Day-to-day bookkeeping access for transactions, banking, documents and invoices.",viewer:"Read-only access to the organization."};
- const{data:members,error:memberError}=await supabase.rpc("list_organization_team",{p_organization_id:workspace.organization.id});
- if(memberError)throw new Error(memberError.message);
- const current=(members??[]).find((m:{user_id:string})=>m.user_id===workspace.userId),currentRole=String(current?.role??"viewer"),canManage=currentRole==="owner"||currentRole==="admin";
- let invitations:unknown[]=[];if(canManage){const result=await supabase.rpc("list_organization_invitations",{p_organization_id:workspace.organization.id});if(result.error)throw new Error(result.error.message);invitations=result.data??[]}
- const roleName=(role:string)=>localizedRole(locale,role);
- return <V2Page className={styles.page}>
-  <PageHeader eyebrow={fr?"Paramètres · contrôle d’accès":"Settings · access control"} title={fr?"Équipe et accès":"Team & Access"} description={fr?`Invitez des personnes dans ${workspace.company.trading_name||workspace.company.legal_name}, attribuez le bon niveau d’accès et retirez l’accès lorsqu’il n’est plus nécessaire.`:`Invite people into ${workspace.company.trading_name||workspace.company.legal_name}, assign the right level of access, and remove access when it is no longer needed.`} meta={<StatusBadge tone="info"><ShieldCheck size={13}/>{fr?"Votre rôle":"Your role"}: {roleName(currentRole)}</StatusBadge>} actions={[{label:fr?"Paramètres":"Settings",href:"/app/settings",icon:ArrowLeft,variant:"ghost"}]}/>
-  <div className={styles.grid}><div>
-   {canManage?<section className={styles.card}><div className={styles.cardHead}><div><p>{fr?"Invitation":"Invite"}</p><h2>{fr?"Ajouter un membre à l’équipe":"Add a team member"}</h2></div><span>{fr?"L’invitation expire après 7 jours":"Invitation expires after 7 days"}</span></div><div className={styles.inviteWrap}><TeamInviteForm/></div></section>:null}
-   <section className={styles.card} style={{marginTop:12}}><div className={styles.cardHead}><div><p>{fr?"Membres":"Members"}</p><h2>{fr?"Personnes ayant accès":"People with access"}</h2></div><span>{(members??[]).length} {fr?`membre${(members??[]).length===1?"":"s"}`:`member${(members??[]).length===1?"":"s"}`}</span></div><div className={styles.memberList}>{(members??[]).map((member:{user_id:string;email:string;role:string;joined_at:string;is_owner:boolean})=><div className={styles.memberRow} key={member.user_id}><div className={styles.identity}><span className={styles.avatar}>{initial(member.email)}</span><div><strong>{member.email}{member.user_id===workspace.userId?(fr?" · Vous":" · You"):""}</strong><small>{fr?"Membre depuis":"Joined"} {new Date(member.joined_at).toLocaleDateString(intl,{year:"numeric",month:"short",day:"numeric"})}</small>{member.is_owner?<span className={styles.ownerBadge}>{fr?"Propriétaire de l’organisation":"Organization owner"}</span>:null}</div></div><div>{canManage&&!member.is_owner?<form action={updateTeamMemberRoleAction} className={styles.roleForm}><input type="hidden" name="user_id" value={member.user_id}/><select name="role" defaultValue={member.role}>{editableRoles.map(role=><option key={role} value={role}>{roleName(role)}</option>)}</select><button className={styles.smallButton} type="submit">{fr?"Enregistrer":"Save"}</button></form>:<span className={styles.memberRole}>{roleName(member.role)}</span>}</div><div className={styles.actions}>{canManage&&!member.is_owner&&member.user_id!==workspace.userId?<form action={removeTeamMemberAction}><input type="hidden" name="user_id" value={member.user_id}/><button type="submit" className={styles.dangerButton}><Trash2 size={12}/>{fr?"Retirer":"Remove"}</button></form>:null}</div></div>)}</div></section>
-   {canManage?<section className={styles.card} style={{marginTop:12}}><div className={styles.cardHead}><div><p>{fr?"En attente":"Pending"}</p><h2>{fr?"Invitations":"Invitations"}</h2></div><span>{invitations.length} {fr?"active(s)":"active"}</span></div><div className={styles.inviteList}>{invitations.length?invitations.map((raw)=>{const invite=raw as {id:string;email:string;role:string;status:string;created_at:string;expires_at:string};return <div className={styles.inviteRow} key={invite.id}><div className={styles.identity}><span className={styles.avatar}>{initial(invite.email)}</span><div><strong>{invite.email}</strong><small>{fr?`Invité comme ${roleName(invite.role)} · expire le ${new Date(invite.expires_at).toLocaleDateString(intl,{month:"short",day:"numeric",year:"numeric"})}`:`Invited as ${roleName(invite.role)} · expires ${new Date(invite.expires_at).toLocaleDateString(intl,{month:"short",day:"numeric",year:"numeric"})}`}</small><span className={styles.pendingBadge}>{fr&&invite.status==="pending"?"En attente":invite.status.charAt(0).toUpperCase()+invite.status.slice(1)}</span></div></div><span className={styles.memberRole}>{roleName(invite.role)}</span><div className={styles.actions}>{invite.status==="pending"?<form action={revokeTeamInvitationAction}><input type="hidden" name="invitation_id" value={invite.id}/><button type="submit" className={styles.dangerButton}>{fr?"Révoquer":"Revoke"}</button></form>:null}</div></div>}):<div className={styles.empty}>{fr?"Aucune invitation en attente.":"No pending invitations."}</div>}</div></section>:null}
-  </div><aside><section className={styles.card}><div className={styles.cardHead}><div><p>{fr?"Rôles":"Roles"}</p><h2>{fr?"Niveaux d’autorisation":"Permission levels"}</h2></div><UsersRound size={16}/></div><div className={styles.permissions}>{Object.entries(roleCopy).map(([role,copy])=><div className={styles.permission} key={role}><strong>{roleName(role)}</strong><p>{copy}</p></div>)}</div></section><div className={styles.note}><strong>{fr?"Modèle de sécurité.":"Security model."}</strong> {fr?"Les autorisations sont appliquées par la sécurité au niveau des lignes (RLS) de Supabase et par des fonctions de base de données contrôlées, pas uniquement en masquant des boutons dans l’interface.":"Permissions are enforced in Supabase row-level security and controlled database functions, not only by hiding UI controls."}</div></aside></div>
- </V2Page>
+export default async function TeamSettingsPage() {
+  const workspace = await getWorkspace();
+  if (!workspace.authenticated) redirect("/sign-in");
+  if (!workspace.organization || !workspace.company) redirect("/setup");
+  const locale = normalizeLocale(workspace.profile?.locale),
+    fr = locale === "fr",
+    intl = intlLocale(locale),
+    supabase = await createClient();
+  const roleCopy = fr
+    ? {
+        owner: "Contrôle complet, y compris la propriété et l’accès à l’organisation.",
+        admin: "Accès opérationnel complet avec gestion de l’équipe.",
+        accountant:
+          "Accès à la comptabilité, aux impôts, à la clôture et aux rapports sans administration de l’équipe.",
+        bookkeeper: "Accès à la tenue quotidienne : transactions, banque, documents et factures.",
+        viewer: "Accès en lecture seule à l’organisation.",
+      }
+    : {
+        owner: "Full control, including ownership and organization access.",
+        admin: "Full operational access plus team management.",
+        accountant: "Accounting, tax, year-end and reporting access without team administration.",
+        bookkeeper: "Day-to-day bookkeeping access for transactions, banking, documents and invoices.",
+        viewer: "Read-only access to the organization.",
+      };
+  const { data: members, error: memberError } = await supabase.rpc("list_organization_team", {
+    p_organization_id: workspace.organization.id,
+  });
+  if (memberError) throw new Error(memberError.message);
+  const current = (members ?? []).find((m: { user_id: string }) => m.user_id === workspace.userId),
+    currentRole = String(current?.role ?? "viewer"),
+    canManage = currentRole === "owner" || currentRole === "admin";
+  let invitations: unknown[] = [];
+  if (canManage) {
+    const result = await supabase.rpc("list_organization_invitations", {
+      p_organization_id: workspace.organization.id,
+    });
+    if (result.error) throw new Error(result.error.message);
+    invitations = result.data ?? [];
+  }
+  const roleName = (role: string) => localizedRole(locale, role);
+  return (
+    <V2Page className={styles.page}>
+      <PageHeader
+        eyebrow={fr ? "Paramètres · contrôle d’accès" : "Settings · access control"}
+        title={fr ? "Équipe et accès" : "Team & Access"}
+        description={
+          fr
+            ? `Invitez des personnes dans ${workspace.company.trading_name || workspace.company.legal_name}, attribuez le bon niveau d’accès et retirez l’accès lorsqu’il n’est plus nécessaire.`
+            : `Invite people into ${workspace.company.trading_name || workspace.company.legal_name}, assign the right level of access, and remove access when it is no longer needed.`
+        }
+        meta={
+          <StatusBadge tone="info">
+            <ShieldCheck size={13} />
+            {fr ? "Votre rôle" : "Your role"}: {roleName(currentRole)}
+          </StatusBadge>
+        }
+        actions={[{ label: fr ? "Paramètres" : "Settings", href: "/app/settings", icon: ArrowLeft, variant: "ghost" }]}
+      />
+      <div className={styles.grid}>
+        <div>
+          {canManage ? (
+            <section className={styles.card}>
+              <div className={styles.cardHead}>
+                <div>
+                  <p>{fr ? "Invitation" : "Invite"}</p>
+                  <h2>{fr ? "Ajouter un membre à l’équipe" : "Add a team member"}</h2>
+                </div>
+                <span>{fr ? "L’invitation expire après 7 jours" : "Invitation expires after 7 days"}</span>
+              </div>
+              <div className={styles.inviteWrap}>
+                <TeamInviteForm />
+              </div>
+            </section>
+          ) : null}
+          <section className={styles.card} style={{ marginTop: 12 }}>
+            <div className={styles.cardHead}>
+              <div>
+                <p>{fr ? "Membres" : "Members"}</p>
+                <h2>{fr ? "Personnes ayant accès" : "People with access"}</h2>
+              </div>
+              <span>
+                {(members ?? []).length}{" "}
+                {fr
+                  ? `membre${(members ?? []).length === 1 ? "" : "s"}`
+                  : `member${(members ?? []).length === 1 ? "" : "s"}`}
+              </span>
+            </div>
+            <div className={styles.memberList}>
+              {(members ?? []).map(
+                (member: { user_id: string; email: string; role: string; joined_at: string; is_owner: boolean }) => (
+                  <div className={styles.memberRow} key={member.user_id}>
+                    <div className={styles.identity}>
+                      <span className={styles.avatar}>{initial(member.email)}</span>
+                      <div>
+                        <strong>
+                          {member.email}
+                          {member.user_id === workspace.userId ? (fr ? " · Vous" : " · You") : ""}
+                        </strong>
+                        <small>
+                          {fr ? "Membre depuis" : "Joined"}{" "}
+                          {new Date(member.joined_at).toLocaleDateString(intl, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </small>
+                        {member.is_owner ? (
+                          <span className={styles.ownerBadge}>
+                            {fr ? "Propriétaire de l’organisation" : "Organization owner"}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div>
+                      {canManage && !member.is_owner ? (
+                        <form action={updateTeamMemberRoleAction} className={styles.roleForm}>
+                          <input type="hidden" name="user_id" value={member.user_id} />
+                          <select name="role" defaultValue={member.role}>
+                            {editableRoles.map(role => (
+                              <option key={role} value={role}>
+                                {roleName(role)}
+                              </option>
+                            ))}
+                          </select>
+                          <button className={styles.smallButton} type="submit">
+                            {fr ? "Enregistrer" : "Save"}
+                          </button>
+                        </form>
+                      ) : (
+                        <span className={styles.memberRole}>{roleName(member.role)}</span>
+                      )}
+                    </div>
+                    <div className={styles.actions}>
+                      {canManage && !member.is_owner && member.user_id !== workspace.userId ? (
+                        <form action={removeTeamMemberAction}>
+                          <input type="hidden" name="user_id" value={member.user_id} />
+                          <button type="submit" className={styles.dangerButton}>
+                            <Trash2 size={12} />
+                            {fr ? "Retirer" : "Remove"}
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+          {canManage ? (
+            <section className={styles.card} style={{ marginTop: 12 }}>
+              <div className={styles.cardHead}>
+                <div>
+                  <p>{fr ? "En attente" : "Pending"}</p>
+                  <h2>{fr ? "Invitations" : "Invitations"}</h2>
+                </div>
+                <span>
+                  {invitations.length} {fr ? "active(s)" : "active"}
+                </span>
+              </div>
+              <div className={styles.inviteList}>
+                {invitations.length ? (
+                  invitations.map(raw => {
+                    const invite = raw as {
+                      id: string;
+                      email: string;
+                      role: string;
+                      status: string;
+                      created_at: string;
+                      expires_at: string;
+                    };
+                    return (
+                      <div className={styles.inviteRow} key={invite.id}>
+                        <div className={styles.identity}>
+                          <span className={styles.avatar}>{initial(invite.email)}</span>
+                          <div>
+                            <strong>{invite.email}</strong>
+                            <small>
+                              {fr
+                                ? `Invité comme ${roleName(invite.role)} · expire le ${new Date(invite.expires_at).toLocaleDateString(intl, { month: "short", day: "numeric", year: "numeric" })}`
+                                : `Invited as ${roleName(invite.role)} · expires ${new Date(invite.expires_at).toLocaleDateString(intl, { month: "short", day: "numeric", year: "numeric" })}`}
+                            </small>
+                            <span className={styles.pendingBadge}>
+                              {fr && invite.status === "pending"
+                                ? "En attente"
+                                : invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={styles.memberRole}>{roleName(invite.role)}</span>
+                        <div className={styles.actions}>
+                          {invite.status === "pending" ? (
+                            <form action={revokeTeamInvitationAction}>
+                              <input type="hidden" name="invitation_id" value={invite.id} />
+                              <button type="submit" className={styles.dangerButton}>
+                                {fr ? "Révoquer" : "Revoke"}
+                              </button>
+                            </form>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className={styles.empty}>{fr ? "Aucune invitation en attente." : "No pending invitations."}</div>
+                )}
+              </div>
+            </section>
+          ) : null}
+        </div>
+        <aside>
+          <section className={styles.card}>
+            <div className={styles.cardHead}>
+              <div>
+                <p>{fr ? "Rôles" : "Roles"}</p>
+                <h2>{fr ? "Niveaux d’autorisation" : "Permission levels"}</h2>
+              </div>
+              <UsersRound size={16} />
+            </div>
+            <div className={styles.permissions}>
+              {Object.entries(roleCopy).map(([role, copy]) => (
+                <div className={styles.permission} key={role}>
+                  <strong>{roleName(role)}</strong>
+                  <p>{copy}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+          <div className={styles.note}>
+            <strong>{fr ? "Modèle de sécurité." : "Security model."}</strong>{" "}
+            {fr
+              ? "Les autorisations sont appliquées par la sécurité au niveau des lignes (RLS) de Supabase et par des fonctions de base de données contrôlées, pas uniquement en masquant des boutons dans l’interface."
+              : "Permissions are enforced in Supabase row-level security and controlled database functions, not only by hiding UI controls."}
+          </div>
+        </aside>
+      </div>
+    </V2Page>
+  );
 }

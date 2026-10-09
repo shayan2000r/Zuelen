@@ -7,9 +7,9 @@ export type StripeObject = Record<string, any>;
 export function stripeConfigured() {
   return Boolean(
     process.env.STRIPE_SECRET_KEY &&
-    process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID &&
-    process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID &&
-    process.env.STRIPE_SEAT_MONTHLY_PRICE_ID
+      process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID &&
+      process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID &&
+      process.env.STRIPE_SEAT_MONTHLY_PRICE_ID,
   );
 }
 
@@ -54,9 +54,8 @@ export async function stripeGet(path: string) {
 }
 
 export function premiumPriceId(interval: "month" | "year") {
-  const id = interval === "year"
-    ? process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID
-    : process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID;
+  const id =
+    interval === "year" ? process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID : process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID;
   if (!id) throw new Error("The selected Premium Stripe price is not configured.");
   return id;
 }

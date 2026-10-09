@@ -1,1 +1,16 @@
-export default function Loading(){return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#f7f7f4",fontFamily:"Inter,system-ui,sans-serif",color:"#687269"}}>Loading professional profile…</main>}
+export default function Loading() {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        background: "#f7f7f4",
+        fontFamily: "Inter,system-ui,sans-serif",
+        color: "#687269",
+      }}
+    >
+      Loading professional profile…
+    </main>
+  );
+}

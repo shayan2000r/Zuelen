@@ -47,15 +47,28 @@ export async function getAdminData(admin: AdminClient) {
     admin.from("organizations").select("id,name,owner_id,created_at"),
     admin.from("organization_members").select("organization_id,user_id,role,created_at"),
     admin.from("user_profiles").select("user_id,full_name,locale"),
-    admin.from("organization_subscriptions").select("organization_id,plan,status,billing_source,billing_interval,current_period_end,cancel_at_period_end"),
+    admin
+      .from("organization_subscriptions")
+      .select("organization_id,plan,status,billing_source,billing_interval,current_period_end,cancel_at_period_end"),
     admin.from("accountant_profiles").select("id,user_id,full_name,firm_name,approval_status,created_at,updated_at"),
-    admin.from("accountant_listing_subscriptions").select("profile_id,tier,status,trial_end,current_period_end,cancel_at_period_end,stripe_subscription_id"),
-    admin.from("early_access_waitlist").select("id,email,audience,locale,status,created_at,approved_at,invited_at,activated_at").order("created_at", { ascending: false }),
+    admin
+      .from("accountant_listing_subscriptions")
+      .select("profile_id,tier,status,trial_end,current_period_end,cancel_at_period_end,stripe_subscription_id"),
+    admin
+      .from("early_access_waitlist")
+      .select("id,email,audience,locale,status,created_at,approved_at,invited_at,activated_at")
+      .order("created_at", { ascending: false }),
   ]);
 
   const queryResults = [
-    companiesResult, organizationsResult, membershipsResult, profilesResult,
-    subscriptionsResult, accountantProfilesResult, accountantSubscriptionsResult, waitlistResult,
+    companiesResult,
+    organizationsResult,
+    membershipsResult,
+    profilesResult,
+    subscriptionsResult,
+    accountantProfilesResult,
+    accountantSubscriptionsResult,
+    waitlistResult,
   ];
   const failed = queryResults.find(result => result.error);
   if (failed?.error) throw new Error(failed.error.message);
@@ -113,7 +126,9 @@ export async function getAdminData(admin: AdminClient) {
         organizations: organizationNames,
         plan: firstSubscription?.plan ?? "—",
         subscriptionStatus: firstSubscription?.status ?? "—",
-        accountState: (user.email_confirmed_at || user.last_sign_in_at ? "active" : "invite_pending") as AdminUserRow["accountState"],
+        accountState: (user.email_confirmed_at || user.last_sign_in_at
+          ? "active"
+          : "invite_pending") as AdminUserRow["accountState"],
         emailConfirmedAt: user.email_confirmed_at ?? null,
       };
     })
@@ -158,20 +173,19 @@ export async function getAdminData(admin: AdminClient) {
   };
 }
 
-
 export async function getAdminUserDetail(admin: AdminClient, userId: string) {
   const { data: authResult, error: authError } = await admin.auth.admin.getUserById(userId);
   if (authError) throw new Error(authError.message);
   const user = authResult.user;
   if (!user || user.email?.toLowerCase() === ZUELEN_ADMIN_EMAIL) return null;
 
-  const [
-    profileResult,
-    membershipsResult,
-    accountantResult,
-  ] = await Promise.all([
+  const [profileResult, membershipsResult, accountantResult] = await Promise.all([
     admin.from("user_profiles").select("full_name,locale,created_at,updated_at").eq("user_id", userId).maybeSingle(),
-    admin.from("organization_members").select("organization_id,role,created_at").eq("user_id", userId).order("created_at", { ascending: true }),
+    admin
+      .from("organization_members")
+      .select("organization_id,role,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true }),
     admin.from("accountant_profiles").select("*").eq("user_id", userId).maybeSingle(),
   ]);
   if (profileResult.error) throw new Error(profileResult.error.message);
@@ -181,9 +195,9 @@ export async function getAdminUserDetail(admin: AdminClient, userId: string) {
   const memberships = membershipsResult.data ?? [];
   const organizationIds = memberships.map(item => item.organization_id);
 
-  let organizations:any[] = [];
-  let companies:any[] = [];
-  let subscriptions:any[] = [];
+  let organizations: any[] = [];
+  let companies: any[] = [];
+  let subscriptions: any[] = [];
   if (organizationIds.length) {
     const [orgResult, companyResult, subResult] = await Promise.all([
       admin.from("organizations").select("id,name,slug,owner_id,created_at").in("id", organizationIds),

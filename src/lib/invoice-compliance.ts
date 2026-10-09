@@ -12,9 +12,16 @@ function missing(value: string | null | undefined) {
   return !value || value.trim().length === 0;
 }
 
-export async function getInvoiceComplianceStatus(
-  workspace: Workspace,
-): Promise<InvoiceComplianceStatus> {
+/** Signed URL of the establishment-authorisation barcode printed on invoices, if uploaded. */
+export async function getEstablishmentBarcodeUrl(workspace: Workspace): Promise<string | null> {
+  const path = workspace.company?.establishment_barcode_path;
+  if (!path) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from("company-documents").createSignedUrl(path, 60 * 60);
+  return data?.signedUrl ?? null;
+}
+
+export async function getInvoiceComplianceStatus(workspace: Workspace): Promise<InvoiceComplianceStatus> {
   const company = workspace.company;
   if (!company) return { missingRcs: false, missingBusinessPermit: false };
 
@@ -36,7 +43,6 @@ export async function getInvoiceComplianceStatus(
 
   return {
     missingRcs: Boolean(data?.rcs_registered) && missing(company.rcs_number),
-    missingBusinessPermit:
-      Boolean(data?.business_permit_held) && missing(company.business_permit_number),
+    missingBusinessPermit: Boolean(data?.business_permit_held) && missing(company.business_permit_number),
   };
 }

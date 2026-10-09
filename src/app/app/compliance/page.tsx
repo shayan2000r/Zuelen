@@ -10,49 +10,508 @@ import { intlLocale, normalizeLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import styles from "./compliance-v2.module.css";
-export const dynamic="force-dynamic";
-function meta(row:{metadata:unknown}){return row.metadata&&typeof row.metadata==="object"?row.metadata as Record<string,unknown>:{};}function url(row:{metadata:unknown}){const value=meta(row).source_url;return typeof value==="string"?value:null}function addDays(value:string,days:number){const date=new Date(`${value}T12:00:00Z`);date.setUTCDate(date.getUTCDate()+days);return date.toISOString().slice(0,10)}function addMonths(value:string,months:number){const date=new Date(`${value}T12:00:00Z`);date.setUTCMonth(date.getUTCMonth()+months);return date.toISOString().slice(0,10)}
-function statusLabel(status:string,fr:boolean){if(!fr)return status.replaceAll("_"," ");const labels:Record<string,string>={upcoming:"à venir",action_required:"action requise",ready:"prêt",filed:"déposé",paid:"payé",not_applicable:"non applicable",overdue:"en retard"};return labels[status]??status.replaceAll("_"," ")}
-export default async function CompliancePage(){
- const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.userId)redirect("/sign-in");if(!workspace.company)redirect("/setup");
- const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",intl=intlLocale(locale),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),today=new Date(),todayKey=today.toISOString().slice(0,10),in30=new Date(today.getTime()+30*86400000).toISOString().slice(0,10),supabase=await createClient(),capabilities=workspace.capabilities!,independent=workspace.company.entity_kind==="independent";
- const[{data,error},pendingTx,unknownVat,annualSnapshot,taxProfile,taxNotices,ccssStatements,ccssProfile]=await Promise.all([
-  supabase.from("compliance_obligations").select("id,authority,obligation_type,period_label,due_date,amount,currency,status,rule_key,rule_version,metadata").eq("company_id",workspace.company.id).like("period_label",`${year}%`).order("due_date",{ascending:true,nullsFirst:false}),
-  capabilities.hasVat?supabase.from("source_transactions").select("id",{count:"exact",head:true}).eq("company_id",workspace.company.id).in("classification_status",["unclassified","review","classified"]).gte("occurred_on",bounds.start).lte("occurred_on",bounds.end):Promise.resolve({data:null,error:null,count:0}),
-  capabilities.hasVat?supabase.from("source_transactions").select("id",{count:"exact",head:true}).eq("company_id",workspace.company.id).eq("classification_status","posted").eq("vat_treatment","unknown").or("counterparty_country.not.is.null,vat_amount.gt.0").gte("occurred_on",bounds.start).lte("occurred_on",bounds.end):Promise.resolve({data:null,error:null,count:0}),
-  capabilities.hasCompanyYearEnd?supabase.from("filings").select("id,snapshot_at").eq("company_id",workspace.company.id).eq("filing_type","ecdf_accounts").eq("period_label",String(year)).order("created_at",{ascending:false}).limit(1).maybeSingle():Promise.resolve({data:null,error:null}),
-  capabilities.hasCorporateTaxes?supabase.from("company_tax_profiles").select("icc_multiplier,icc_multiplier_year").eq("company_id",workspace.company.id).maybeSingle():Promise.resolve({data:null,error:null}),
-  supabase.from("tax_events").select("id",{count:"exact",head:true}).eq("company_id",workspace.company.id).eq("tax_year",year),
-  supabase.from("ccss_statements").select("id,contribution_month,due_date,amount_due,payment_status").eq("user_id",workspace.userId).eq("company_id",workspace.company.id).gte("contribution_month",`${year}-01-01`).lte("contribution_month",`${year}-12-01`).order("due_date",{ascending:true}),
-  supabase.from("ccss_profiles").select("affiliation_start_date,mde_membership").eq("user_id",workspace.userId).eq("tax_year",year).maybeSingle()
- ]);const loadError=error??ccssStatements.error??ccssProfile.error;if(loadError)throw new Error(`${fr?"Impossible de charger le calendrier des obligations":"Could not load compliance calendar"}: ${loadError.message}`);
- const baseRows=(data??[]).map(row=>({...row,metadata:meta(row)}));
- const personalRows=[...(ccssStatements.data??[]).map(statement=>({id:`ccss-${statement.id}`,authority:"CCSS",obligation_type:fr?"Paiement de l’extrait CCSS":"CCSS statement payment",period_label:statement.contribution_month.slice(0,7),due_date:statement.due_date,amount:statement.amount_due,currency:"EUR",status:statement.payment_status==="paid"?"paid":"upcoming",rule_key:"ccss_statement",rule_version:"actual-v1",metadata:{ccss_source:true,note:fr?"Montant réel de l’extrait":"Actual statement amount"}}))];
- if(ccssProfile.data){const start=ccssProfile.data.affiliation_start_date,affiliationDue=addDays(start,8),mdeDue=addMonths(start,3);if(affiliationDue>=todayKey)personalRows.push({id:`ccss-affiliation-${year}`,authority:"CCSS",obligation_type:fr?"Déclaration d’affiliation initiale":"Initial self-employed affiliation",period_label:String(year),due_date:affiliationDue,amount:null,currency:"EUR",status:"upcoming",rule_key:"ccss_initial_affiliation",rule_version:"official-v1",metadata:{ccss_source:true,note:fr?"Au plus tard 8 jours après le début":"No later than 8 days after activity starts"}});if(ccssProfile.data.mde_membership==="not_affiliated"&&mdeDue>=todayKey)personalRows.push({id:`ccss-mde-${year}`,authority:"CCSS",obligation_type:fr?"Fenêtre initiale d’adhésion MDE":"Initial MDE membership window",period_label:String(year),due_date:mdeDue,amount:null,currency:"EUR",status:"upcoming",rule_key:"ccss_mde_initial_window",rule_version:"official-v1",metadata:{ccss_source:true,note:fr?"Adhésion volontaire dans les 3 mois":"Voluntary membership within 3 months"}})}
- const rows=[...baseRows,...personalRows].sort((a,b)=>(a.due_date??"9999-12-31").localeCompare(b.due_date??"9999-12-31")),completed=rows.filter(r=>["paid","filed","not_applicable"].includes(r.status)),active=rows.filter(r=>!["paid","filed","not_applicable"].includes(r.status)),overdue=active.filter(r=>r.due_date&&r.due_date<todayKey),upcoming=active.filter(r=>!r.due_date||r.due_date>=todayKey),next=upcoming.find(r=>r.due_date)??active[0]??null,next30=upcoming.filter(r=>r.due_date&&r.due_date<=in30).length,inProgress=active.filter(r=>["action_required","ready"].includes(r.status)).length,nextDate=next?.due_date?new Date(`${next.due_date}T12:00:00`):null,days=nextDate?Math.ceil((nextDate.getTime()-today.getTime())/86400000):null,vatReady=(pendingTx.count??0)===0&&(unknownVat.count??0)===0,annualReady=Boolean(annualSnapshot.data),taxReady=taxProfile.data?.icc_multiplier!=null&&Number(taxProfile.data?.icc_multiplier_year)===year,noticeCount=taxNotices.count??0;
- const obligationRow=(row:(typeof rows)[number],isOverdue=false,isCompleted=false)=>{const due=row.due_date?new Date(`${row.due_date}T12:00:00`):null,source=url(row),isCcss=meta(row).ccss_source===true;return <div className={`${styles.row} ${isOverdue?styles.overdueRow:""} ${isCompleted?styles.completedRow:""}`} key={row.id}><div className={styles.rowDate}><strong>{due?due.toLocaleDateString(intl,{day:"2-digit",month:"short"}):(fr?"Événement":"Event")}</strong><span>{due?due.getFullYear():(fr?"déclenché":"triggered")}</span></div><div className={styles.rowCopy}><span>{row.authority} · {row.rule_key??(fr?"personnalisé":"custom")}</span><strong>{row.obligation_type}</strong><small>{row.period_label??"—"}{meta(row).note?` · ${String(meta(row).note)}`:""}</small></div><div className={styles.rowSide}>{isCcss?<span>{statusLabel(row.status,fr)}</span>:<ComplianceStatusControl id={row.id} status={row.status}/>} {isCcss?<Link href="/app/ccss">{fr?"Ouvrir CCSS":"Open CCSS"}</Link>:source?<a href={source} target="_blank" rel="noreferrer">{fr?"Source officielle":"Official source"} <ExternalLink size={9}/></a>:null}</div></div>};
- const dayMessage=days===null?(fr?"Aucune échéance datée":"No dated deadline"):days<0?(fr?`${Math.abs(days)} jour${Math.abs(days)===1?"":"s"} de retard`:`${Math.abs(days)} days overdue`):days===0?(fr?"Échéance aujourd’hui":"Due today"):(fr?`${days} jour${days===1?"":"s"} restant${days===1?"":"s"}`:`${days} days remaining`);
- return <V2Page className={styles.page}>
-  <PageHeader
-   eyebrow={fr ? "Obligations · Luxembourg · " + year : "Compliance · Luxembourg · " + year}
-   title={fr ? "Centre des obligations" : "Compliance center"}
-   description={independent?(fr?"Vos échéances professionnelles et personnelles applicables, sans obligations réservées aux sociétés.":"Your applicable professional and personal deadlines, without company-only obligations."):(fr ? "Les échéances, l’état de préparation et l’historique réglementaire de l’exercice dans un calendrier opérationnel." : "Deadlines, readiness and regulatory history for the financial year in one operational calendar.")}
-   meta={<div className={styles.syncSlot}><ComplianceSyncButton year={year}/></div>}
-  />
+export const dynamic = "force-dynamic";
+function meta(row: { metadata: unknown }) {
+  return row.metadata && typeof row.metadata === "object" ? (row.metadata as Record<string, unknown>) : {};
+}
+function url(row: { metadata: unknown }) {
+  const value = meta(row).source_url;
+  return typeof value === "string" ? value : null;
+}
+function addDays(value: string, days: number) {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+function addMonths(value: string, months: number) {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + months);
+  return date.toISOString().slice(0, 10);
+}
+function statusLabel(status: string, fr: boolean) {
+  if (!fr) return status.replaceAll("_", " ");
+  const labels: Record<string, string> = {
+    upcoming: "à venir",
+    action_required: "action requise",
+    ready: "prêt",
+    filed: "déposé",
+    paid: "payé",
+    not_applicable: "non applicable",
+    overdue: "en retard",
+  };
+  return labels[status] ?? status.replaceAll("_", " ");
+}
+export default async function CompliancePage() {
+  const workspace = await getWorkspace();
+  if (!workspace.authenticated || !workspace.userId) redirect("/sign-in");
+  if (!workspace.company) redirect("/setup");
+  const locale = normalizeLocale(workspace.profile?.locale),
+    fr = locale === "fr",
+    intl = intlLocale(locale),
+    year = await getActiveFiscalYear(workspace.company.fiscal_year_start_month),
+    bounds = fiscalYearBounds(year, workspace.company.fiscal_year_start_month),
+    today = new Date(),
+    todayKey = today.toISOString().slice(0, 10),
+    in30 = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10),
+    supabase = await createClient(),
+    capabilities = workspace.capabilities!,
+    independent = workspace.company.entity_kind === "independent";
+  const label = (row: { obligation_type: string | null; metadata: unknown }) => {
+      const m = meta(row),
+        value = fr ? m.label_fr : m.label_en;
+      return String(value ?? row.obligation_type ?? "");
+    },
+    note = (row: { metadata: unknown }) => {
+      const m = meta(row),
+        value = (fr ? m.note_fr : m.note_en) ?? m.note;
+      return value ? String(value) : "";
+    };
+  const [{ data, error }, pendingTx, unknownVat, annualSnapshot, taxProfile, taxNotices, ccssStatements, ccssProfile] =
+    await Promise.all([
+      supabase
+        .from("compliance_obligations")
+        .select(
+          "id,authority,obligation_type,period_label,due_date,amount,currency,status,rule_key,rule_version,metadata",
+        )
+        .eq("company_id", workspace.company.id)
+        .like("period_label", `${year}%`)
+        .order("due_date", { ascending: true, nullsFirst: false }),
+      capabilities.hasVat
+        ? supabase
+            .from("source_transactions")
+            .select("id", { count: "exact", head: true })
+            .eq("company_id", workspace.company.id)
+            .in("classification_status", ["unclassified", "review", "classified"])
+            .gte("occurred_on", bounds.start)
+            .lte("occurred_on", bounds.end)
+        : Promise.resolve({ data: null, error: null, count: 0 }),
+      capabilities.hasVat
+        ? supabase
+            .from("source_transactions")
+            .select("id", { count: "exact", head: true })
+            .eq("company_id", workspace.company.id)
+            .eq("classification_status", "posted")
+            .eq("vat_treatment", "unknown")
+            .or("counterparty_country.not.is.null,vat_amount.gt.0")
+            .gte("occurred_on", bounds.start)
+            .lte("occurred_on", bounds.end)
+        : Promise.resolve({ data: null, error: null, count: 0 }),
+      capabilities.hasCompanyYearEnd
+        ? supabase
+            .from("filings")
+            .select("id,snapshot_at")
+            .eq("company_id", workspace.company.id)
+            .eq("filing_type", "ecdf_accounts")
+            .eq("period_label", String(year))
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      capabilities.hasCorporateTaxes
+        ? supabase
+            .from("company_tax_profiles")
+            .select("icc_multiplier,icc_multiplier_year")
+            .eq("company_id", workspace.company.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      supabase
+        .from("tax_events")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", workspace.company.id)
+        .eq("tax_year", year),
+      supabase
+        .from("ccss_statements")
+        .select("id,contribution_month,due_date,amount_due,payment_status")
+        .eq("user_id", workspace.userId)
+        .eq("company_id", workspace.company.id)
+        .gte("contribution_month", `${year}-01-01`)
+        .lte("contribution_month", `${year}-12-01`)
+        .order("due_date", { ascending: true }),
+      supabase
+        .from("ccss_profiles")
+        .select("affiliation_start_date,mde_membership")
+        .eq("user_id", workspace.userId)
+        .eq("tax_year", year)
+        .maybeSingle(),
+    ]);
+  const loadError = error ?? ccssStatements.error ?? ccssProfile.error;
+  if (loadError)
+    throw new Error(
+      `${fr ? "Impossible de charger le calendrier des obligations" : "Could not load compliance calendar"}: ${loadError.message}`,
+    );
+  const baseRows = (data ?? []).map(row => ({ ...row, metadata: meta(row) }));
+  const personalRows = [
+    ...(ccssStatements.data ?? []).map(statement => ({
+      id: `ccss-${statement.id}`,
+      authority: "CCSS",
+      obligation_type: fr ? "Paiement de l’extrait CCSS" : "CCSS statement payment",
+      period_label: statement.contribution_month.slice(0, 7),
+      due_date: statement.due_date,
+      amount: statement.amount_due,
+      currency: "EUR",
+      status: statement.payment_status === "paid" ? "paid" : "upcoming",
+      rule_key: "ccss_statement",
+      rule_version: "actual-v1",
+      metadata: { ccss_source: true, note: fr ? "Montant réel de l’extrait" : "Actual statement amount" },
+    })),
+  ];
+  if (ccssProfile.data) {
+    const start = ccssProfile.data.affiliation_start_date,
+      affiliationDue = addDays(start, 8),
+      mdeDue = addMonths(start, 3);
+    if (affiliationDue >= todayKey)
+      personalRows.push({
+        id: `ccss-affiliation-${year}`,
+        authority: "CCSS",
+        obligation_type: fr ? "Déclaration d’affiliation initiale" : "Initial self-employed affiliation",
+        period_label: String(year),
+        due_date: affiliationDue,
+        amount: null,
+        currency: "EUR",
+        status: "upcoming",
+        rule_key: "ccss_initial_affiliation",
+        rule_version: "official-v1",
+        metadata: {
+          ccss_source: true,
+          note: fr ? "Au plus tard 8 jours après le début" : "No later than 8 days after activity starts",
+        },
+      });
+    if (ccssProfile.data.mde_membership === "not_affiliated" && mdeDue >= todayKey)
+      personalRows.push({
+        id: `ccss-mde-${year}`,
+        authority: "CCSS",
+        obligation_type: fr ? "Fenêtre initiale d’adhésion MDE" : "Initial MDE membership window",
+        period_label: String(year),
+        due_date: mdeDue,
+        amount: null,
+        currency: "EUR",
+        status: "upcoming",
+        rule_key: "ccss_mde_initial_window",
+        rule_version: "official-v1",
+        metadata: {
+          ccss_source: true,
+          note: fr ? "Adhésion volontaire dans les 3 mois" : "Voluntary membership within 3 months",
+        },
+      });
+  }
+  const rows = [...baseRows, ...personalRows].sort((a, b) =>
+      (a.due_date ?? "9999-12-31").localeCompare(b.due_date ?? "9999-12-31"),
+    ),
+    completed = rows.filter(r => ["paid", "filed", "not_applicable"].includes(r.status)),
+    active = rows.filter(r => !["paid", "filed", "not_applicable"].includes(r.status)),
+    overdue = active.filter(r => r.due_date && r.due_date < todayKey),
+    upcoming = active.filter(r => !r.due_date || r.due_date >= todayKey),
+    next = upcoming.find(r => r.due_date) ?? active[0] ?? null,
+    next30 = upcoming.filter(r => r.due_date && r.due_date <= in30).length,
+    inProgress = active.filter(r => ["action_required", "ready"].includes(r.status)).length,
+    nextDate = next?.due_date ? new Date(`${next.due_date}T12:00:00`) : null,
+    days = nextDate ? Math.ceil((nextDate.getTime() - today.getTime()) / 86400000) : null,
+    vatReady = (pendingTx.count ?? 0) === 0 && (unknownVat.count ?? 0) === 0,
+    annualReady = Boolean(annualSnapshot.data),
+    taxReady = taxProfile.data?.icc_multiplier != null && Number(taxProfile.data?.icc_multiplier_year) === year,
+    noticeCount = taxNotices.count ?? 0;
+  const obligationRow = (row: (typeof rows)[number], isOverdue = false, isCompleted = false) => {
+    const due = row.due_date ? new Date(`${row.due_date}T12:00:00`) : null,
+      source = url(row),
+      isCcss = meta(row).ccss_source === true;
+    return (
+      <div
+        className={`${styles.row} ${isOverdue ? styles.overdueRow : ""} ${isCompleted ? styles.completedRow : ""}`}
+        key={row.id}
+      >
+        <div className={styles.rowDate}>
+          <strong>
+            {due ? due.toLocaleDateString(intl, { day: "2-digit", month: "short" }) : fr ? "Événement" : "Event"}
+          </strong>
+          <span>{due ? due.getFullYear() : fr ? "déclenché" : "triggered"}</span>
+        </div>
+        <div className={styles.rowCopy}>
+          <span>
+            {row.authority} · {row.rule_key ?? (fr ? "personnalisé" : "custom")}
+          </span>
+          <strong>{label(row)}</strong>
+          <small>
+            {row.period_label ?? "—"}
+            {note(row) ? ` · ${note(row)}` : ""}
+          </small>
+        </div>
+        <div className={styles.rowSide}>
+          {isCcss ? (
+            <span>{statusLabel(row.status, fr)}</span>
+          ) : (
+            <ComplianceStatusControl id={row.id} status={row.status} />
+          )}{" "}
+          {isCcss ? (
+            <Link href="/app/ccss">{fr ? "Ouvrir CCSS" : "Open CCSS"}</Link>
+          ) : source ? (
+            <a href={source} target="_blank" rel="noreferrer">
+              {fr ? "Source officielle" : "Official source"} <ExternalLink size={9} />
+            </a>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
+  const dayMessage =
+    days === null
+      ? fr
+        ? "Aucune échéance datée"
+        : "No dated deadline"
+      : days < 0
+        ? fr
+          ? `${Math.abs(days)} jour${Math.abs(days) === 1 ? "" : "s"} de retard`
+          : `${Math.abs(days)} days overdue`
+        : days === 0
+          ? fr
+            ? "Échéance aujourd’hui"
+            : "Due today"
+          : fr
+            ? `${days} jour${days === 1 ? "" : "s"} restant${days === 1 ? "" : "s"}`
+            : `${days} days remaining`;
+  return (
+    <V2Page className={styles.page}>
+      <PageHeader
+        eyebrow={fr ? "Obligations · Luxembourg · " + year : "Compliance · Luxembourg · " + year}
+        title={fr ? "Centre des obligations" : "Compliance center"}
+        description={
+          independent
+            ? fr
+              ? "Vos échéances professionnelles et personnelles applicables, sans obligations réservées aux sociétés."
+              : "Your applicable professional and personal deadlines, without company-only obligations."
+            : fr
+              ? "Les échéances, l’état de préparation et l’historique réglementaire de l’exercice dans un calendrier opérationnel."
+              : "Deadlines, readiness and regulatory history for the financial year in one operational calendar."
+        }
+        meta={
+          <div className={styles.syncSlot}>
+            <ComplianceSyncButton year={year} />
+          </div>
+        }
+      />
 
-  <DataSummary
-   label={fr ? "Résumé des obligations" : "Compliance summary"}
-   items={[
-    {label:fr ? "En retard" : "Overdue",value:overdue.length,description:overdue.length ? (fr ? "À traiter maintenant" : "Needs attention now") : (fr ? "Aucun retard" : "Nothing overdue"),icon:AlertTriangle,tone:overdue.length ? "danger" : "success"},
-    {label:fr ? "30 prochains jours" : "Next 30 days",value:next30,description:fr ? "Obligations à venir" : "Upcoming obligations",icon:CalendarCheck2,tone:next30 ? "warning" : "neutral"},
-    {label:fr ? "En cours" : "In progress",value:inProgress,description:fr ? "En préparation ou prêtes" : "Preparing or ready",icon:Clock3,tone:inProgress ? "info" : "neutral"},
-    {label:fr ? "Terminées" : "Completed",value:completed.length,description:fr ? "Déposées, payées ou non applicables" : "Filed, paid or not applicable",icon:CheckCircle2,tone:"success"}
-   ]}
-  />
+      <DataSummary
+        label={fr ? "Résumé des obligations" : "Compliance summary"}
+        items={[
+          {
+            label: fr ? "En retard" : "Overdue",
+            value: overdue.length,
+            description: overdue.length
+              ? fr
+                ? "À traiter maintenant"
+                : "Needs attention now"
+              : fr
+                ? "Aucun retard"
+                : "Nothing overdue",
+            icon: AlertTriangle,
+            tone: overdue.length ? "danger" : "success",
+          },
+          {
+            label: fr ? "30 prochains jours" : "Next 30 days",
+            value: next30,
+            description: fr ? "Obligations à venir" : "Upcoming obligations",
+            icon: CalendarCheck2,
+            tone: next30 ? "warning" : "neutral",
+          },
+          {
+            label: fr ? "En cours" : "In progress",
+            value: inProgress,
+            description: fr ? "En préparation ou prêtes" : "Preparing or ready",
+            icon: Clock3,
+            tone: inProgress ? "info" : "neutral",
+          },
+          {
+            label: fr ? "Terminées" : "Completed",
+            value: completed.length,
+            description: fr ? "Déposées, payées ou non applicables" : "Filed, paid or not applicable",
+            icon: CheckCircle2,
+            tone: "success",
+          },
+        ]}
+      />
 
-  <article className={styles.nextCard}><div className={styles.dateBlock}><strong>{nextDate?nextDate.getDate():"—"}</strong><span>{nextDate?nextDate.toLocaleDateString(intl,{month:"short"}).toUpperCase():(fr?"RAS":"CLEAR")}</span></div><div className={styles.nextCopy}><span>{fr?"Prochaine obligation":"Next obligation"}</span><strong>{next?.obligation_type??(fr?"Aucune échéance active":"No active deadline")}</strong><small>{next?`${next.authority} · ${next.period_label??year} · ${statusLabel(next.status,fr)}`:(fr?`Aucune obligation générée pour ${year}. Actualisez les règles pour les créer.`:`No obligations generated for ${year}. Refresh rules to create them.`)}</small></div><div className={styles.nextSide}><b>{dayMessage}</b>{next&&url(next)?<a href={url(next)!} target="_blank" rel="noreferrer">{fr?"Source officielle":"Official source"} <ExternalLink size={9}/></a>:null}</div></article>
-  <section className={styles.readiness}>{capabilities.hasVat?<Link href="/app/vat" className={styles.readyCard}><div className={styles.readyTop}><span>TVA</span><b className={vatReady?"":styles.needs}>{vatReady?(fr?"prête":"ready"):(fr?"à vérifier":"review")}</b></div><strong>{vatReady?(fr?"Données TVA structurellement prêtes":"VAT data structurally ready"):(fr?"Des éléments TVA restent à vérifier":"VAT evidence still has gaps")}</strong><small>{fr?`${pendingTx.count??0} transactions non vérifiées · ${unknownVat.count??0} traitements TVA inconnus`:`${pendingTx.count??0} unreviewed transactions · ${unknownVat.count??0} unknown VAT treatments`}</small></Link>:null}{capabilities.hasCompanyYearEnd?<Link href="/app/year-end" className={styles.readyCard}><div className={styles.readyTop}><span>{fr?"Comptes annuels":"Annual accounts"}</span><b className={annualReady?"":styles.needs}>{annualReady?(fr?"figés":"frozen"):(fr?"ouverts":"open")}</b></div><strong>{annualReady?(fr?"L’instantané de clôture existe":"Closing snapshot exists"):(fr?"La clôture annuelle reste ouverte":"Year-end remains open")}</strong><small>{fr?"Vérifiez la liste de contrôle de clôture de l’exercice sélectionné avant de préparer les comptes annuels.":"Review the selected year’s closing checklist before annual-account preparation."}</small></Link>:null}{capabilities.hasCorporateTaxes?<Link href="/app/taxes" className={styles.readyCard}><div className={styles.readyTop}><span>{fr?"Impôts directs":"Direct taxes"}</span><b className={taxReady?"":styles.needs}>{taxReady?(fr?"profilé":"profiled"):(fr?"à compléter":"input")}</b></div><strong>{taxReady?(fr?"Paramètre d’impôt communal confirmé":"Municipal tax input confirmed"):(fr?`L’estimation fiscale ${year} nécessite les données du profil`:`${year} tax estimate needs profile data`)}</strong><small>{fr?"Les estimations historiques ne réutilisent jamais silencieusement le multiplicateur communal d’un autre exercice.":"Historical estimates never reuse a different year’s municipal multiplier silently."}</small></Link>:null}<Link href="/app/taxes" className={styles.readyCard}><div className={styles.readyTop}><span>{fr?"Justificatifs des autorités":"Authority evidence"}</span><b className={noticeCount?"":styles.needs}>{noticeCount?(fr?`${noticeCount} dossier${noticeCount===1?"":"s"}`:`${noticeCount} cases`):(fr?"aucun":"none")}</b></div><strong>{noticeCount?(fr?"Les avis d’imposition sont suivis":"Tax notices are tracked"):(fr?"Aucun avis d’autorité importé":"No authority notices imported")}</strong><small>{fr?"Les montants et paiements des avis restent fondés sur les justificatifs.":"Notice amounts and payments stay evidence-driven."}</small></Link></section>
-  <section className={styles.sections}><article className={styles.section}><div className={styles.sectionHead}><div><p>{fr?"Actions et échéances":"Action & upcoming"}</p><h2>{fr?"Obligations ouvertes":"Open obligations"}</h2></div><span>{active.length} {fr?"active(s)":"active"}</span></div>{active.length===0?<div className={styles.empty}><CalendarCheck2 size={20}/><p>{fr?`Aucune obligation ouverte pour ${year}. Actualisez les règles si l’exercice n’a pas encore été généré.`:`No open obligations for ${year}. Refresh rules if the year has not been generated yet.`}</p></div>:<div className={styles.list}>{overdue.map(row=>obligationRow(row,true,false))}{upcoming.map(row=>obligationRow(row,false,false))}</div>}</article><article className={styles.section}><div className={styles.sectionHead}><div><p>{fr?"Historique":"History"}</p><h2>{fr?"Terminées":"Completed"}</h2></div><span>{completed.length}</span></div>{completed.length===0?<div className={styles.empty}>{fr?"Les dépôts et paiements terminés apparaîtront ici.":"Completed filings and payments will appear here."}</div>:<div className={styles.list}>{completed.slice(0,12).map(row=>obligationRow(row,false,true))}</div>}</article></section>
-  <div className={styles.notice}><AlertTriangle size={13}/><span>{fr?"Le statut de workflow de Zuelen est un enregistrement interne. Zuelen ne prétend jamais qu’une autorité a accepté un dépôt tant que vous ne l’avez pas explicitement marqué comme déposé ou payé après confirmation.":"Zuelen’s workflow status is an internal record. It never claims an authority accepted a filing unless you explicitly mark it filed or paid after confirmation."}</span></div>
- </V2Page>;
+      <article className={styles.nextCard}>
+        <div className={styles.dateBlock}>
+          <strong>{nextDate ? nextDate.getDate() : "—"}</strong>
+          <span>
+            {nextDate ? nextDate.toLocaleDateString(intl, { month: "short" }).toUpperCase() : fr ? "RAS" : "CLEAR"}
+          </span>
+        </div>
+        <div className={styles.nextCopy}>
+          <span>{fr ? "Prochaine obligation" : "Next obligation"}</span>
+          <strong>{(next ? label(next) : null) ?? (fr ? "Aucune échéance active" : "No active deadline")}</strong>
+          <small>
+            {next
+              ? `${next.authority} · ${next.period_label ?? year} · ${statusLabel(next.status, fr)}`
+              : fr
+                ? `Aucune obligation générée pour ${year}. Actualisez les règles pour les créer.`
+                : `No obligations generated for ${year}. Refresh rules to create them.`}
+          </small>
+        </div>
+        <div className={styles.nextSide}>
+          <b>{dayMessage}</b>
+          {next && url(next) ? (
+            <a href={url(next)!} target="_blank" rel="noreferrer">
+              {fr ? "Source officielle" : "Official source"} <ExternalLink size={9} />
+            </a>
+          ) : null}
+        </div>
+      </article>
+      <section className={styles.readiness}>
+        {capabilities.hasVat ? (
+          <Link href="/app/vat" className={styles.readyCard}>
+            <div className={styles.readyTop}>
+              <span>TVA</span>
+              <b className={vatReady ? "" : styles.needs}>
+                {vatReady ? (fr ? "prête" : "ready") : fr ? "à vérifier" : "review"}
+              </b>
+            </div>
+            <strong>
+              {vatReady
+                ? fr
+                  ? "Données TVA structurellement prêtes"
+                  : "VAT data structurally ready"
+                : fr
+                  ? "Des éléments TVA restent à vérifier"
+                  : "VAT evidence still has gaps"}
+            </strong>
+            <small>
+              {fr
+                ? `${pendingTx.count ?? 0} transactions non vérifiées · ${unknownVat.count ?? 0} traitements TVA inconnus`
+                : `${pendingTx.count ?? 0} unreviewed transactions · ${unknownVat.count ?? 0} unknown VAT treatments`}
+            </small>
+          </Link>
+        ) : null}
+        {capabilities.hasCompanyYearEnd ? (
+          <Link href="/app/year-end" className={styles.readyCard}>
+            <div className={styles.readyTop}>
+              <span>{fr ? "Comptes annuels" : "Annual accounts"}</span>
+              <b className={annualReady ? "" : styles.needs}>
+                {annualReady ? (fr ? "figés" : "frozen") : fr ? "ouverts" : "open"}
+              </b>
+            </div>
+            <strong>
+              {annualReady
+                ? fr
+                  ? "L’instantané de clôture existe"
+                  : "Closing snapshot exists"
+                : fr
+                  ? "La clôture annuelle reste ouverte"
+                  : "Year-end remains open"}
+            </strong>
+            <small>
+              {fr
+                ? "Vérifiez la liste de contrôle de clôture de l’exercice sélectionné avant de préparer les comptes annuels."
+                : "Review the selected year’s closing checklist before annual-account preparation."}
+            </small>
+          </Link>
+        ) : null}
+        {capabilities.hasCorporateTaxes ? (
+          <Link href="/app/taxes" className={styles.readyCard}>
+            <div className={styles.readyTop}>
+              <span>{fr ? "Impôts directs" : "Direct taxes"}</span>
+              <b className={taxReady ? "" : styles.needs}>
+                {taxReady ? (fr ? "profilé" : "profiled") : fr ? "à compléter" : "input"}
+              </b>
+            </div>
+            <strong>
+              {taxReady
+                ? fr
+                  ? "Paramètre d’impôt communal confirmé"
+                  : "Municipal tax input confirmed"
+                : fr
+                  ? `L’estimation fiscale ${year} nécessite les données du profil`
+                  : `${year} tax estimate needs profile data`}
+            </strong>
+            <small>
+              {fr
+                ? "Les estimations historiques ne réutilisent jamais silencieusement le multiplicateur communal d’un autre exercice."
+                : "Historical estimates never reuse a different year’s municipal multiplier silently."}
+            </small>
+          </Link>
+        ) : null}
+        <Link href="/app/taxes" className={styles.readyCard}>
+          <div className={styles.readyTop}>
+            <span>{fr ? "Justificatifs des autorités" : "Authority evidence"}</span>
+            <b className={noticeCount ? "" : styles.needs}>
+              {noticeCount
+                ? fr
+                  ? `${noticeCount} dossier${noticeCount === 1 ? "" : "s"}`
+                  : `${noticeCount} cases`
+                : fr
+                  ? "aucun"
+                  : "none"}
+            </b>
+          </div>
+          <strong>
+            {noticeCount
+              ? fr
+                ? "Les avis d’imposition sont suivis"
+                : "Tax notices are tracked"
+              : fr
+                ? "Aucun avis d’autorité importé"
+                : "No authority notices imported"}
+          </strong>
+          <small>
+            {fr
+              ? "Les montants et paiements des avis restent fondés sur les justificatifs."
+              : "Notice amounts and payments stay evidence-driven."}
+          </small>
+        </Link>
+      </section>
+      <section className={styles.sections}>
+        <article className={styles.section}>
+          <div className={styles.sectionHead}>
+            <div>
+              <p>{fr ? "Actions et échéances" : "Action & upcoming"}</p>
+              <h2>{fr ? "Obligations ouvertes" : "Open obligations"}</h2>
+            </div>
+            <span>
+              {active.length} {fr ? "active(s)" : "active"}
+            </span>
+          </div>
+          {active.length === 0 ? (
+            <div className={styles.empty}>
+              <CalendarCheck2 size={20} />
+              <p>
+                {fr
+                  ? `Aucune obligation ouverte pour ${year}. Actualisez les règles si l’exercice n’a pas encore été généré.`
+                  : `No open obligations for ${year}. Refresh rules if the year has not been generated yet.`}
+              </p>
+            </div>
+          ) : (
+            <div className={styles.list}>
+              {overdue.map(row => obligationRow(row, true, false))}
+              {upcoming.map(row => obligationRow(row, false, false))}
+            </div>
+          )}
+        </article>
+        <article className={styles.section}>
+          <div className={styles.sectionHead}>
+            <div>
+              <p>{fr ? "Historique" : "History"}</p>
+              <h2>{fr ? "Terminées" : "Completed"}</h2>
+            </div>
+            <span>{completed.length}</span>
+          </div>
+          {completed.length === 0 ? (
+            <div className={styles.empty}>
+              {fr
+                ? "Les dépôts et paiements terminés apparaîtront ici."
+                : "Completed filings and payments will appear here."}
+            </div>
+          ) : (
+            <div className={styles.list}>{completed.slice(0, 12).map(row => obligationRow(row, false, true))}</div>
+          )}
+        </article>
+      </section>
+      <div className={styles.notice}>
+        <AlertTriangle size={13} />
+        <span>
+          {fr
+            ? "Le statut de workflow de Zuelen est un enregistrement interne. Zuelen ne prétend jamais qu’une autorité a accepté un dépôt tant que vous ne l’avez pas explicitement marqué comme déposé ou payé après confirmation."
+            : "Zuelen’s workflow status is an internal record. It never claims an authority accepted a filing unless you explicitly mark it filed or paid after confirmation."}
+        </span>
+      </div>
+    </V2Page>
+  );
 }

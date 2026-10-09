@@ -13,5 +13,35 @@ export default async function ProfessionalSecurityPage() {
   if (!profile) return null;
   const locale = normalizeLocale(workspace.profile?.locale);
   const fr = locale === "fr";
-  return <ProfessionalFrame name={profile.full_name || workspace.profile?.full_name || workspace.email || "Accountant"} firmName={profile.firm_name} email={workspace.email} photoUrl={profile.photo_url} approvalStatus={profile.approval_status} plan={subscription?.tier ?? null} hasBusinessWorkspace={workspace.workspaces.length > 0} locale={locale}><div className={styles.page}><div className={styles.pageHead}><div><span>{fr ? "Paramètres · sécurité" : "Settings · security"}</span><h1>{fr ? "Sécurité du compte" : "Account security"}</h1><p>{fr ? "Protégez votre identité Zuelen et tous les espaces qui y sont rattachés." : "Protect your Zuelen identity and every workspace attached to it."}</p></div><Link className={styles.secondaryLink} href="/professional/settings"><ArrowLeft size={14}/>{fr ? "Paramètres" : "Settings"}</Link></div><MfaSettings locale={locale}/></div></ProfessionalFrame>;
+  return (
+    <ProfessionalFrame
+      name={profile.full_name || workspace.profile?.full_name || workspace.email || "Accountant"}
+      firmName={profile.firm_name}
+      email={workspace.email}
+      photoUrl={profile.photo_url}
+      approvalStatus={profile.approval_status}
+      plan={subscription?.tier ?? null}
+      hasBusinessWorkspace={workspace.workspaces.length > 0}
+      locale={locale}
+    >
+      <div className={styles.page}>
+        <div className={styles.pageHead}>
+          <div>
+            <span>{fr ? "Paramètres · sécurité" : "Settings · security"}</span>
+            <h1>{fr ? "Sécurité du compte" : "Account security"}</h1>
+            <p>
+              {fr
+                ? "Protégez votre identité Zuelen et tous les espaces qui y sont rattachés."
+                : "Protect your Zuelen identity and every workspace attached to it."}
+            </p>
+          </div>
+          <Link className={styles.secondaryLink} href="/professional/settings">
+            <ArrowLeft size={14} />
+            {fr ? "Paramètres" : "Settings"}
+          </Link>
+        </div>
+        <MfaSettings locale={locale} />
+      </div>
+    </ProfessionalFrame>
+  );
 }
