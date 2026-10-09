@@ -397,3 +397,95 @@ html[data-zuelen-theme="dark"] .clear {
     flex-direction: column;
   }
 }
+
+/* Period selector and return worksheet */
+.periods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.periods a {
+  border: 1px solid var(--z-border);
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 12px;
+  color: var(--z-text-secondary);
+  text-decoration: none;
+  background: var(--z-surface-1);
+}
+.periods a:hover {
+  border-color: var(--z-border-strong);
+  color: var(--z-text);
+}
+.periods .periodActive {
+  background: var(--z-brand);
+  border-color: var(--z-brand);
+  color: var(--z-brand-on);
+}
+.formNote {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--z-text-secondary);
+  margin: -6px 0 14px;
+}
+.formNote a {
+  color: var(--z-brand-strong);
+  white-space: nowrap;
+}
+.formSection {
+  margin-bottom: 16px;
+}
+.formSection h3 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+.formLine {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px 104px 36px 104px;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--z-border);
+  font-size: 12px;
+}
+.formLine > span:first-child {
+  color: var(--z-text-secondary);
+  line-height: 1.45;
+}
+.formLine code {
+  font-family: var(--z-font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--z-text-tertiary);
+  text-align: right;
+}
+.formLine strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.formTotal > span:first-child,
+.formTotal strong {
+  color: var(--z-text);
+  font-weight: 600;
+}
+.issueList {
+  margin: 6px 0 0;
+  padding-left: 16px;
+}
+.issueList li {
+  margin: 3px 0;
+}
+@media (max-width: 700px) {
+  .formLine {
+    grid-template-columns: 28px minmax(0, 1fr) 28px minmax(0, 1fr);
+    padding-left: 0 !important;
+  }
+  .formLine > span:first-child {
+    grid-column: 1 / -1;
+  }
+  .formLine > span:empty {
+    display: none;
+  }
+}

@@ -71,6 +71,9 @@ export function closestVatRate(observedPercent: number, date?: string | Date | n
 export const FRANCHISE_SOURCE = "https://pfi.public.lu/dam-assets/pdf/tva/sme/faq-fr.pdf";
 export const FRANCHISE_MENTION = "TVA non applicable – Article 57bis de la loi modifiée du 12 février 1979";
 export const EXEMPT_ACTIVITY_MENTION = "Exonération de TVA – article 44 de la loi modifiée du 12 février 1979";
+/** Printed on an invoice to a business customer outside the EU (same text as the database stores at issue). */
+export const OUTSIDE_EU_SERVICE_MENTION =
+  "TVA non applicable – prestation de services à un preneur assujetti établi hors de l'Union européenne";
 
 type FranchiseThreshold = {
   effectiveFromYear: number;

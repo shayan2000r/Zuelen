@@ -44,21 +44,12 @@ All checks above still pass after the cleanup.
 | 9 | Unused exports in the UI kit | Kept on purpose (design-system primitives). |
 | 10 | SQL tests not run in CI | **Fixed** (database job). The cross-tenant test had a missing grant and could not have run; fixed. |
 
-### Database changes that need a person's approval
+### Database changes that needed a person's approval
 
-The Supabase connector used by Claude asks for confirmation before running SQL that contains DROP or
-DELETE (also inside function bodies). Those changes are tested and waiting in
-`db/pending/requires_approval.sql`:
+The retention guard, dated rate validation for drafts, removal of the hard-coded rate checks and the
+cleanup of the temporary export function were applied in the Supabase SQL editor on 2026-10-09
+(`db/migrations/20261009120000_requires_approval_bundle.sql`) and verified against the tested version.
 
-- reset functions refuse to remove issued invoices and posted entries of ended financial years
-  (Code de commerce art. 16, ten-year retention);
-- invoice drafts validate VAT rates against the supply date;
-- the issued-invoice protection also freezes the stored VAT mention;
-- the hard-coded 0/3/8/14/17 % checks are removed so 2023 rates (16/13/7 %) can be booked;
-- the temporary function used to export the baseline is removed (already disabled).
-
-Apply it in the Supabase SQL editor (or ask Claude to apply it while you are there to approve), then
-rename it to `db/migrations/<version>_requires_approval_bundle.sql`.
 ## 4. Structure
 
 The top-level layout (`src/app`, `src/components`, `src/lib`, `db`, `docs`, `tests`) is sound. Domain logic

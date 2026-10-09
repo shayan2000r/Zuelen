@@ -1,6 +1,6 @@
--- Changes held for explicit approval: the Supabase connector asks for confirmation before running
--- any SQL that removes rows or objects (also inside function bodies). Apply after the VAT rules
--- migration (needs public.lu_vat_rate_allowed and sales_invoices.vat_exemption_mention).
+-- Applied on 2026-10-09 in the Supabase SQL editor (the connector cannot confirm DROP/DELETE
+-- statements from a cloud session). Recorded in the migration history as 20261009120000.
+--
 --
 -- 1. Bookkeeping retention guard (regulatory register H1). Code de commerce art. 16: accounting
 --    records are kept for ten years from the end of the financial year. The reset functions already
