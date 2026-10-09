@@ -332,14 +332,28 @@ function ManualEntryFlow({
                 <option value="domestic">{fr ? "TVA luxembourgeoise" : "Luxembourg VAT"}</option>
                 <option value="exempt_or_zero">{fr ? "Pas de TVA / exonéré" : "No VAT / exempt"}</option>
                 <option value="eu_b2b_reverse_charge">
-                  {fr ? "Achat B2B UE · autoliquidation" : "EU B2B purchase · reverse charge"}
+                  {direction === "income"
+                    ? fr
+                      ? "Vente à une entreprise UE · autoliquidation"
+                      : "Sale to an EU business · reverse charge"
+                    : fr
+                      ? "Achat B2B UE · autoliquidation"
+                      : "EU B2B purchase · reverse charge"}
                 </option>
                 <option value="non_eu">{fr ? "Hors UE / importation" : "Outside EU / import"}</option>
               </select>
             </label>
-            {vatTreatment === "domestic" || vatTreatment === "eu_b2b_reverse_charge" ? (
+            {vatTreatment === "domestic" || (vatTreatment === "eu_b2b_reverse_charge" && direction === "expense") ? (
               <label className={styles.field}>
-                <span>{fr ? "Taux TVA si connu" : "VAT rate if known"}</span>
+                <span>
+                  {vatTreatment === "domestic"
+                    ? fr
+                      ? "Taux TVA si connu"
+                      : "VAT rate if known"
+                    : fr
+                      ? "Taux TVA luxembourgeois à autoliquider"
+                      : "Luxembourg VAT rate to self-assess"}
+                </span>
                 <select name="vat_rate" value={vatRate} onChange={e => setVatRate(Number(e.target.value))}>
                   {rates.map(rate => (
                     <option value={rate} key={rate}>
@@ -366,6 +380,13 @@ function ManualEntryFlow({
             ) : (
               <input type="hidden" name="vat_included" value="no" />
             )}
+            {direction === "expense" ? (
+              <small className={styles.fieldHelp + " " + styles.fieldFull}>
+                {fr
+                  ? "La TVA facturée par un fournisseur étranger n’est pas de la TVA luxembourgeoise : choisissez « Pas de TVA / exonéré ». Elle reste dans le coût ; le cas échéant, elle se récupère par une procédure de remboursement distincte."
+                  : "VAT charged by a foreign supplier is not Luxembourg VAT: choose “No VAT / exempt”. It stays in the cost; where allowed, it is reclaimed through a separate refund procedure."}
+              </small>
+            ) : null}
             <label className={styles.field}>
               <span>{fr ? "Pays du tiers · facultatif" : "Counterparty country · optional"}</span>
               <input

@@ -192,6 +192,129 @@ insert into ids values ('tx2023', pg_temp.tx((select v from ids where k='sas'), 
 select pg_temp.eq('16 % accepted for a 2023 transaction', (select vat_rate from public.source_transactions where id = (select v from ids where k='tx2023')), 16.00);
 
 -- ---------------------------------------------------------------------------
+-- A9 / A13 / A14: which VAT is deducted, self-assessment, and corrections
+-- ---------------------------------------------------------------------------
+create function pg_temp.expect_error(p_label text, p_sql text, p_message_like text) returns void language plpgsql as $$
+begin
+  begin
+    execute p_sql;
+  exception when others then
+    execute 'reset role';
+    if sqlerrm not like p_message_like then raise exception 'FAIL %: unexpected error %', p_label, sqlerrm; end if;
+    raise notice 'ok   %', p_label;
+    return;
+  end;
+  execute 'reset role';
+  raise exception 'FAIL %: no error', p_label;
+end $$;
+create function pg_temp.correct(p_tx uuid, p_gross numeric, p_net numeric, p_vat numeric, p_rate numeric, p_treatment text, p_direction text default 'expense') returns void language plpgsql as $$
+begin
+  perform pg_temp.as_user((select o.owner_id from public.organizations o join public.source_transactions s on s.organization_id = o.id where s.id = p_tx));
+  execute 'set local role authenticated';
+  perform public.correct_source_transaction(p_tx, (select occurred_on from public.source_transactions where id = p_tx), p_direction,
+    p_gross, p_net, p_vat, p_rate, p_treatment, 'Supplier', 'corrected', 'LU');
+  execute 'reset role';
+end $$;
+create function pg_temp.entry(p_tx uuid) returns uuid language sql as $$
+  select posted_journal_entry_id from public.source_transactions where id = p_tx
+$$;
+grant execute on all functions in schema pg_temp to authenticated;
+
+-- Foreign VAT (recorded under a non-Luxembourg treatment) is never deducted: it is part of the cost.
+insert into ids values ('e_foreign', pg_temp.post(pg_temp.tx((select v from ids where k='sas'), date '2026-04-05', 'expense', 120, 100, 20, null, 'non_eu'), '6132'));
+select pg_temp.eq('Foreign VAT: whole amount is the cost', pg_temp.line((select v from ids where k='e_foreign'), '6132'), 120.00);
+select pg_temp.eq('Foreign VAT: no input VAT', pg_temp.line((select v from ids where k='e_foreign'), '421611'), 0::numeric);
+
+-- VAT with an unconfirmed treatment, and an EU purchase without self-assessed VAT, are not posted.
+insert into ids values ('e_unknown', pg_temp.tx((select v from ids where k='sas'), date '2026-04-05', 'expense', 117, 100, 17, 17, 'unknown'));
+select pg_temp.expect_error('VAT with an unconfirmed treatment is not posted',
+  format('select public.classify_and_post_source_transaction(%L, %L)', (select v from ids where k='e_unknown'), '6132'), '%Confirm the VAT situation%');
+insert into ids values ('e_rc0', pg_temp.tx((select v from ids where k='sas'), date '2026-04-05', 'expense', 500, 500, 0, 0, 'eu_b2b_reverse_charge'));
+select pg_temp.expect_error('EU purchase without self-assessed VAT is not posted',
+  format('select public.classify_and_post_source_transaction(%L, %L)', (select v from ids where k='e_rc0'), '6132'), '%self-assess%');
+
+-- An intra-Community acquisition of goods is self-assessed like a reverse-charge service.
+insert into ids values ('e_acq', pg_temp.post(pg_temp.tx((select v from ids where k='sas'), date '2026-04-06', 'expense', 200, null, 34, 17, 'eu_acquisition'), '6132'));
+select pg_temp.eq('Intra-Community acquisition: output VAT 34', pg_temp.line((select v from ids where k='e_acq'), '461411'), -34.00);
+select pg_temp.eq('Intra-Community acquisition: input VAT 34', pg_temp.line((select v from ids where k='e_acq'), '421611'), 34.00);
+select pg_temp.eq('Intra-Community acquisition: bank -200', pg_temp.line((select v from ids where k='e_acq'), '5131'), -200.00);
+
+-- Correcting a posted purchase from 17 % to 8 % reverses the entry and posts the corrected VAT.
+insert into ids values ('t_corr', pg_temp.tx((select v from ids where k='sas'), date '2026-04-02', 'expense', 117, 100, 17, 17, 'domestic'));
+insert into ids values ('t_corr_entry', pg_temp.post((select v from ids where k='t_corr'), '6132'));
+select pg_temp.correct((select v from ids where k='t_corr'), 108, 100, 8, 8, 'domestic');
+select pg_temp.eq('Correction: transaction posted again', (select classification_status from public.source_transactions where id = (select v from ids where k='t_corr')), 'posted');
+select pg_temp.eq('Correction: new rate stored', (select vat_rate from public.source_transactions where id = (select v from ids where k='t_corr')), 8.00);
+select pg_temp.eq('Correction: input VAT 8', pg_temp.line(pg_temp.entry((select v from ids where k='t_corr')), '421611'), 8.00);
+select pg_temp.eq('Correction: original entry reversed', (select count(*) from public.journal_entries where reversal_of = (select v from ids where k='t_corr_entry') and status = 'posted'), 1::bigint);
+
+-- Correcting a posted purchase to an EU reverse charge self-assesses the VAT on the amount paid.
+select pg_temp.correct((select v from ids where k='t_corr'), 1000, 1000, 170, 17, 'eu_b2b_reverse_charge');
+select pg_temp.eq('Correction to reverse charge: no separate net amount', (select amount_net from public.source_transactions where id = (select v from ids where k='t_corr')), null::numeric);
+select pg_temp.eq('Correction to reverse charge: expense 1000', pg_temp.line(pg_temp.entry((select v from ids where k='t_corr')), '6132'), 1000.00);
+select pg_temp.eq('Correction to reverse charge: output VAT 170', pg_temp.line(pg_temp.entry((select v from ids where k='t_corr')), '461411'), -170.00);
+select pg_temp.eq('Correction to reverse charge: input VAT 170', pg_temp.line(pg_temp.entry((select v from ids where k='t_corr')), '421611'), 170.00);
+
+-- The older correction function keeps the stored treatment.
+do $$ begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+  set local role authenticated;
+  perform public.update_source_transaction_safe((select v from ids where k='t_corr'), date '2026-04-02', 'expense', 2000, 340, 'Supplier', 'legacy');
+  reset role;
+end $$;
+select pg_temp.eq('Legacy correction keeps reverse charge', (select vat_treatment || ' ' || coalesce(amount_net::text, 'no net') from public.source_transactions where id = (select v from ids where k='t_corr')), 'eu_b2b_reverse_charge no net');
+select pg_temp.eq('Legacy correction: output VAT 340', pg_temp.line(pg_temp.entry((select v from ids where k='t_corr')), '461411'), -340.00);
+
+-- A sale to an EU business customer carries no Luxembourg VAT.
+insert into ids values ('i_eu', pg_temp.tx((select v from ids where k='sas'), date '2026-04-07', 'income', 1000, 1000, 0, 0, 'domestic'));
+select pg_temp.expect_error('Correction refuses Luxembourg VAT on an EU B2B sale',
+  format('select pg_temp.correct(%L, 1170, 1000, 170, 17, %L, %L)', (select v from ids where k='i_eu'), 'eu_b2b_reverse_charge', 'income'), '%carries no Luxembourg VAT%');
+select pg_temp.expect_error('Correction refuses VAT with an unconfirmed treatment',
+  format('select pg_temp.correct(%L, 117, 100, 17, 17, %L)', (select v from ids where k='e_unknown'), 'unknown'), '%Choose Luxembourg VAT%');
+
+-- Document intake: rates by date, foreign VAT flagged, the bank amount kept.
+create function pg_temp.doc(p_company uuid, p_data jsonb) returns uuid language sql as $$
+  insert into public.documents (organization_id, company_id, type, storage_path, file_name, extraction_status, extracted_data)
+  select organization_id, id, 'purchase_invoice', 'test/' || gen_random_uuid(), 'invoice.pdf', 'needs_review', p_data
+  from public.companies where id = p_company
+  returning id
+$$;
+create function pg_temp.from_doc(p_doc uuid) returns uuid language plpgsql as $$
+declare v uuid;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+  execute 'set local role authenticated';
+  v := (public.create_source_transaction_from_document(p_doc)->>'transaction_id')::uuid;
+  execute 'reset role';
+  return v;
+end $$;
+grant execute on all functions in schema pg_temp to authenticated;
+
+insert into ids values ('d_2023', pg_temp.from_doc(pg_temp.doc((select v from ids where k='sas'),
+  '{"document_kind":"purchase_invoice","total":116,"subtotal":100,"vat_amount":16,"vat_rate":16,"document_date":"2023-05-10","currency":"EUR","issuer_name":"Fournisseur SA","issuer_country":"LU","suggested_vat_treatment":"domestic","transaction_direction":"expense"}')));
+select pg_temp.eq('Document from 2023 keeps its 16 % rate', (select vat_rate from public.source_transactions where id = (select v from ids where k='d_2023')), 16.00);
+
+insert into ids values ('d_foreign', pg_temp.from_doc(pg_temp.doc((select v from ids where k='sas'),
+  '{"document_kind":"purchase_invoice","total":119,"subtotal":100,"vat_amount":19,"vat_rate":19,"document_date":"2026-05-10","currency":"EUR","issuer_name":"Hotel GmbH","issuer_country":"DE","suggested_vat_treatment":"domestic","transaction_direction":"expense"}')));
+select pg_temp.eq('Foreign VAT on a document is flagged for review', (select vat_treatment || ' ' || coalesce(vat_rate::text, 'no rate') from public.source_transactions where id = (select v from ids where k='d_foreign')), 'unknown no rate');
+
+-- A document matched to a bank movement does not change the amount paid.
+insert into ids values ('bank_tx', pg_temp.tx((select v from ids where k='sas'), date '2026-05-12', 'expense', 117, null, null, null, 'unknown'));
+update public.source_transactions set source_type = 'bank' where id = (select v from ids where k='bank_tx');
+insert into ids values ('d_bank', pg_temp.doc((select v from ids where k='sas'),
+  '{"document_kind":"purchase_invoice","total":117.01,"subtotal":100,"vat_amount":17,"vat_rate":17,"document_date":"2026-05-12","currency":"EUR","issuer_name":"Fournisseur SA","issuer_country":"LU","suggested_vat_treatment":"domestic"}'));
+insert into public.document_transaction_links (organization_id, company_id, document_id, source_transaction_id, match_score, status, match_reason, created_by)
+select organization_id, company_id, (select v from ids where k='d_bank'), id, 0.95, 'suggested', 'test', '00000000-0000-0000-0000-00000000000a'
+from public.source_transactions where id = (select v from ids where k='bank_tx');
+do $$ begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+  set local role authenticated;
+  perform public.apply_document_facts_to_transaction((select id from public.document_transaction_links where document_id = (select v from ids where k='d_bank')));
+  reset role;
+end $$;
+select pg_temp.eq('Bank amount kept, document VAT applied', (select amount_gross || ' ' || vat_amount || ' ' || amount_net || ' ' || vat_treatment from public.source_transactions where id = (select v from ids where k='bank_tx')), '117.00 17.00 100.00 domestic');
+
+-- ---------------------------------------------------------------------------
 -- A7 / A8: VAT mention fixed on issued invoices
 -- ---------------------------------------------------------------------------
 create function pg_temp.issue(p_company uuid, p_treatment text, p_country text, p_customer_vat text, p_rate numeric) returns uuid language plpgsql as $$

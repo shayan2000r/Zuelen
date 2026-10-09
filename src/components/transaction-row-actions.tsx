@@ -13,6 +13,7 @@ import { TransactionEvidenceAction } from "@/components/transaction-evidence-act
 import { TransactionHistoryAction } from "@/components/transaction-history-action";
 import styles from "./record-actions.module.css";
 import { closestVatRate, vatRatesOn } from "@/lib/tax-rules/vat";
+import { computeTransactionVat } from "@/lib/tax-rules/transaction-vat";
 
 type Account = { id: string; code: string; label: string; account_type: string };
 type Evidence = { id: string; file_name: string; type: string; file_size: number | null; created_at: string };
@@ -66,21 +67,24 @@ export function TransactionRowActions({ row, accounts = [] }: { row: Row; accoun
     [rate, setRate] = useState(defaultRate),
     [included, setIncluded] = useState(true),
     [treatment, setTreatment] = useState(defaultTreatment);
+  const [direction, setDirection] = useState(row.direction),
+    [occurredOn, setOccurredOn] = useState(row.occurred_on);
   const calc = useMemo(() => {
-    if (!amount) return { net: 0, vat: 0, gross: 0 };
-    if (treatment === "eu_b2b_reverse_charge") {
-      const vat = (amount * rate) / 100;
-      return { net: amount, vat, gross: amount };
-    }
-    if (treatment === "non_eu" || treatment === "exempt_or_zero" || rate === 0)
-      return { net: amount, vat: 0, gross: amount };
-    if (included) {
-      const net = amount / (1 + rate / 100);
-      return { net, vat: amount - net, gross: amount };
-    }
-    const vat = (amount * rate) / 100;
-    return { net: amount, vat, gross: amount + vat };
-  }, [amount, rate, included, treatment]);
+    const result = computeTransactionVat({
+      amount,
+      rate,
+      included,
+      treatment,
+      direction,
+      occurredOn,
+      // The server checks registration; the preview only shows the split.
+      vatRegistered: true,
+    });
+    return result.ok ? result : { net: 0, vat: 0, gross: 0, selfAssessed: false };
+  }, [amount, rate, included, treatment, direction, occurredOn]);
+  const showRate =
+    treatment === "domestic" ||
+    ((treatment === "eu_b2b_reverse_charge" || treatment === "eu_acquisition") && direction === "expense");
   const posted = row.classification_status === "posted",
     eligible = accounts
       .filter(a =>
@@ -152,8 +156,8 @@ export function TransactionRowActions({ row, accounts = [] }: { row: Row; accoun
           </div>
           {posted ? (
             <p className={styles.notice}>
-              Posted entries are never rewritten. Category changes create a reversal/replacement. Transaction fact edits
-              use the existing safe correction workflow; VAT treatment itself is locked once posted.
+              Posted entries are never rewritten. Saving a change reverses the original entry and posts a corrected one,
+              so the ledger keeps both.
             </p>
           ) : null}
           {posted && eligible.length ? (
@@ -188,29 +192,39 @@ export function TransactionRowActions({ row, accounts = [] }: { row: Row; accoun
             <div className={styles.grid}>
               <label>
                 <span>Type</span>
-                <select name="direction" defaultValue={row.direction}>
+                <select name="direction" value={direction} onChange={e => setDirection(e.target.value)}>
                   <option value="expense">Expense</option>
                   <option value="income">Income / refund</option>
                 </select>
               </label>
               <label>
                 <span>Date</span>
-                <input name="occurred_on" type="date" defaultValue={row.occurred_on} required />
+                <input
+                  name="occurred_on"
+                  type="date"
+                  value={occurredOn}
+                  onChange={e => setOccurredOn(e.target.value)}
+                  required
+                />
               </label>
-              {!posted ? (
-                <label className={styles.full}>
-                  <span>VAT treatment</span>
-                  <select name="vat_treatment" value={treatment} onChange={e => setTreatment(e.target.value)}>
-                    <option value="domestic">Luxembourg domestic VAT</option>
-                    <option value="eu_b2b_reverse_charge">EU B2B · reverse charge</option>
-                    <option value="non_eu">Non-EU / import evidence</option>
-                    <option value="exempt_or_zero">Exempt / zero-rated</option>
-                    <option value="unknown">Not sure · review later</option>
-                  </select>
-                </label>
-              ) : (
-                <input type="hidden" name="vat_treatment" value={defaultTreatment} />
-              )}
+              <label className={styles.full}>
+                <span>VAT treatment</span>
+                <select name="vat_treatment" value={treatment} onChange={e => setTreatment(e.target.value)}>
+                  <option value="domestic">Luxembourg VAT</option>
+                  <option value="eu_b2b_reverse_charge">
+                    {direction === "income"
+                      ? "EU business customer · reverse charge"
+                      : "EU B2B purchase · reverse charge"}
+                  </option>
+                  {direction === "expense" || treatment === "eu_acquisition" ? (
+                    <option value="eu_acquisition">EU purchase of goods · intra-Community acquisition</option>
+                  ) : null}
+                  <option value="non_eu">Outside EU / import</option>
+                  <option value="exempt_or_zero">No VAT / exempt</option>
+                  <option value="outside_scope">Outside the scope of VAT</option>
+                  <option value="unknown">Not sure · review later</option>
+                </select>
+              </label>
               <label>
                 <span>Amount</span>
                 <input
@@ -223,16 +237,20 @@ export function TransactionRowActions({ row, accounts = [] }: { row: Row; accoun
                   required
                 />
               </label>
-              <label>
-                <span>{treatment === "eu_b2b_reverse_charge" ? "Notional VAT rate" : "VAT rate"}</span>
-                <select name="vat_rate" value={rate} onChange={e => setRate(Number(e.target.value))}>
-                  {vatRatesOn(row.occurred_on).map(r => (
-                    <option value={r} key={r}>
-                      {r}%
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {showRate ? (
+                <label>
+                  <span>{treatment === "domestic" ? "VAT rate" : "Self-assessed VAT rate"}</span>
+                  <select name="vat_rate" value={rate} onChange={e => setRate(Number(e.target.value))}>
+                    {vatRatesOn(occurredOn).map(r => (
+                      <option value={r} key={r}>
+                        {r}%
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <input type="hidden" name="vat_rate" value="0" />
+              )}
               {treatment === "domestic" ? (
                 <label className={styles.full}>
                   <span>Does the amount include VAT?</span>
@@ -250,8 +268,8 @@ export function TransactionRowActions({ row, accounts = [] }: { row: Row; accoun
               )}
               <div className={`${styles.notice} ${styles.full}`}>
                 <Calculator size={13} /> Net {money(calc.net, row.currency || "EUR")} ·{" "}
-                {treatment === "eu_b2b_reverse_charge" ? "self-assessed VAT" : "VAT"}{" "}
-                {money(calc.vat, row.currency || "EUR")} · Cash {money(calc.gross, row.currency || "EUR")}
+                {calc.selfAssessed ? "self-assessed VAT" : "VAT"} {money(calc.vat, row.currency || "EUR")} · Cash{" "}
+                {money(calc.gross, row.currency || "EUR")}
               </div>
               <label>
                 <span>Customer / supplier</span>

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import { userFacingDataError } from "@/lib/user-facing-error";
 import { canBookkeep } from "@/lib/permissions";
+import { computeTransactionVat, transactionVatErrorMessage } from "@/lib/tax-rules/transaction-vat";
 
 export type TransactionReview = {
   id: string;
@@ -32,10 +33,6 @@ export type TransactionActionState = {
   matchedExisting?: boolean;
   review?: TransactionReview;
 };
-const treatments = ["domestic", "eu_b2b_reverse_charge", "non_eu", "exempt_or_zero", "unknown"];
-function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 function validUuid(value: string) {
   return /^[0-9a-f-]{36}$/i.test(value);
 }
@@ -71,29 +68,20 @@ function refreshBooks() {
   ])
     revalidatePath(path);
 }
-function calculateVat(formData: FormData) {
-  const entered = Number(formData.get("amount") ?? formData.get("amount_gross")),
-    rate = Number(formData.get("vat_rate") || 0),
-    included = String(formData.get("vat_included") ?? "yes") !== "no",
-    treatment = String(formData.get("vat_treatment") ?? "domestic");
-  if (!Number.isFinite(entered) || entered <= 0) return { error: "Amount must be greater than zero." } as const;
-  if (![0, 3, 8, 14, 17].includes(rate)) return { error: "Choose a supported Luxembourg VAT rate." } as const;
-  if (!treatments.includes(treatment)) return { error: "Choose a valid VAT treatment." } as const;
-  if (treatment === "eu_b2b_reverse_charge") {
-    const net = roundMoney(entered),
-      vat = roundMoney((net * rate) / 100);
-    return { gross: net, net, vat, rate, included: false, treatment } as const;
-  }
-  if (treatment === "non_eu" || treatment === "exempt_or_zero" || rate === 0)
-    return { gross: roundMoney(entered), net: roundMoney(entered), vat: 0, rate: 0, included, treatment } as const;
-  if (included) {
-    const gross = roundMoney(entered),
-      net = roundMoney(gross / (1 + rate / 100));
-    return { gross, net, vat: roundMoney(gross - net), rate, included, treatment } as const;
-  }
-  const net = roundMoney(entered),
-    vat = roundMoney((net * rate) / 100);
-  return { gross: roundMoney(net + vat), net, vat, rate, included, treatment } as const;
+function calculateVat(
+  formData: FormData,
+  context: { occurredOn: string; direction: string; vatRegistered: boolean; locale: "en" | "fr" },
+) {
+  const result = computeTransactionVat({
+    amount: Number(formData.get("amount") ?? formData.get("amount_gross")),
+    rate: Number(formData.get("vat_rate") || 0),
+    included: String(formData.get("vat_included") ?? "yes") !== "no",
+    treatment: String(formData.get("vat_treatment") ?? "unknown"),
+    direction: context.direction,
+    occurredOn: context.occurredOn,
+    vatRegistered: context.vatRegistered,
+  });
+  return result.ok ? result : { error: transactionVatErrorMessage(result.error, context.locale) };
 }
 
 export async function createSourceTransaction(
@@ -118,8 +106,13 @@ export async function createSourceTransaction(
       .trim()
       .toUpperCase(),
     enteredFx = Number(formData.get("exchange_rate_to_base") ?? 0),
-    vat = calculateVat(formData),
-    locale = workspace.profile?.locale === "fr" ? "fr" : "en";
+    locale = workspace.profile?.locale === "fr" ? "fr" : "en",
+    vat = calculateVat(formData, {
+      occurredOn,
+      direction,
+      vatRegistered: Boolean(workspace.company.vat_registered),
+      locale,
+    });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn))
     return {
       status: "error",
@@ -156,15 +149,7 @@ export async function createSourceTransaction(
           ? `Indiquez le taux de change : 1 ${transactionCurrency} = ? ${baseCurrency}.`
           : `Enter the exchange rate: 1 ${transactionCurrency} = ? ${baseCurrency}.`,
     };
-  if ("error" in vat) return { status: "error", message: vat.error ?? "VAT calculation failed." };
-  if (!workspace.company.vat_registered && vat.vat > 0)
-    return {
-      status: "error",
-      message:
-        locale === "fr"
-          ? "Cette entreprise n’est pas configurée comme assujettie à la TVA. Laissez les détails TVA sur « Je ne sais pas » ou mettez à jour le profil TVA."
-          : "This company is not marked as VAT registered. Leave VAT details as “Not sure” or update the VAT profile.",
-    };
+  if ("error" in vat) return { status: "error", message: vat.error };
   try {
     await assertUsageAvailable(workspace.organization.id, "transactions", 1);
   } catch (error) {
@@ -216,7 +201,7 @@ export async function createSourceTransaction(
       occurred_on: occurredOn,
       direction,
       amount_gross: vat.gross,
-      amount_net: vat.net,
+      amount_net: vat.storedNet,
       vat_amount: vat.vat,
       vat_rate: vat.rate,
       vat_treatment: vat.treatment,
@@ -750,18 +735,37 @@ export async function editSourceTransactionAction(
   const workspace = await getWorkspace();
   if (!workspace.authenticated || !workspace.company)
     return { status: "error", message: "Your session expired. Please sign in again." };
-  const id = String(formData.get("source_transaction_id") ?? ""),
+  const locale = workspace.profile?.locale === "fr" ? "fr" : "en",
+    id = String(formData.get("source_transaction_id") ?? ""),
     occurredOn = String(formData.get("occurred_on") ?? ""),
     direction = String(formData.get("direction") ?? ""),
     counterparty = String(formData.get("counterparty_name") ?? "").trim(),
     description = String(formData.get("description") ?? "").trim(),
-    vat = calculateVat(formData);
-  if (!validUuid(id)) return { status: "error", message: "Invalid transaction." };
+    country = String(formData.get("counterparty_country") ?? "")
+      .trim()
+      .toUpperCase();
+  if (!validUuid(id))
+    return { status: "error", message: locale === "fr" ? "Opération invalide." : "Invalid transaction." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn) || !["income", "expense"].includes(direction))
-    return { status: "error", message: "Choose a valid date and type." };
-  if ("error" in vat) return { status: "error", message: vat.error ?? "VAT calculation failed." };
-  if (!workspace.company.vat_registered && vat.vat > 0)
-    return { status: "error", message: "This company is not marked as VAT registered." };
+    return {
+      status: "error",
+      message: locale === "fr" ? "Choisissez une date et un type valides." : "Choose a valid date and type.",
+    };
+  if (country && !/^[A-Z]{2}$/.test(country))
+    return {
+      status: "error",
+      message:
+        locale === "fr"
+          ? "Le pays doit être un code à 2 lettres (LU, FR…)."
+          : "Country must be a 2-letter code (LU, FR…).",
+    };
+  const vat = calculateVat(formData, {
+    occurredOn,
+    direction,
+    vatRegistered: Boolean(workspace.company.vat_registered),
+    locale,
+  });
+  if ("error" in vat) return { status: "error", message: vat.error };
   const supabase = await createClient();
   const { data: current, error: loadError } = await supabase
     .from("source_transactions")
@@ -772,35 +776,31 @@ export async function editSourceTransactionAction(
   if (loadError || !current)
     return {
       status: "error",
-      message: loadError ? userFacingDataError(loadError, "Transaction not found.") : "Transaction not found.",
+      message: loadError ? userFacingDataError(loadError, "Transaction not found.", locale) : "Transaction not found.",
     };
-  const { error } = await supabase.rpc("update_source_transaction_safe", {
+  // One database call updates the amounts and the VAT details together; a posted transaction is reversed and
+  // posted again with the corrected facts.
+  const { error } = await supabase.rpc("correct_source_transaction", {
     p_source_transaction_id: id,
     p_occurred_on: occurredOn,
     p_direction: direction,
     p_amount_gross: vat.gross,
+    p_amount_net: vat.storedNet,
     p_vat_amount: vat.vat,
+    p_vat_rate: vat.rate,
+    p_vat_treatment: vat.treatment,
     p_counterparty_name: counterparty || null,
     p_description: description || null,
+    p_counterparty_country: country || null,
   });
-  if (error) return { status: "error", message: userFacingDataError(error) };
-  if (current.classification_status !== "posted") {
-    await supabase
-      .from("source_transactions")
-      .update({
-        amount_net: vat.net,
-        vat_rate: vat.rate,
-        vat_treatment: vat.treatment,
-        counterparty_country:
-          String(formData.get("counterparty_country") ?? "")
-            .trim()
-            .toUpperCase() || null,
-      })
-      .eq("id", id);
+  if (error) return { status: "error", message: userFacingDataError(error, undefined, locale) };
+  if (current.classification_status !== "posted")
     await supabase.rpc("apply_source_transaction_suggestion", { p_source_transaction_id: id });
-  }
   refreshBooks();
-  return { status: "success", message: "Transaction updated safely." };
+  return {
+    status: "success",
+    message: locale === "fr" ? "Opération mise à jour." : "Transaction updated safely.",
+  };
 }
 export async function deleteSourceTransactionAction(
   _previous: TransactionActionState,

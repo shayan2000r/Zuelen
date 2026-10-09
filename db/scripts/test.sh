@@ -6,6 +6,7 @@
 #   docker run -d --name zuelen-db -e POSTGRES_PASSWORD=postgres -p 54322:5432 supabase/postgres:17.6.1.155
 #   db/scripts/test.sh
 set -euo pipefail
+shopt -s nullglob
 
 cd "$(dirname "$0")/../.."
 export PGHOST="${PGHOST:-127.0.0.1}" PGPORT="${PGPORT:-54322}" PGPASSWORD="${PGPASSWORD:-postgres}" PGDATABASE="${PGDATABASE:-postgres}"
