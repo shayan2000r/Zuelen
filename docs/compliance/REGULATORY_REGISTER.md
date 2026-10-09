@@ -25,14 +25,14 @@ official Luxembourg source it must match.
 
 | Area | ✅ | ⏳ | ⚠️ | ❌ | 🟡 | 🔍 |
 | --- | --- | --- | --- | --- | --- | --- |
-| A. VAT (TVA) | 9 | 1 | 0 | 0 | 2 | 0 |
+| A. VAT (TVA) | 10 | 0 | 0 | 0 | 2 | 0 |
 | B. Corporate direct taxes | 4 | 0 | 0 | 0 | 2 | 0 |
 | C. CCSS (independents) | 9 | 0 | 0 | 0 | 2 | 0 |
 | D. Accounting (PCN) | 2 | 0 | 0 | 0 | 2 | 0 |
 | E. Compliance calendar | 7 | 0 | 0 | 0 | 1 | 0 |
 | F. Personal tax (independents) | 1 | 0 | 0 | 0 | 0 | 0 |
 | G. Invoicing mentions | 3 | 0 | 0 | 0 | 1 | 0 |
-| H. Bookkeeping law | 0 | 1 | 0 | 0 | 0 | 0 |
+| H. Bookkeeping law | 1 | 0 | 0 | 0 | 0 | 0 |
 
 Before the fixes: 19 ✅, 6 ⚠️, 5 ❌, 8 🟡, 5 🔍.
 
@@ -44,7 +44,7 @@ Legal basis: loi modifiée du 12 février 1979 concernant la taxe sur la valeur 
 
 | ID | Rule | Zuelen | Official | Source | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| A1 | VAT rates by date of supply | `vat_rate_periods` (DB) and `src/lib/tax-rules/vat.ts`: 17/14/8/3 % (2015–2022, from 2024), 16/13/7/3 % (2023), 0 %. Rate pickers follow the transaction / service date; DB validates by date. | Same | European Commission, [VAT rates from 1 January 2024](https://trade.ec.europa.eu/access-to-markets/fr/news/modifications-des-taux-de-tva-applicables-au-1-janvier-2024-dans-certains-etats-membres-de-lue); LTVA art. 39–40 | ⏳ | Correct rates are enforced now. Entering a 2023 rate also needs the removal of the old 0/3/8/14/17 checks in `db/pending`. |
+| A1 | VAT rates by date of supply | `vat_rate_periods` (DB) and `src/lib/tax-rules/vat.ts`: 17/14/8/3 % (2015–2022, from 2024), 16/13/7/3 % (2023), 0 %. Rate pickers follow the transaction / service date; DB validates by date. | Same | European Commission, [VAT rates from 1 January 2024](https://trade.ec.europa.eu/access-to-markets/fr/news/modifications-des-taux-de-tva-applicables-au-1-janvier-2024-dans-certains-etats-membres-de-lue); LTVA art. 39–40 | ✅ | |
 | A2 | Filing frequency thresholds | annual < €112,000; quarterly to €620,000; monthly above (settings map the turnover bracket; the AED assignment prevails) | Same | [guichet.lu — VAT return](https://guichet.public.lu/fr/entreprises/fiscalite/impots-benefices/tva/declarations/declaration-tva.html) (20.01.2023) | ✅ | |
 | A3 | Monthly / quarterly return | Due date shown: 14th of the following month / quarter | "avant le 15e jour du mois (trimestre) qui suit" | as A2 | ✅ | Shown as the last day that complies with "before". |
 | A4 | Annual return | Last day of February (annual filers); 30 April (monthly / quarterly filers) | "avant le 1er mars" / "avant le 1er mai" | as A2 | ✅ | Was 1 March / 1 May. Existing open deadlines were moved. |
@@ -129,13 +129,12 @@ Deadlines are generated from dated rows in `compliance_rules` (version 2026.2) b
 
 | ID | Rule | Zuelen | Official | Source | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| H1 | Keep books and supporting documents | Resets refuse closed periods, filed declarations, issued invoices and posted entries of ended financial years | 10 years from the end of the financial year (Code de commerce art. 16) | Consolidated Code de commerce (secondary copy); Legilux to confirm | ⏳ | Guard written and tested in `db/pending/requires_approval.sql`. |
+| H1 | Keep books and supporting documents | Resets refuse closed periods, filed declarations, issued invoices and posted entries of ended financial years | 10 years from the end of the financial year (Code de commerce art. 16) | Consolidated Code de commerce (secondary copy); Legilux to confirm | ✅ | Migration 20261009120000. |
 
 ---
 
 ## Open decisions and next steps
 
-1. **Approve `db/pending/requires_approval.sql`** in Supabase (retention guard, 2023 rates, draft validation, cleanup).
-2. **VAT return layout (A11):** Phase 1, from the official eCDF specifications.
-3. **Annual accounts output:** the official filing is a structured eCDF file (balance sheet, P&L and, under a June 2025 draft regulation, PCN balances). Add its format and the abridged / full thresholds to this register before offering "annual accounts" as filing-ready.
-4. Add the 2027 IRC scale and the 2027 CCSS parameters when they are published.
+1. **VAT return layout (A11):** Phase 1, from the official eCDF specifications.
+2. **Annual accounts output:** the official filing is a structured eCDF file (balance sheet, P&L and, under a June 2025 draft regulation, PCN balances). Add its format and the abridged / full thresholds to this register before offering "annual accounts" as filing-ready.
+3. Add the 2027 IRC scale and the 2027 CCSS parameters when they are published.

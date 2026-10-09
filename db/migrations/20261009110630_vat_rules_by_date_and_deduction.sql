@@ -11,7 +11,7 @@
 -- * Issued invoices store the legally required exemption / reverse-charge mention.
 --
 -- The updated save_service_invoice_draft and protect_issued_sales_invoice functions are in
--- pending/requires_approval.sql (the connector asks for approval for SQL with row removals).
+-- 20261009120000_requires_approval_bundle.sql (the connector asks for approval for SQL with row removals).
 
 -- ---------------------------------------------------------------------------
 -- VAT rates by date
