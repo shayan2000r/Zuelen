@@ -31,7 +31,7 @@ official Luxembourg source it must match.
 | D. Accounting (PCN) | 2 | 0 | 0 | 0 | 2 | 0 |
 | E. Compliance calendar | 7 | 0 | 0 | 0 | 1 | 0 |
 | F. Personal tax (independents) | 1 | 0 | 0 | 0 | 0 | 0 |
-| G. Invoicing mentions | 2 | 0 | 0 | 1 | 1 | 0 |
+| G. Invoicing mentions | 3 | 0 | 0 | 0 | 1 | 0 |
 | H. Bookkeeping law | 0 | 1 | 0 | 0 | 0 | 0 |
 
 Before the fixes: 19 ✅, 6 ⚠️, 5 ❌, 8 🟡, 5 🔍.
@@ -54,7 +54,7 @@ Legal basis: loi modifiée du 12 février 1979 concernant la taxe sur la valeur 
 | A8 | Reverse-charge mention (EU B2B) | "Autoliquidation" stored at issue; customer VAT number required; not allowed for LU customers | "Autoliquidation" / "Reverse charge" when the customer is liable for the VAT | Fiduciaire LPG, [VAT compulsory information on invoices](https://www.fiduciaire-lpg.lu/en/publications/vat/vat-compulsory-information-invoices) (secondary) | 🟡 | Wording confirmed through a secondary source. Customer VAT numbers are not checked against VIES. |
 | A9 | Reverse charge on EU B2B purchases | Output VAT self-assessed in full (461411); input VAT deducted according to the company's deduction right; any non-deductible part is added to the cost | Same mechanism | LTVA | ✅ | Tested: pro-rata 60 % on €170 VAT gives €102 deducted, €68 added to the expense. |
 | A10 | VAT ledger accounts | 421611 "TVA en amont", 461411 "TVA en aval" | In PCN 2020 | eCDF PCN mapping | ✅ | |
-| A11 | VAT return content | Output, input and net VAT totals (`LU-VAT-2026.1`), flagged "manual review required" | Official forms (eCDF `TVA_DECM` / `TVA_DECT` / `TVA_DECA`) have many boxes | eCDF specifications (to collect) | 🟡 | **Open decision**: produce the official box layout, or keep totals plus guidance for launch. |
+| A11 | VAT return content | Return worksheet: output, input and net VAT and evidence by rate, frozen as a snapshot; the page states it is not the official form and that the return is filed on MyGuichet / eCDF | Official forms (eCDF `TVA_DECM` / `TVA_DECT` / `TVA_DECA`) have many boxes | eCDF specifications (to collect) | 🟡 | **Decided (2026-10-09):** worksheet for launch; the official box layout is built in Phase 1 from the AED / eCDF specifications. |
 | A12 | Deduction rights: exempt activities (art. 44), mixed activities (pro-rata), non-registered businesses | Settings: deduction right full / partial (pro-rata %) / none; exemption basis "exempt activity" prints the art. 44 mention; not registered → no deduction, VAT on purchases is part of the cost | Exempt supplies give no right to deduct; mixed activities deduct pro-rata | LTVA art. 44 and following | ✅ | The provisional pro-rata is last year's; the final adjustment is a year-end entry. |
 
 ## B. Corporate direct taxes — Administration des contributions directes (ACD)
@@ -123,7 +123,7 @@ Deadlines are generated from dated rows in `compliance_rules` (version 2026.2) b
 | G1 | VAT invoice content | Issuer VAT number (when charging VAT), addresses, sequential number at issue, dates, descriptions, quantities, net per rate, rate, VAT amount, exemption / reverse-charge mention | LTVA invoicing list (18 items) | Fiduciaire LPG (secondary, as A8) | 🟡 | Confirm against the LTVA text on Legilux (sources disagree on art. 62 or 63). |
 | G2 | R.C.S. number and establishment authorisation on invoices | Printed; warning whenever they are missing (was only above €100, which is the VAT simplified-invoice limit) | Required on invoices, letters, e-mails, quotes and websites | Ministry of the Economy, [Autorisation d'établissement](https://mpc.gouvernement.lu/dam-assets/le-minist%C3%A8re/enforcement/ae-fr.pdf) (05/2025) | ✅ | |
 | G3 | Franchise mention | see A7 | | | ✅ | |
-| G5 | 2D barcode of the establishment authorisation | Not supported | The barcode must appear on invoices, letters, e-mails, quotes, websites and shop fronts | as G2 | ❌ | New finding. Needs an upload of the barcode issued by the Ministry and printing it on invoices. |
+| G5 | 2D barcode of the establishment authorisation | Uploaded in Settings; frozen into the issuer snapshot at issue and printed on invoices and the preview; the composer warns when a permit number exists without a barcode | The barcode must appear on invoices, letters, e-mails, quotes, websites and shop fronts | as G2 | ✅ | Letters, e-mails and websites are outside Zuelen. |
 
 ## H. Bookkeeping law
 
@@ -136,7 +136,6 @@ Deadlines are generated from dated rows in `compliance_rules` (version 2026.2) b
 ## Open decisions and next steps
 
 1. **Approve `db/pending/requires_approval.sql`** in Supabase (retention guard, 2023 rates, draft validation, cleanup).
-2. **VAT return layout (A11):** decide whether Zuelen should produce the official eCDF boxes for launch.
-3. **Establishment-authorisation barcode (G5):** add an upload and print it on invoices.
-4. **Annual accounts output:** the official filing is a structured eCDF file (balance sheet, P&L and, under a June 2025 draft regulation, PCN balances). Add its format and the abridged / full thresholds to this register before offering "annual accounts" as filing-ready.
-5. Add the 2027 IRC scale and the 2027 CCSS parameters when they are published.
+2. **VAT return layout (A11):** Phase 1, from the official eCDF specifications.
+3. **Annual accounts output:** the official filing is a structured eCDF file (balance sheet, P&L and, under a June 2025 draft regulation, PCN balances). Add its format and the abridged / full thresholds to this register before offering "annual accounts" as filing-ready.
+4. Add the 2027 IRC scale and the 2027 CCSS parameters when they are published.

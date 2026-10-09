@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { InvoiceComposer, type InvoiceComposerInitial } from "@/components/invoice-composer";
 import { canBookkeep } from "@/lib/permissions";
-import { getInvoiceComplianceStatus } from "@/lib/invoice-compliance";
+import { getInvoiceComplianceStatus, getEstablishmentBarcodeUrl } from "@/lib/invoice-compliance";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
@@ -62,6 +62,12 @@ export default async function EditDraftInvoicePage({ params }: { params: Promise
     })),
   };
   return (
-    <InvoiceComposer company={workspace.company} compliance={compliance} initialInvoice={initial} draftInvoiceId={id} />
+    <InvoiceComposer
+      barcodeUrl={await getEstablishmentBarcodeUrl(workspace)}
+      company={workspace.company}
+      compliance={compliance}
+      initialInvoice={initial}
+      draftInvoiceId={id}
+    />
   );
 }

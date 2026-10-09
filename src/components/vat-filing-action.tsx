@@ -4,9 +4,12 @@ import { useActionState, useEffect, useState } from "react";
 import { prepareVatFilingAction, type VatFilingState } from "@/app/app/vat/actions";
 import { useRolePermissions } from "@/components/role-context";
 import { UpgradeWall } from "@/components/upgrade-wall";
+import { useI18n } from "@/components/locale-context";
 const initial: VatFilingState = { status: "idle", message: "" };
 export function VatFilingAction({ start, end, ready }: { start: string; end: string; ready: boolean }) {
   const { canAccount } = useRolePermissions(),
+    { locale } = useI18n(),
+    fr = locale === "fr",
     [state, action, pending] = useActionState(prepareVatFilingAction, initial),
     [upgradeOpen, setUpgradeOpen] = useState(false);
   useEffect(() => {
@@ -44,7 +47,13 @@ export function VatFilingAction({ start, end, ready }: { start: string; end: str
           ) : (
             <FileCheck2 size={14} />
           )}{" "}
-          {pending ? "Preparing…" : "Prepare filing snapshot"}
+          {pending
+            ? fr
+              ? "Préparation…"
+              : "Preparing…"
+            : fr
+              ? "Préparer la feuille de déclaration"
+              : "Prepare return worksheet"}
         </button>
         {state.message ? (
           <span style={{ fontSize: 12, color: state.status === "error" ? "#a65340" : "#24713a" }}>{state.message}</span>

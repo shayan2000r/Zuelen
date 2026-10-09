@@ -25,19 +25,47 @@ function safeName(name: string) {
       .slice(0, 60) || "brand"
   }${ext}`;
 }
-export function BrandImageUploader({
-  organizationId,
-  companyId,
-  currentPath,
-  currentUrl,
-  companyName,
-}: {
+type ImageField = "brand_image_path" | "establishment_barcode_path";
+
+export function BrandImageUploader(props: {
   organizationId: string;
   companyId: string;
   currentPath: string | null;
   currentUrl: string | null;
   companyName: string;
 }) {
+  return <CompanyImageUploader {...props} field="brand_image_path" folder="brand" />;
+}
+
+/** Establishment-authorisation 2D barcode, printed on invoices (Ministry of the Economy requirement). */
+export function EstablishmentBarcodeUploader(props: {
+  organizationId: string;
+  companyId: string;
+  currentPath: string | null;
+  currentUrl: string | null;
+  companyName: string;
+}) {
+  return <CompanyImageUploader {...props} field="establishment_barcode_path" folder="establishment-barcode" />;
+}
+
+function CompanyImageUploader({
+  organizationId,
+  companyId,
+  currentPath,
+  currentUrl,
+  companyName,
+  field,
+  folder,
+}: {
+  organizationId: string;
+  companyId: string;
+  currentPath: string | null;
+  currentUrl: string | null;
+  companyName: string;
+  field: ImageField;
+  folder: string;
+}) {
+  const barcode = field === "establishment_barcode_path";
   const router = useRouter(),
     { locale } = useI18n(),
     fr = locale === "fr",
@@ -58,14 +86,14 @@ export function BrandImageUploader({
     setMessage("");
     const supabase = createClient();
     try {
-      const path = `${organizationId}/${companyId}/brand/${crypto.randomUUID()}-${safeName(file.name)}`;
+      const path = `${organizationId}/${companyId}/${folder}/${crypto.randomUUID()}-${safeName(file.name)}`;
       const { error: uploadError } = await supabase.storage
         .from("company-documents")
         .upload(path, file, { contentType: file.type, upsert: false, cacheControl: "3600" });
       if (uploadError) throw uploadError;
       const { error: updateError } = await supabase
         .from("companies")
-        .update({ brand_image_path: path, updated_at: new Date().toISOString() })
+        .update({ [field]: path, updated_at: new Date().toISOString() })
         .eq("id", companyId);
       if (updateError) {
         await supabase.storage.from("company-documents").remove([path]);
@@ -91,7 +119,7 @@ export function BrandImageUploader({
     try {
       const { error: updateError } = await supabase
         .from("companies")
-        .update({ brand_image_path: null, updated_at: new Date().toISOString() })
+        .update({ [field]: null, updated_at: new Date().toISOString() })
         .eq("id", companyId);
       if (updateError) throw updateError;
       await supabase.storage.from("company-documents").remove([currentPath]);
@@ -116,18 +144,38 @@ export function BrandImageUploader({
         {currentUrl ? (
           <img
             src={currentUrl}
-            alt={fr ? `Logo ou image de profil de ${companyName}` : `${companyName} logo or profile`}
+            alt={
+              barcode
+                ? fr
+                  ? `Code-barres de l’autorisation d’établissement de ${companyName}`
+                  : `${companyName} establishment authorisation barcode`
+                : fr
+                  ? `Logo ou image de profil de ${companyName}`
+                  : `${companyName} logo or profile`
+            }
           />
         ) : (
-          <span>{initial}</span>
+          <span>{barcode ? "QR" : initial}</span>
         )}
       </div>
       <div className={styles.brandCopy}>
-        <strong>{fr ? "Logo / image de l’entreprise" : "Logo / profile image"}</strong>
+        <strong>
+          {barcode
+            ? fr
+              ? "Code-barres de l’autorisation d’établissement"
+              : "Establishment authorisation barcode"
+            : fr
+              ? "Logo / image de l’entreprise"
+              : "Logo / profile image"}
+        </strong>
         <p>
-          {fr
-            ? "Affichée dans la barre latérale et les documents financiers. Si aucune image n’est définie, Zuelen utilise l’initiale de l’entreprise."
-            : "Shown in the sidebar and financial documents. If empty, Zuelen uses the on-brand initial avatar."}
+          {barcode
+            ? fr
+              ? "Le code-barres 2D attribué à votre autorisation d’établissement doit figurer sur vos factures, devis, lettres, e-mails et site internet. Importez l’image reçue du ministère de l’Économie (MyGuichet) ; elle est imprimée sur chaque facture émise."
+              : "The 2D barcode attributed to your establishment authorisation must appear on invoices, quotes, letters, e-mails and your website. Upload the image you received from the Ministry of the Economy (MyGuichet); it is printed on every invoice you issue."
+            : fr
+              ? "Affichée dans la barre latérale et les documents financiers. Si aucune image n’est définie, Zuelen utilise l’initiale de l’entreprise."
+              : "Shown in the sidebar and financial documents. If empty, Zuelen uses the on-brand initial avatar."}
         </p>
         {message ? <small>{message}</small> : null}
         <div className={styles.brandActions}>

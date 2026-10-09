@@ -250,4 +250,12 @@ select public.sync_core_compliance_calendar((select v from ids where k = 'ind'),
 reset role;
 select pg_temp.eq('RCS independent above EUR 100,000: annual accounts filing', pg_temp.due((select v from ids where k='ind'), 'annual_accounts_filing'), date '2027-07-31');
 
+-- ---------------------------------------------------------------------------
+-- G5: the establishment-authorisation barcode is frozen into the issued invoice
+-- ---------------------------------------------------------------------------
+update public.companies set establishment_barcode_path = 'org/company/barcode/test.png' where id = (select v from ids where k='lib');
+insert into ids values ('inv_barcode', pg_temp.issue((select v from ids where k='lib'), 'domestic', 'LU', null, 0));
+update public.companies set establishment_barcode_path = 'org/company/barcode/changed.png' where id = (select v from ids where k='lib');
+select pg_temp.eq('Barcode frozen in the issuer snapshot', (select issuer_snapshot->>'establishment_barcode_path' from public.sales_invoices where id = (select v from ids where k='inv_barcode')), 'org/company/barcode/test.png');
+
 rollback;

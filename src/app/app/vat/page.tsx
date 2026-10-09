@@ -463,8 +463,8 @@ export default async function VatFilingPage() {
               <strong>{fr ? "La soumission reste sous votre contrôle" : "Submission stays controlled"}</strong>
               <p>
                 {fr
-                  ? "Zuelen prépare et fige les justificatifs comptables. Le dépôt reste une étape séparée et confirmée par l'utilisateur."
-                  : "Zuelen prepares and freezes accounting evidence. Filing remains a separate confirmed step."}
+                  ? "Zuelen prépare et fige les montants et justificatifs (TVA en aval, TVA en amont, solde). Ce n'est pas le formulaire officiel : la déclaration se dépose sur MyGuichet / eCDF avec ces montants, puis vous la marquez comme déposée."
+                  : "Zuelen prepares and freezes the amounts and evidence (output VAT, input VAT, balance). This is not the official form: file the return on MyGuichet / eCDF using these amounts, then mark it as filed."}
               </p>
             </div>
           </div>

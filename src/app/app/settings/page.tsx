@@ -1,6 +1,6 @@
 import { Building2 } from "lucide-react";
 import { redirect } from "next/navigation";
-import { BrandImageUploader } from "@/components/brand-image-uploader";
+import { BrandImageUploader, EstablishmentBarcodeUploader } from "@/components/brand-image-uploader";
 import { CompanySettingsForm } from "@/components/company-settings-form";
 import { PageHeader, V2Page } from "@/components/zuelen-ui-v2";
 import { localizedRole, normalizeLocale } from "@/lib/i18n";
@@ -26,9 +26,14 @@ export default async function SettingsPage() {
   const independent = workspace.company.entity_kind === "independent";
   const supabase = await createClient();
   const canManage = canManageOrganization(workspace.role);
-  const [brand, independentProfileResult, taxProfileResult] = await Promise.all([
+  const [brand, barcode, independentProfileResult, taxProfileResult] = await Promise.all([
     workspace.company.brand_image_path
       ? supabase.storage.from("company-documents").createSignedUrl(workspace.company.brand_image_path, 60 * 60)
+      : Promise.resolve({ data: null, error: null }),
+    workspace.company.establishment_barcode_path
+      ? supabase.storage
+          .from("company-documents")
+          .createSignedUrl(workspace.company.establishment_barcode_path, 60 * 60)
       : Promise.resolve({ data: null, error: null }),
     independent
       ? supabase
@@ -84,6 +89,13 @@ export default async function SettingsPage() {
               companyId={workspace.company.id}
               currentPath={workspace.company.brand_image_path}
               currentUrl={brand.data?.signedUrl ?? null}
+              companyName={workspace.company.trading_name || workspace.company.legal_name}
+            />
+            <EstablishmentBarcodeUploader
+              organizationId={workspace.organization.id}
+              companyId={workspace.company.id}
+              currentPath={workspace.company.establishment_barcode_path}
+              currentUrl={barcode.data?.signedUrl ?? null}
               companyName={workspace.company.trading_name || workspace.company.legal_name}
             />
             <CompanySettingsForm

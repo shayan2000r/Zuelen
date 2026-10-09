@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { InvoiceComposer, type InvoiceComposerInitial } from "@/components/invoice-composer";
 import { defaultDateForFiscalYear, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { canBookkeep } from "@/lib/permissions";
-import { getInvoiceComplianceStatus } from "@/lib/invoice-compliance";
+import { getInvoiceComplianceStatus, getEstablishmentBarcodeUrl } from "@/lib/invoice-compliance";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
@@ -121,6 +121,7 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
   }
   return (
     <InvoiceComposer
+      barcodeUrl={await getEstablishmentBarcodeUrl(workspace)}
       company={{
         legal_name: workspace.company.legal_name,
         legal_form: workspace.company.legal_form,

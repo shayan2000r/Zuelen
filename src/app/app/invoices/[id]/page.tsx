@@ -113,7 +113,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       .maybeSingle();
     journalNumber = journal?.entry_number ?? null;
   }
-  const issuer = (invoice.issuer_snapshot ?? {}) as Snapshot,
+  const issuerSnapshot = (invoice.issuer_snapshot ?? {}) as Snapshot;
+  // Issued invoices show the barcode frozen at issue; drafts preview the current one.
+  const barcodePath =
+    typeof issuerSnapshot.establishment_barcode_path === "string"
+      ? issuerSnapshot.establishment_barcode_path
+      : invoice.status === "draft"
+        ? workspace.company.establishment_barcode_path
+        : null;
+  const barcodeUrl = barcodePath
+    ? ((await supabase.storage.from("company-documents").createSignedUrl(barcodePath, 60 * 60)).data?.signedUrl ?? null)
+    : null;
+  const issuer = issuerSnapshot,
     customer = (invoice.customer_snapshot ?? {}) as Snapshot,
     issuerAddress = address(issuer),
     customerAddress = address(customer),
@@ -273,6 +284,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <span>R.C.S. Luxembourg {value(issuer, "rcs_number")}</span>
           <span>Autorisation {value(issuer, "business_permit_number")}</span>
           <span>TVA {value(issuer, "vat_number")}</span>
+          {barcodeUrl ? (
+            <img
+              className={styles.establishmentBarcode}
+              src={barcodeUrl}
+              alt={fr ? "Code-barres de l’autorisation d’établissement" : "Establishment authorisation barcode"}
+            />
+          ) : null}
         </footer>
       </article>
       <div className={styles.postingReceipt}>

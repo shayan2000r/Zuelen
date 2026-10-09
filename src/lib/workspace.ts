@@ -54,6 +54,7 @@ export type Workspace = {
     municipality: string | null;
     activity: string | null;
     brand_image_path: string | null;
+    establishment_barcode_path: string | null;
     registered_address: Record<string, unknown>;
   } | null;
   workspaces: EconomicWorkspaceSummary[];
@@ -111,7 +112,7 @@ export async function getWorkspace(): Promise<Workspace> {
       supabase
         .from("companies")
         .select(
-          "id,organization_id,legal_name,trading_name,legal_form,entity_kind,base_currency,fiscal_year_start_month,vat_registered,vat_filing_frequency,vat_exemption_basis,vat_deduction_mode,vat_deduction_ratio,tax_advances_assessed,eu_recap_frequency,vat_number,rcs_number,tax_number,business_permit_number,municipality,activity,brand_image_path,registered_address,created_at",
+          "id,organization_id,legal_name,trading_name,legal_form,entity_kind,base_currency,fiscal_year_start_month,vat_registered,vat_filing_frequency,vat_exemption_basis,vat_deduction_mode,vat_deduction_ratio,tax_advances_assessed,eu_recap_frequency,vat_number,rcs_number,tax_number,business_permit_number,municipality,activity,brand_image_path,establishment_barcode_path,registered_address,created_at",
         )
         .in("organization_id", organizationIds)
         .order("created_at", { ascending: true }),
@@ -170,6 +171,7 @@ export async function getWorkspace(): Promise<Workspace> {
     municipality: companyRow.municipality,
     activity: companyRow.activity,
     brand_image_path: companyRow.brand_image_path,
+    establishment_barcode_path: companyRow.establishment_barcode_path ?? null,
     registered_address: companyRow.registered_address,
   };
   const capabilities = getWorkspaceCapabilities({

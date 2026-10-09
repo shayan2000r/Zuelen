@@ -67,12 +67,14 @@ export function InvoiceComposer({
   initialInvoice,
   correctionInvoiceId,
   draftInvoiceId,
+  barcodeUrl = null,
 }: {
   company: Company;
   compliance: InvoiceCompliance;
   initialInvoice?: InvoiceComposerInitial;
   correctionInvoiceId?: string;
   draftInvoiceId?: string;
+  barcodeUrl?: string | null;
 }) {
   const router = useRouter(),
     { locale, intlLocale } = useI18n(),
@@ -144,6 +146,11 @@ export function InvoiceComposer({
   const missingCompliance = [
     compliance.missingRcs ? (fr ? "numéro R.C.S. Luxembourg" : "R.C.S. Luxembourg number") : null,
     compliance.missingBusinessPermit ? (fr ? "numéro d’autorisation d’établissement" : "business permit number") : null,
+    company.business_permit_number && !barcodeUrl
+      ? fr
+        ? "code-barres de l’autorisation d’établissement (Paramètres)"
+        : "establishment authorisation barcode (Settings)"
+      : null,
   ].filter((item): item is string => Boolean(item));
   // R.C.S. number and establishment authorisation must appear on invoices whatever the amount
   // (the EUR 100 limit is the VAT simplified-invoice rule, which is different).
@@ -706,6 +713,13 @@ export function InvoiceComposer({
             <span>R.C.S. Luxembourg {company.rcs_number || "—"}</span>
             <span>Autorisation {company.business_permit_number || "—"}</span>
             <span>TVA {company.vat_number || "—"}</span>
+            {barcodeUrl ? (
+              <img
+                className={styles.establishmentBarcode}
+                src={barcodeUrl}
+                alt={fr ? "Code-barres de l’autorisation d’établissement" : "Establishment authorisation barcode"}
+              />
+            ) : null}
           </footer>
         </article>
       </aside>

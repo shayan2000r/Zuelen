@@ -1047,3 +1047,10 @@
   transform: none;
   background: var(--z-brand-soft-strong);
 }
+
+.establishmentBarcode {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-left: auto;
+}
