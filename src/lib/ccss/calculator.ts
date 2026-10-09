@@ -59,7 +59,8 @@ function personCalculation(
   const normalMaximum = cents(parameters.maximumContributionBase);
   const ordinaryMinimum = situation.affiliationType === "secondary" ? secondaryMinimum : ssm;
   const explicitExemption =
-    situation.insignificantIncomeExemptionStatus === "approved" && actualIncome < secondaryMinimum;
+    // Code de la sécurité sociale: exemption when income "ne dépasse pas" one third of the SSM.
+    situation.insignificantIncomeExemptionStatus === "approved" && actualIncome <= secondaryMinimum;
   const warnings: string[] = [];
 
   if (explicitExemption) {
@@ -114,7 +115,7 @@ function personCalculation(
       : confirmedDependencyBase;
   const selectedMdeRate = mdeRate(parameters, situation.mdeClass);
 
-  if (actualIncome < secondaryMinimum && situation.insignificantIncomeExemptionStatus === "not_requested")
+  if (actualIncome <= secondaryMinimum && situation.insignificantIncomeExemptionStatus === "not_requested")
     warnings.push("insignificant_exemption_may_be_available");
   if (situation.pensionReductionStatus === "requested") warnings.push("pension_reduction_requested");
   if (situation.insignificantIncomeExemptionStatus === "requested") warnings.push("insignificant_exemption_requested");

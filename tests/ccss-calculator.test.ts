@@ -246,3 +246,12 @@ test("monetary rounding is deterministic and half-up at the cent", () => {
   assert.equal(result.principal.components.mde.amountCents, 637);
   assert.equal(multiplyByPercent(1n, "50.000000"), 1n);
 });
+
+test("insignificant-income exemption applies when income does not exceed one third of the SSM", () => {
+  // Code de la sécurité sociale / guichet.lu: "ne dépasse pas 1/3 du salaire social minimum"
+  const atThreshold = monthly(june.secondaryActivityMinimum, { insignificantIncomeExemptionStatus: "approved" });
+  assert.equal(atThreshold.principal.exemptionApplied, true);
+  assert.equal(atThreshold.combinedTotalCents, 0);
+  const above = monthly("923.79", { insignificantIncomeExemptionStatus: "approved" });
+  assert.equal(above.principal.exemptionApplied, false);
+});

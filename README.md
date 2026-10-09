@@ -41,8 +41,10 @@ pnpm dev
 | `pnpm lint` | ESLint (Next.js core-web-vitals + TypeScript rules) |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm test` | Node test runner over `tests/**/*.test.ts` |
+| `pnpm format` / `pnpm format:check` | Prettier |
+| `db/scripts/test.sh` | Build a database from `db/` and run the SQL tests (needs Docker; see the script) |
 
-CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests and build on every pull request to `main`.
+CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, tests and build, plus the database job, on every pull request to `main`.
 
 ## Repository layout
 
@@ -58,24 +60,27 @@ src/
     api/          Route handlers (Stripe webhook, early access)
   components/     UI components and their CSS modules
   lib/            Domain logic and server helpers
+    tax-rules/    Dated VAT and corporate tax rules (single source in the app)
     ccss/         CCSS contribution calculator and dated parameter periods
     personal-fiscal/  Tax-class derivation
     supabase/     Supabase clients (browser, server, admin)
 db/
-  migrations/     SQL migrations (see note below)
-  tests/          SQL security tests (run against a non-production database)
+  baseline/       Production schema and reference data
+  migrations/     Changes since the baseline
+  pending/        Tested changes waiting for approval in Supabase
+  tests/          SQL tests (security, regulatory scenarios, fingerprint)
 docs/
   compliance/     Regulatory register: every rule, rate and deadline with its official source
   audit/          Audit reports
 tests/            Unit tests
 ```
 
-## Database migrations
+## Database
 
-`db/migrations` does **not** yet contain the full schema: the base schema (August 2026) was applied
-directly to Supabase, and several later changes were applied without a matching entry in the
-Supabase migration history. See [docs/audit/PHASE_0A_REPO_AUDIT.md](docs/audit/PHASE_0A_REPO_AUDIT.md)
-before relying on these files to recreate a database.
+`db/baseline` holds the full production schema and reference data (verified identical to production on
+2026-10-09); `db/migrations` holds every change since, named with the version production records.
+`db/scripts/test.sh` builds a database from them and runs the SQL tests (CI does the same).
+See [db/README.md](db/README.md).
 
 ## Regulatory rules
 

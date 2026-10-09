@@ -145,7 +145,9 @@ export function InvoiceComposer({
     compliance.missingRcs ? (fr ? "numéro R.C.S. Luxembourg" : "R.C.S. Luxembourg number") : null,
     compliance.missingBusinessPermit ? (fr ? "numéro d’autorisation d’établissement" : "business permit number") : null,
   ].filter((item): item is string => Boolean(item));
-  const complianceWarning = totals.gross > 100 && missingCompliance.length > 0,
+  // R.C.S. number and establishment authorisation must appear on invoices whatever the amount
+  // (the EUR 100 limit is the VAT simplified-invoice rule, which is different).
+  const complianceWarning = missingCompliance.length > 0,
     foreignCurrency = invoiceCurrency !== company.base_currency.toUpperCase();
   function updateLine(index: number, patch: Partial<Line>) {
     setLines(current => current.map((line, i) => (i === index ? { ...line, ...patch } : line)));
@@ -552,8 +554,8 @@ export function InvoiceComposer({
               <strong>{fr ? "Vérification de conformité" : "Compliance check"}</strong>
               <span>
                 {fr
-                  ? `Cette facture dépasse 100 € TTC. Votre profil ne contient pas : ${missingCompliance.join(", ")}. Vérifiez si ces mentions s’appliquent à votre activité avant l’émission.`
-                  : `This invoice is over €100 including VAT. Your profile is missing: ${missingCompliance.join(", ")}. Check whether these details apply to your business before issuing.`}
+                  ? `Votre profil ne contient pas : ${missingCompliance.join(", ")}. Ces mentions doivent figurer sur les factures lorsqu’elles ont été attribuées à votre activité.`
+                  : `Your profile is missing: ${missingCompliance.join(", ")}. These details must appear on invoices when they have been issued to your business.`}
               </span>
             </div>
           </div>

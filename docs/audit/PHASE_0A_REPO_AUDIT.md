@@ -29,61 +29,36 @@ Date: 2026-10-09 · Branch: `claude/dazzling-bell-3qs1rs` · Base: `main` @ `ce4
 
 All checks above still pass after the cleanup.
 
-## 3. Findings not fixed yet (need a decision or belong to a later phase)
+## 3. Findings and their status (updated 2026-10-09)
 
-### High
+| # | Finding | Status |
+| --- | --- | --- |
+| 1 | The repository could not rebuild the database (43 partial migration files vs 97 recorded in production; 8+ changes applied by hand) | **Fixed.** `db/baseline` was generated from production's catalogs and verified by fingerprint (identical columns, constraints, indexes, function bodies, policies, triggers, grants, PCN catalogue). New changes go in `db/migrations` with the version production records. A CI job builds the database from the baseline on the production Postgres image and runs the SQL tests. See `db/README.md`. |
+| 2 | More than half of the source files were minified one-liners | **Fixed.** Prettier (printWidth 120) formats the codebase; `pnpm format:check` runs in CI. Source-text tests read through `tests/source-text.ts`, so formatting does not affect them. |
+| 3 | Regulatory values duplicated and hard-coded | **Fixed.** VAT rates, the franchise threshold and corporate tax rules live in `src/lib/tax-rules/*` (dated); the database uses `vat_rate_periods` and `compliance_rules` (the calendar now reads its rules from there). See `docs/compliance/REGULATORY_REGISTER.md`. |
+| 4 | Layered "fix-up" stylesheets and inline styles | Open, planned for Phase 4 (design-system consolidation). |
+| 5 | `server-only` imported but not declared | **Fixed.** |
+| 6 | PCN seed downloaded from a third party at migration time | **Fixed.** The verified catalogue is in `db/baseline/01_reference_data.sql`; the old migration is archived. |
+| 7 | Supabase advisors: leaked-password protection disabled; 32 `SECURITY DEFINER` RPCs callable by signed-in users | Open. Leaked-password protection is a dashboard setting (Authentication → Policies); the RPC review belongs to Phase 3. |
+| 8 | Lint warnings | Reduced from 67 to 55. The rest (`<img>` vs `next/image`, React hook patterns) change rendering behaviour and are planned with Phase 4. |
+| 9 | Unused exports in the UI kit | Kept on purpose (design-system primitives). |
+| 10 | SQL tests not run in CI | **Fixed** (database job). The cross-tenant test had a missing grant and could not have run; fixed. |
 
-1. **The repository cannot rebuild the database.** Supabase has 97 recorded migrations, starting with
-   `compta_core_foundation` (2026-08-16). `db/migrations` has 43 files starting 2026-08-20, so the base
-   schema (companies, journal, VAT posting, invoicing, compliance calendar, etc.) exists only in the live
-   database. In addition, at least 8 repo migrations dated 2026-09-13 to 2026-09-24 (early access,
-   document intake, foreign currency, etc.) **are applied in production but missing from the Supabase
-   migration history** (last recorded version: `20260922105445`). They were most likely run by hand.
-   *Recommendation:* take a schema baseline from production (`supabase db pull` or `pg_dump --schema-only`)
-   into the repo, mark it as applied, and from then on apply every change through migrations only.
-   Most of the accounting, VAT and calendar logic Phase 1 must audit lives in these Postgres functions.
+### Database changes that need a person's approval
 
-2. **More than half of the source files are written as minified one-liners.** 169 of 297 files under `src` contain
-   lines over 400 characters (some CSS modules are a single 13,000-character line). This makes code review,
-   diffs and the Phase 1 audit much harder and error-prone.
-   *Recommendation:* adopt Prettier and format the codebase in a dedicated commit. Blocker: 11 of the 14
-   test files assert on the **source text** with regexes (e.g. `/message:error\.message/`) instead of
-   testing behaviour, so they would fail after formatting. They should be rewritten as behavioural tests
-   first (Phase 2), or relaxed to be whitespace-insensitive.
+The Supabase connector used by Claude asks for confirmation before running SQL that contains DROP or
+DELETE (also inside function bodies). Those changes are tested and waiting in
+`db/pending/requires_approval.sql`:
 
-3. **Regulatory values are duplicated and hard-coded in many places.** For example, VAT rates
-   `17/14/8/3` are hard-coded in at least five components plus database functions; corporate tax brackets
-   live inside `src/app/app/taxes/page.tsx`; calendar deadlines are hard-coded in
-   `sync_core_compliance_calendar` while the same values also sit in the `compliance_rules` table, which
-   the function does not read. CCSS is the exception (dated parameter periods with sources); the same
-   pattern should be applied to all rules. See `docs/compliance/REGULATORY_REGISTER.md`.
+- reset functions refuse to remove issued invoices and posted entries of ended financial years
+  (Code de commerce art. 16, ten-year retention);
+- invoice drafts validate VAT rates against the supply date;
+- the issued-invoice protection also freezes the stored VAT mention;
+- the hard-coded 0/3/8/14/17 % checks are removed so 2023 rates (16/13/7 %) can be booked;
+- the temporary function used to export the baseline is removed (already disabled).
 
-### Medium
-
-4. **Layered "fix-up" stylesheets.** 77 CSS modules plus `final-ux-cleanup.css`, `*-polish.module.css`,
-   `*-v2.module.css`, `*-upgrades.module.css`, `*-final-responsive.module.css`, and ~100 inline
-   `style={{…}}` blocks. These overrides stack on top of each other. Consolidate into the design system
-   (`docs/ZUELEN_UI_DESIGN_SYSTEM_V2.md`) during Phase 4.
-5. **`server-only` is imported but not declared** in `package.json` (10 files). It works because Next.js
-   bundles it, but the Next.js docs recommend installing it. Adding the dependency was not done in this
-   session (package installs were blocked); run `pnpm add server-only`.
-6. **PCN reproducible seed downloads from a third party at migration time.** `20260901140100_pcn2020_catalog_seed.sql`
-   uses the Postgres `http` extension to fetch Odoo's Luxembourg chart from GitHub. Production labels and
-   hierarchy were verified against the official eCDF mapping, but a fresh environment would depend on a
-   non-official source and on network access from the database. Store the verified eCDF snapshot in the repo instead.
-7. **Supabase security advisor:** leaked-password protection is disabled (enable in Auth settings), and 32
-   `SECURITY DEFINER` RPCs are callable by signed-in users. The latter is the intended design (each function
-   checks permissions itself) but every one must be reviewed in Phase 3.
-8. **67 lint warnings**, mainly `set-state-in-effect` (cascading re-renders) and `no-explicit-any`.
-9. **Unused exports** remain in the UI kit and helpers (`EmptyState`, `TrendChip`, `Field`, `prettyRole`,
-   `currentFiscalYear`…). Left in place: UI-kit primitives are likely to be used in Phase 4.
-
-### Low
-
-10. `db/tests/*.sql` are not run in CI.
-11. CI does not run on pushes to non-`main` branches (only PRs to `main`), which is fine, but there is no
-    separate check for migrations.
-
+Apply it in the Supabase SQL editor (or ask Claude to apply it while you are there to approve), then
+rename it to `db/migrations/<version>_requires_approval_bundle.sql`.
 ## 4. Structure
 
 The top-level layout (`src/app`, `src/components`, `src/lib`, `db`, `docs`, `tests`) is sound. Domain logic
