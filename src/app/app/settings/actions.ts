@@ -40,6 +40,12 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
   const frequency = vatFrequencyFromTurnover(turnoverBracket);
   const fiscalMonth = Number(formData.get("fiscal_year_start_month") ?? 1);
   const vatRegistered = Boolean(vat);
+  const exemptionBasis = text(formData, "vat_exemption_basis");
+  const deductionMode = text(formData, "vat_deduction_mode") || "full";
+  const deductionRatioRaw = text(formData, "vat_deduction_ratio");
+  const deductionRatio = deductionRatioRaw ? Number(deductionRatioRaw) : null;
+  const taxAdvancesAssessed = formData.get("tax_advances_assessed") === "on";
+  const euRecapFrequency = text(formData, "eu_recap_frequency") || "monthly";
 
   if (legalName.length < 2) return { status: "error", message: m("Enter the legal name.", "Saisissez le nom légal.") };
   if (!legalForm) return { status: "error", message: m("Choose the legal form.", "Choisissez la forme juridique.") };
@@ -47,6 +53,10 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
   if (!/^[A-Z]{3}$/.test(currency)) return { status: "error", message: m("Use a valid 3-letter base currency.", "Utilisez un code devise valide à trois lettres.") };
   if (vat && !/^LU\d{8}$/.test(vat)) return { status: "error", message: m("A Luxembourg VAT number must use the format LU12345678.", "Un numéro de TVA luxembourgeois doit respecter le format LU12345678.") };
   if (vatRegistered && !frequency) return { status: "error", message: m("Choose the expected annual turnover bracket so Zuelen can determine the VAT filing cadence.", "Choisissez la tranche de chiffre d’affaires annuel prévue afin que Zuelen détermine la périodicité TVA.") };
+  if (!["", "franchise", "exempt_activity"].includes(exemptionBasis)) return { status: "error", message: m("Choose why the business does not charge VAT.", "Indiquez pourquoi l’activité ne facture pas de TVA.") };
+  if (!["full", "partial", "none"].includes(deductionMode)) return { status: "error", message: m("Choose the input VAT deduction right.", "Choisissez le droit à déduction de la TVA en amont.") };
+  if (vatRegistered && deductionMode === "partial" && (deductionRatio === null || !Number.isFinite(deductionRatio) || deductionRatio < 0 || deductionRatio > 100)) return { status: "error", message: m("Enter the deduction pro-rata as a percentage between 0 and 100.", "Saisissez le prorata de déduction en pourcentage, entre 0 et 100.") };
+  if (!["monthly", "quarterly"].includes(euRecapFrequency)) return { status: "error", message: m("Choose the EU recapitulative statement frequency.", "Choisissez la périodicité de l’état récapitulatif UE.") };
   if (!/^[A-Z]{2}$/.test(country)) return { status: "error", message: m("Use a two-letter country code.", "Utilisez un code pays à deux lettres.") };
   if (country === "LU" && postal && !/^(?:L-|LU-)?\d{4}$/.test(postal)) return { status: "error", message: m("Luxembourg postal codes must contain exactly 4 digits.", "Les codes postaux luxembourgeois doivent contenir exactement 4 chiffres.") };
 
@@ -85,6 +95,12 @@ export async function saveCompanySettings(_previous: SettingsState, formData: Fo
     base_currency: currency,
     vat_registered: vatRegistered,
     vat_filing_frequency: vatRegistered ? frequency : null,
+    // Not VAT registered: no deduction right, and the invoice mention defaults to the franchise (art. 57bis).
+    vat_exemption_basis: vatRegistered ? (exemptionBasis || null) : (exemptionBasis || "franchise"),
+    vat_deduction_mode: vatRegistered ? deductionMode : "none",
+    vat_deduction_ratio: vatRegistered && deductionMode === "partial" ? deductionRatio : null,
+    tax_advances_assessed: taxAdvancesAssessed,
+    eu_recap_frequency: euRecapFrequency,
     registered_address: { street, postal_code: normalizedPostal, city, country_code: country },
     updated_at: new Date().toISOString(),
   }).eq("id", workspace.company.id);

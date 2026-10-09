@@ -4,6 +4,7 @@ import { ArrowRight, Camera, CircleHelp, FileUp, LoaderCircle, PenLine, Plus, X 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { vatRatesOn } from "@/lib/tax-rules/vat";
 import {
   createSourceTransaction,
   discardManualSourceTransactionAction,
@@ -18,7 +19,6 @@ import styles from "./live.module.css";
 import choiceStyles from "./transaction-entry-choice.module.css";
 
 const initialTransactionState:TransactionActionState={status:"idle",message:""};
-const rates=[17,14,8,3,0];
 
 function ManualEntryFlow({
   defaultDate,
@@ -52,6 +52,8 @@ function ManualEntryFlow({
   const[reviewMessage,setReviewMessage]=useState<string|null>(null);
   const[vatTreatment,setVatTreatment]=useState("unknown");
   const[vatRate,setVatRate]=useState(0);
+  const[occurredOn,setOccurredOn]=useState(defaultDate);
+  const rates=vatRatesOn(occurredOn);
   const[vatIncluded,setVatIncluded]=useState(true);
   const[transactionCurrency,setTransactionCurrency]=useState(currency.toUpperCase());
   const[exchangeRate,setExchangeRate]=useState("");
@@ -143,7 +145,7 @@ function ManualEntryFlow({
         <input type="hidden" name="direction" value={direction}/>
       </div>
 
-      <label className={styles.field}><span>{fr?"Date":"Date"}</span><input name="occurred_on" type="date" defaultValue={defaultDate} required/></label>
+      <label className={styles.field}><span>{fr?"Date":"Date"}</span><input name="occurred_on" type="date" value={occurredOn} onChange={e=>{setOccurredOn(e.target.value);if(!vatRatesOn(e.target.value).includes(vatRate))setVatRate(0)}} required/></label>
       <label className={styles.field}><span>{amountLabel+" · "+transactionCurrency}</span><input name="amount" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" required/></label>
       <label className={styles.field}><span>{fr?"Devise":"Currency"}</span><input name="currency" value={transactionCurrency} onChange={event=>setTransactionCurrency(event.target.value.toUpperCase().replace(/[^A-Z]/g,"").slice(0,3))} list="transaction-currencies" maxLength={3} pattern="[A-Z]{3}" required/><datalist id="transaction-currencies"><option value={currency.toUpperCase()}/><option value="EUR"/><option value="USD"/><option value="GBP"/><option value="CHF"/></datalist></label>
       {foreignCurrency?<label className={styles.field}><span>{fr?`Taux de change · 1 ${transactionCurrency} en ${currency.toUpperCase()}`:`Exchange rate · 1 ${transactionCurrency} in ${currency.toUpperCase()}`}</span><input name="exchange_rate_to_base" type="number" min="0.00000001" step="0.00000001" inputMode="decimal" value={exchangeRate} onChange={event=>setExchangeRate(event.target.value)} placeholder="0.00000000" required/><small className={styles.fieldHelp}>{fr?"Utilisez le taux figurant sur votre paiement ou relevé. Zuelen ne suppose jamais un taux 1:1.":"Use the rate shown on your payment or bank record. Zuelen never assumes a 1:1 exchange rate."}</small></label>:<input type="hidden" name="exchange_rate_to_base" value="1"/>}

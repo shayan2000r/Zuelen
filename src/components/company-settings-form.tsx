@@ -8,7 +8,7 @@ import { FieldGroup, FormSection, SelectField, TextareaField, TextField } from "
 import styles from "@/app/app/settings/settings.module.css";
 
 const initial: SettingsState = { status: "idle", message: "" };
-type Company = { legal_name: string; trading_name: string | null; legal_form: string; entity_kind: "independent"|"company"; rcs_number: string | null; vat_number: string | null; tax_number: string | null; business_permit_number: string | null; municipality: string | null; activity: string | null; fiscal_year_start_month: number; base_currency: string; vat_registered: boolean; vat_filing_frequency: string | null; registered_address: Record<string, unknown> };
+type Company = { legal_name: string; trading_name: string | null; legal_form: string; entity_kind: "independent"|"company"; rcs_number: string | null; vat_number: string | null; tax_number: string | null; business_permit_number: string | null; municipality: string | null; activity: string | null; fiscal_year_start_month: number; base_currency: string; vat_registered: boolean; vat_filing_frequency: string | null; vat_exemption_basis?: string | null; vat_deduction_mode?: string; vat_deduction_ratio?: number | null; tax_advances_assessed?: boolean; eu_recap_frequency?: string; registered_address: Record<string, unknown> };
 function address(company: Company, key: string) { const value = company.registered_address?.[key]; return typeof value === "string" ? value : ""; }
 function turnoverBracket(frequency:string|null){return frequency==="monthly"?"over_620k":frequency==="quarterly"?"112k_to_620k":"up_to_112k"}
 type IndependentProfile = { activity_category:string; activity_start_date:string; accounting_start_date:string } | null;
@@ -76,6 +76,30 @@ export function CompanySettingsForm({ company, independentProfile=null, taxProfi
           <SelectField label={fr ? "Début de l’exercice" : "Fiscal year starts"} name="fiscal_year_start_month" defaultValue={String(company.fiscal_year_start_month)}>{Array.from({ length: 12 }, (_, index) => <option value={index + 1} key={index}>{new Date(2026, index, 1).toLocaleDateString(intlLocale, { month: "long" })}</option>)}</SelectField>
           <SelectField label={fr ? "Chiffre d’affaires annuel HT attendu" : "Expected annual turnover excl. VAT"} name="turnover_bracket" defaultValue={turnoverBracket(company.vat_filing_frequency)}><option value="up_to_112k">≤ €112,000 · {fr?"déclaration annuelle":"annual return"}</option><option value="112k_to_620k">€112,000.01 – €620,000 · {fr?"trimestrielle + annuelle":"quarterly + annual"}</option><option value="over_620k">&gt; €620,000 · {fr?"mensuelle + annuelle":"monthly + annual"}</option></SelectField>
         </FieldGroup>
+        <FieldGroup columns={2}>
+          <SelectField label={fr ? "Opérations sans TVA" : "Supplies without VAT"} name="vat_exemption_basis" defaultValue={company.vat_exemption_basis ?? ""}>
+            <option value="">{fr ? "Aucune (TVA facturée normalement)" : "None (VAT charged normally)"}</option>
+            <option value="franchise">{fr ? "Régime de franchise · art. 57bis (CA ≤ 50 000 €)" : "Small-business franchise · art. 57bis (turnover ≤ €50,000)"}</option>
+            <option value="exempt_activity">{fr ? "Activité exonérée · art. 44" : "Exempt activity · art. 44"}</option>
+          </SelectField>
+          <SelectField label={fr ? "Droit à déduction de la TVA en amont" : "Input VAT deduction right"} name="vat_deduction_mode" defaultValue={company.vat_deduction_mode ?? "full"}>
+            <option value="full">{fr ? "Total (activité entièrement taxée)" : "Full (fully taxable activity)"}</option>
+            <option value="partial">{fr ? "Partiel (prorata, activité mixte)" : "Partial (pro-rata, mixed activity)"}</option>
+            <option value="none">{fr ? "Aucun (activité exonérée ou franchise)" : "None (exempt activity or franchise)"}</option>
+          </SelectField>
+          <TextField label={fr ? "Prorata de déduction (%)" : "Deduction pro-rata (%)"} name="vat_deduction_ratio" type="number" min="0" max="100" step="0.01" defaultValue={company.vat_deduction_ratio == null ? "" : String(company.vat_deduction_ratio)} placeholder={fr ? "Uniquement si partiel" : "Only if partial"} />
+          <SelectField label={fr ? "État récapitulatif UE" : "EU recapitulative statement"} name="eu_recap_frequency" defaultValue={company.eu_recap_frequency ?? "monthly"}>
+            <option value="monthly">{fr ? "Mensuel (par défaut)" : "Monthly (default)"}</option>
+            <option value="quarterly">{fr ? "Trimestriel (services, ou biens ≤ 50 000 € par trimestre)" : "Quarterly (services, or goods ≤ €50,000 per quarter)"}</option>
+          </SelectField>
+          <SelectField label={fr ? "Avances d’impôt fixées par l’ACD" : "Tax advances fixed by the ACD"} name="tax_advances_assessed" defaultValue={company.tax_advances_assessed ? "on" : ""}>
+            <option value="">{fr ? "Non" : "No"}</option>
+            <option value="on">{fr ? "Oui, selon mon bulletin d’avances" : "Yes, per my advance-payment notice"}</option>
+          </SelectField>
+        </FieldGroup>
+        <p className={styles.fieldNote}>{fr
+          ? "La part de TVA non déductible est ajoutée au coût de l’achat. Le prorata provisoire est celui de l’exercice précédent ; l’ajustement définitif se fait à la clôture. Les avances d’impôt n’apparaissent dans le calendrier que si l’ACD vous en a fixé."
+          : "Non-deductible VAT is added to the cost of the purchase. The provisional pro-rata is last year's; the final adjustment is made at year end. Tax advances appear in the calendar only if the ACD has fixed them for you."}</p>
         <p className={styles.fieldNote}>{company.vat_number
           ?(fr?"Votre numéro de TVA indique que l’activité est enregistrée à la TVA. La tranche de chiffre d’affaires aide Zuelen à proposer une périodicité, mais l’AED reste compétente pour confirmer la fréquence applicable.":"Your VAT number indicates VAT registration. The turnover bracket helps Zuelen suggest a filing cadence, but the AED remains the authority for the applicable frequency.")
           :(fr?"Aucun numéro de TVA n’est enregistré. Zuelen ne traitera donc pas l’activité comme assujettie à la TVA tant qu’un numéro n’est pas ajouté.":"No VAT number is currently stored. Zuelen will therefore not treat the business as VAT registered until one is added.")}</p>

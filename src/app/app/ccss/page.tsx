@@ -120,7 +120,16 @@ export default async function CcssPage() {
   const documents = documentResult.data ?? [];
   let projection: ReturnType<typeof calculateAnnualCcss> | null = null;
   let projectionError: string | null = null;
-  if (ccssProfile && parameters.length) {
+  const uncoveredMonth = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}-01`)
+    .find((month) => !parameters.some((parameter) => parameter.effectiveFrom <= month && (!parameter.effectiveTo || parameter.effectiveTo >= month)));
+  if (ccssProfile && uncoveredMonth) {
+    // Official parameters (minimum social wage, ceilings, rates) are only published by the IGSS/CCSS
+    // for the current period; never extrapolate them.
+    projectionError = l(
+      `The official CCSS parameters from ${uncoveredMonth.slice(0, 7)} onwards are not published yet. Zuelen will show the projection once the IGSS/CCSS publish them.`,
+      `Les paramètres officiels CCSS à partir de ${uncoveredMonth.slice(0, 7)} ne sont pas encore publiés. Zuelen affichera la projection dès leur publication par l’IGSS/la CCSS.`,
+    );
+  } else if (ccssProfile && parameters.length) {
     const situation: CcssSituation = {
       affiliationType: ccssProfile.affiliation_type as CcssSituation["affiliationType"],
       activityLegalForm: ccssProfile.activity_legal_form as CcssSituation["activityLegalForm"],

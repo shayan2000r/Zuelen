@@ -38,6 +38,11 @@ export type Workspace = {
     fiscal_year_start_month: number;
     vat_registered: boolean;
     vat_filing_frequency: string | null;
+    vat_exemption_basis: "franchise" | "exempt_activity" | null;
+    vat_deduction_mode: "full" | "partial" | "none";
+    vat_deduction_ratio: number | null;
+    tax_advances_assessed: boolean;
+    eu_recap_frequency: "monthly" | "quarterly";
     vat_number: string | null;
     rcs_number: string | null;
     tax_number: string | null;
@@ -79,7 +84,7 @@ export async function getWorkspace(): Promise<Workspace> {
 
   const [{ data: organizations, error: organizationError }, { data: companyRows, error: companyError }] = await Promise.all([
     supabase.from("organizations").select("id,name,slug").in("id", organizationIds),
-    supabase.from("companies").select("id,organization_id,legal_name,trading_name,legal_form,entity_kind,base_currency,fiscal_year_start_month,vat_registered,vat_filing_frequency,vat_number,rcs_number,tax_number,business_permit_number,municipality,activity,brand_image_path,registered_address,created_at").in("organization_id", organizationIds).order("created_at", { ascending:true }),
+    supabase.from("companies").select("id,organization_id,legal_name,trading_name,legal_form,entity_kind,base_currency,fiscal_year_start_month,vat_registered,vat_filing_frequency,vat_exemption_basis,vat_deduction_mode,vat_deduction_ratio,tax_advances_assessed,eu_recap_frequency,vat_number,rcs_number,tax_number,business_permit_number,municipality,activity,brand_image_path,registered_address,created_at").in("organization_id", organizationIds).order("created_at", { ascending:true }),
   ]);
   if (organizationError) throw new Error(organizationError.message);
   if (companyError) throw new Error(companyError.message);
@@ -114,6 +119,9 @@ export async function getWorkspace(): Promise<Workspace> {
     id:companyRow.id,legal_name:companyRow.legal_name,trading_name:companyRow.trading_name,legal_form:companyRow.legal_form,
     entity_kind:companyRow.entity_kind,base_currency:companyRow.base_currency,fiscal_year_start_month:companyRow.fiscal_year_start_month,
     vat_registered:companyRow.vat_registered,vat_filing_frequency:companyRow.vat_filing_frequency,vat_number:companyRow.vat_number,
+    vat_exemption_basis:companyRow.vat_exemption_basis ?? null,vat_deduction_mode:companyRow.vat_deduction_mode ?? "full",
+    vat_deduction_ratio:companyRow.vat_deduction_ratio == null ? null : Number(companyRow.vat_deduction_ratio),
+    tax_advances_assessed:Boolean(companyRow.tax_advances_assessed),eu_recap_frequency:companyRow.eu_recap_frequency ?? "monthly",
     rcs_number:companyRow.rcs_number,tax_number:companyRow.tax_number,business_permit_number:companyRow.business_permit_number,
     municipality:companyRow.municipality,activity:companyRow.activity,brand_image_path:companyRow.brand_image_path,
     registered_address:companyRow.registered_address,
