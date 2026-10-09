@@ -2,6 +2,7 @@
 // The database applies the same rules when it posts the transaction (classify_and_post_source_transaction);
 // see docs/compliance/REGULATORY_REGISTER.md (A1, A9, A13).
 
+import { isOtherEuCountry } from "./eu.ts";
 import { isVatRateAllowed } from "./vat.ts";
 
 export const VAT_TREATMENTS = [
@@ -24,6 +25,8 @@ export type TransactionVatInput = {
   direction: "income" | "expense" | string;
   occurredOn: string;
   vatRegistered: boolean;
+  /** Counterparty country (ISO code). Required for a business abroad; decides the VAT return boxes. Omit to skip the check. */
+  country?: string | null;
 };
 
 export type TransactionVatErrorCode =
@@ -31,7 +34,9 @@ export type TransactionVatErrorCode =
   | "treatment"
   | "rate"
   | "reverse_charge_rate"
-  | "income_vat_not_registered";
+  | "income_vat_not_registered"
+  | "country_abroad"
+  | "country_eu";
 
 export type TransactionVat =
   | {
@@ -85,14 +90,24 @@ export function computeTransactionVat(input: TransactionVatInput): TransactionVa
   // An intra-Community acquisition is a purchase of goods; a sale cannot have this treatment.
   if (treatment === "eu_acquisition" && direction === "income") return { ok: false, error: "treatment" };
 
+  // Reverse charge applies to a business established abroad; an intra-Community acquisition comes from
+  // another Member State. The country also decides the boxes of the VAT return. (Not checked when the
+  // country is not given, for the live preview in the forms.)
+  if (input.country !== undefined) {
+    const country = input.country?.trim().toUpperCase() || null;
+    if (treatment === "eu_b2b_reverse_charge" && (!country || country === "LU"))
+      return { ok: false, error: "country_abroad" };
+    if (treatment === "eu_acquisition" && !isOtherEuCountry(country)) return { ok: false, error: "country_eu" };
+  }
+
   const rate = Number(input.rate);
   if (!Number.isFinite(rate) || !isVatRateAllowed(rate, occurredOn)) return { ok: false, error: "rate" };
 
   if (treatment === "eu_b2b_reverse_charge" || treatment === "eu_acquisition") {
-    // A sale to an EU business customer carries no Luxembourg VAT: the customer accounts for it.
+    // A service to a business customer abroad carries no Luxembourg VAT (place of supply: the customer's country).
     if (direction === "income") return noVat;
-    // A service or goods bought from an EU business: the Luxembourg buyer self-assesses VAT at the
-    // Luxembourg rate.
+    // A service from a business abroad, or goods from another Member State: the Luxembourg buyer
+    // self-assesses VAT at the Luxembourg rate.
     if (rate <= 0) return { ok: false, error: "reverse_charge_rate" };
     const vat = roundMoney((entered * rate) / 100);
     return { ok: true, gross: entered, net: entered, storedNet: null, vat, rate, treatment, selfAssessed: true };
@@ -137,6 +152,14 @@ const MESSAGES: Record<TransactionVatErrorCode, { en: string; fr: string }> = {
   reverse_charge_rate: {
     en: "Choose the Luxembourg VAT rate you self-assess on this EU purchase (usually the standard rate).",
     fr: "Choisissez le taux de TVA luxembourgeois à autoliquider sur cet achat UE (en général le taux normal).",
+  },
+  country_abroad: {
+    en: "Enter the country of the business abroad (2 letters, for example DE or US).",
+    fr: "Indiquez le pays de l’entreprise étrangère (2 lettres, par exemple DE ou US).",
+  },
+  country_eu: {
+    en: "An intra-Community acquisition comes from another EU country: enter the supplier’s country.",
+    fr: "Une acquisition intracommunautaire provient d’un autre pays de l’UE : indiquez le pays du fournisseur.",
   },
   income_vat_not_registered: {
     en: "This business is not marked as VAT registered, so it cannot charge VAT. Choose “No VAT / exempt” or update the VAT profile in Settings.",

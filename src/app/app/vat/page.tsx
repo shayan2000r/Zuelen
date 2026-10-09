@@ -9,59 +9,79 @@ import {
   ReceiptText,
   Scale,
 } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { VatFilingAction } from "@/components/vat-filing-action";
 import { DataSummary } from "@/components/zuelen-data-ui-v2";
 import { PageHeader, StatusBadge, V2Page } from "@/components/zuelen-ui-v2";
 import styles from "@/components/vat-filing.module.css";
-import { fiscalYearBounds, getActiveFiscalYear } from "@/lib/fiscal-year";
 import { intlLocale, normalizeLocale, type Locale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import { vatRatesOn } from "@/lib/tax-rules/vat";
+import { VAT_FORM_SOURCES, vatFormLayout } from "@/lib/vat-return/forms";
+import { loadVatReturn } from "@/lib/vat-return/load";
+import { currentVatPeriod, parseVatPeriod, vatPeriodsOfYear, type VatFrequency } from "@/lib/vat-return/periods";
+import type { VatIssueCode } from "@/lib/vat-return/compute";
 export const dynamic = "force-dynamic";
 function money(v: number, c: string, l: Locale) {
   return new Intl.NumberFormat(intlLocale(l), { style: "currency", currency: c, minimumFractionDigits: 2 }).format(v);
 }
-type RateBucket = { base: number; vat: number };
-export default async function VatFilingPage() {
+function amount(v: number | undefined, l: Locale) {
+  return v
+    ? new Intl.NumberFormat(intlLocale(l), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
+    : "—";
+}
+const ISSUE_TEXT: Record<VatIssueCode, { fr: string; en: string }> = {
+  zero_rate_sale: {
+    fr: "Vente luxembourgeoise sans TVA : précisez l'exonération (ou le taux) dans l'opération.",
+    en: "Luxembourg sale without VAT: state the exemption (or the rate) on the transaction.",
+  },
+  sale_abroad_unclear: {
+    fr: "Vente à l'étranger : indiquez s'il s'agit d'une entreprise (autoliquidation) et du pays du client.",
+    en: "Sale abroad: say whether the customer is a business (reverse charge) and its country.",
+  },
+  country_missing: {
+    fr: "Pays du client ou du fournisseur manquant : il détermine la case de la déclaration.",
+    en: "Customer or supplier country missing: it decides the box of the return.",
+  },
+  rate_not_on_form: {
+    fr: "Taux de TVA absent du formulaire officiel pour cette opération.",
+    en: "VAT rate not on the official form for this transaction.",
+  },
+  unknown_treatment: {
+    fr: "Situation TVA non confirmée.",
+    en: "VAT situation not confirmed.",
+  },
+  revenue_branch_unclear: {
+    fr: "Compte de produits hors 702–708 : vérifiez la case du chiffre d'affaires (compté en 004).",
+    en: "Revenue account outside 702–708: check the turnover box (counted in 004).",
+  },
+};
+type Params = { period?: string };
+export default async function VatFilingPage({ searchParams }: { searchParams: Promise<Params> }) {
   const w = await getWorkspace();
   if (!w.authenticated) redirect("/sign-in");
   if (!w.company) redirect("/setup");
   if (!w.capabilities?.hasVat) redirect("/app/taxes?not_applicable=vat");
+  const params = await searchParams;
   const locale = normalizeLocale(w.profile?.locale),
     fr = locale === "fr",
     dateLocale = intlLocale(locale),
     s = await createClient(),
-    year = await getActiveFiscalYear(w.company.fiscal_year_start_month),
-    bounds = fiscalYearBounds(year, w.company.fiscal_year_start_month),
     currency = w.company.base_currency || "EUR",
-    from = bounds.start,
-    to = bounds.end,
-    frequency = w.company.vat_filing_frequency || "annual";
-  const [
-    { data: accounts },
-    { data: entries },
-    { data: invoices },
-    { count: pendingCount },
-    { data: taxMeta },
-    { data: filings },
-  ] = await Promise.all([
-    s.from("company_accounts").select("id,code").eq("company_id", w.company.id).in("code", ["421611", "461411"]),
-    s
-      .from("journal_entries")
-      .select("id")
-      .eq("company_id", w.company.id)
-      .eq("status", "posted")
-      .gte("entry_date", from)
-      .lte("entry_date", to),
-    s
-      .from("sales_invoices")
-      .select("id,vat_treatment,subtotal,vat_total,total,customer_snapshot")
-      .eq("company_id", w.company.id)
-      .eq("status", "issued")
-      .gte("service_date", from)
-      .lte("service_date", to),
+    frequency = (
+      ["monthly", "quarterly", "annual"].includes(w.company.vat_filing_frequency ?? "")
+        ? w.company.vat_filing_frequency
+        : "annual"
+    ) as VatFrequency,
+    today = new Date().toISOString().slice(0, 10),
+    period = (params.period && parseVatPeriod(params.period)) || currentVatPeriod(today, frequency),
+    year = Number(period.start.slice(0, 4)),
+    from = period.start,
+    to = period.end;
+  const [vatReturn, { count: pendingCount }, { data: taxMeta }, { data: filings }] = await Promise.all([
+    loadVatReturn(s, w.company, period),
     s
       .from("source_transactions")
       .select("id", { count: "exact", head: true })
@@ -71,9 +91,7 @@ export default async function VatFilingPage() {
       .lte("occurred_on", to),
     s
       .from("source_transactions")
-      .select(
-        "id,source_type,vat_treatment,vat_rate,counterparty_country,transaction_kind,direction,vat_amount,amount_net,amount_gross",
-      )
+      .select("id,source_type,vat_treatment")
       .eq("company_id", w.company.id)
       .eq("classification_status", "posted")
       .gte("occurred_on", from)
@@ -83,71 +101,48 @@ export default async function VatFilingPage() {
       .select("id,status,period_label,snapshot_at,export_status,payload,period_start,period_end")
       .eq("company_id", w.company.id)
       .eq("filing_type", "vat_return")
-      .gte("period_start", from)
-      .lte("period_end", to)
+      .eq("period_start", from)
+      .eq("period_end", to)
       .order("created_at", { ascending: false })
       .limit(5),
   ]);
-  const map = new Map((accounts ?? []).map(a => [a.id, a.code]));
-  let output = 0,
-    input = 0;
-  if (entries?.length && accounts?.length) {
-    const { data: lines } = await s
-      .from("journal_lines")
-      .select("company_account_id,debit,credit")
-      .in(
-        "journal_entry_id",
-        entries.map(e => e.id),
-      )
-      .in(
-        "company_account_id",
-        accounts.map(a => a.id),
-      );
-    for (const l of lines ?? []) {
-      const code = map.get(l.company_account_id);
-      if (code === "461411") output += Number(l.credit) - Number(l.debit);
-      if (code === "421611") input += Number(l.debit) - Number(l.credit);
-    }
-  }
-  const invoiceIds = (invoices ?? []).map(i => i.id),
-    salesRates = new Map<number, RateBucket>(),
-    purchaseRates = new Map<number, RateBucket>();
-  if (invoiceIds.length) {
-    const { data: lines } = await s
-      .from("sales_invoice_lines")
-      .select("invoice_id,vat_rate,net_amount,vat_amount")
-      .in("invoice_id", invoiceIds);
-    const domestic = new Set((invoices ?? []).filter(i => i.vat_treatment === "domestic").map(i => i.id));
-    for (const l of lines ?? []) {
-      if (!domestic.has(l.invoice_id)) continue;
-      const rate = Number(l.vat_rate),
-        r = salesRates.get(rate) ?? { base: 0, vat: 0 };
-      r.base += Number(l.net_amount);
-      r.vat += Number(l.vat_amount);
-      salesRates.set(rate, r);
-    }
-  }
-  for (const t of taxMeta ?? []) {
-    if (
-      t.direction !== "expense" ||
-      t.source_type === "invoice" ||
-      t.vat_treatment !== "domestic" ||
-      Number(t.vat_amount) <= 0
-    )
-      continue;
-    const rate = Number(t.vat_rate ?? 0),
-      r = purchaseRates.get(rate) ?? { base: 0, vat: 0 };
-    r.base += Number(t.amount_net ?? 0);
-    r.vat += Number(t.vat_amount ?? 0);
-    purchaseRates.set(rate, r);
-  }
-  const eu = (invoices ?? []).filter(i => i.vat_treatment === "eu_b2b_reverse_charge"),
-    euBase = eu.reduce((x, i) => x + Number(i.subtotal), 0),
+  const boxes = vatReturn.boxes,
+    output = boxes["076"] ?? 0,
+    input = boxes["102"] ?? 0,
+    net = boxes["105"] ?? 0,
     bankEvidenceMissing = (taxMeta ?? []).filter(t => t.source_type === "bank" && t.vat_treatment === "unknown").length,
     unknownNonBank = (taxMeta ?? []).filter(t => t.source_type !== "bank" && t.vat_treatment === "unknown").length,
-    explicitVat = (taxMeta ?? []).filter(t => Number(t.vat_amount) > 0).length,
-    net = output - input,
-    ready = (pendingCount ?? 0) === 0 && bankEvidenceMissing === 0 && unknownNonBank === 0;
+    recapBase = (boxes["457"] ?? 0) + (boxes["013"] ?? 0) + (boxes["423"] ?? 0),
+    ready =
+      (pendingCount ?? 0) === 0 &&
+      bankEvidenceMissing === 0 &&
+      unknownNonBank === 0 &&
+      vatReturn.issues.length === 0 &&
+      vatReturn.reconciled,
+    source = VAT_FORM_SOURCES[period.form],
+    formName =
+      period.form === "DECA"
+        ? fr
+          ? "Déclaration annuelle"
+          : "Annual return"
+        : period.form === "DECT"
+          ? fr
+            ? "Déclaration trimestrielle"
+            : "Quarterly return"
+          : fr
+            ? "Déclaration mensuelle"
+            : "Monthly return",
+    periodLabel = (key: string) => {
+      const p = parseVatPeriod(key)!;
+      if (p.form === "DECA") return fr ? `Année ${key}` : `Year ${key}`;
+      if (p.form === "DECT") return key.replace("-", " ");
+      return new Date(`${p.start}T00:00:00Z`).toLocaleDateString(dateLocale, {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    },
+    periods = [...vatPeriodsOfYear(year - 1, frequency), ...vatPeriodsOfYear(year, frequency)];
   const freqLabel = fr
       ? frequency === "annual"
         ? "annuelle"
@@ -156,26 +151,26 @@ export default async function VatFilingPage() {
           : "mensuelle"
       : frequency,
     due =
-      frequency === "annual"
-        ? fr
-          ? `Avant le 1er mars ${year + 1}`
-          : `Before 1 Mar ${year + 1}`
-        : frequency === "quarterly"
+      period.form === "DECA"
+        ? frequency === "annual"
           ? fr
-            ? "Avant le 15 suivant chaque trimestre · récapitulatif annuel avant le 1er mai"
-            : "Before the 15th after each quarter · annual recap before 1 May"
+            ? `Avant le 1er mars ${year + 1}`
+            : `Before 1 Mar ${year + 1}`
           : fr
-            ? "Avant le 15 du mois suivant · récapitulatif annuel avant le 1er mai"
-            : "Before the 15th of the following month · annual recap before 1 May";
+            ? `Avant le 1er mai ${year + 1}`
+            : `Before 1 May ${year + 1}`
+        : fr
+          ? "Avant le 15 du mois qui suit la période"
+          : "Before the 15th of the month after the period";
   return (
     <V2Page className={styles.page}>
       <PageHeader
-        eyebrow={fr ? "Déclarations TVA · " + year : "VAT filing · " + year}
+        eyebrow={(fr ? "Déclaration TVA · " : "VAT return · ") + periodLabel(period.key)}
         title={fr ? "TVA" : "VAT"}
         description={
           fr
-            ? "La position TVA, les justificatifs par taux et la préparation de la déclaration dans un même workflow financier."
-            : "Your VAT position, evidence by rate and filing readiness in one financial workflow."
+            ? "Votre déclaration TVA case par case, calculée à partir des factures émises et des opérations comptabilisées."
+            : "Your VAT return box by box, computed from issued invoices and posted transactions."
         }
         meta={
           <StatusBadge tone={ready ? "success" : "warning"}>
@@ -184,6 +179,19 @@ export default async function VatFilingPage() {
           </StatusBadge>
         }
       />
+
+      <nav className={styles.periods} aria-label={fr ? "Période de déclaration" : "Return period"}>
+        {periods.map(p => (
+          <Link
+            key={p.key}
+            href={`/app/vat?period=${p.key}`}
+            className={p.key === period.key ? styles.periodActive : undefined}
+            aria-current={p.key === period.key ? "page" : undefined}
+          >
+            {periodLabel(p.key)}
+          </Link>
+        ))}
+      </nav>
 
       <section className={styles.contextGuide}>
         <div className={styles.contextLead}>
@@ -233,20 +241,20 @@ export default async function VatFilingPage() {
                   ? "Aucun élément bloquant détecté ; vérifiez les montants avant de préparer la déclaration."
                   : "No blocking items detected; review the figures before preparing the filing."
                 : fr
-                  ? `${pendingCount ?? 0} transaction(s) à vérifier · ${bankEvidenceMissing + unknownNonBank} traitement(s) TVA encore inconnu(s).`
-                  : `${pendingCount ?? 0} transaction(s) need review · ${bankEvidenceMissing + unknownNonBank} item(s) still have unknown VAT treatment.`}
+                  ? `${pendingCount ?? 0} transaction(s) à vérifier · ${bankEvidenceMissing + unknownNonBank + vatReturn.issues.length} élément(s) TVA à préciser.`
+                  : `${pendingCount ?? 0} transaction(s) need review · ${bankEvidenceMissing + unknownNonBank + vatReturn.issues.length} VAT item(s) to clarify.`}
             </span>
           </div>
         </div>
         <div className={styles.contextFoot}>
           <span>
             {fr
-              ? `Taux luxembourgeois en vigueur au ${bounds.end} : ${vatRatesOn(bounds.end)
+              ? `Taux luxembourgeois en vigueur au ${to} : ${vatRatesOn(to)
                   .filter(r => r > 0)
                   .join(
                     " %, ",
                   )} %. Ne choisissez pas un taux au hasard : utilisez le justificatif ou confirmez le traitement applicable.`
-              : `Luxembourg VAT rates in force on ${bounds.end}: ${vatRatesOn(bounds.end)
+              : `Luxembourg VAT rates in force on ${to}: ${vatRatesOn(to)
                   .filter(r => r > 0)
                   .join(
                     "%, ",
@@ -286,80 +294,112 @@ export default async function VatFilingPage() {
           {
             label: fr ? "TVA collectée" : "Output VAT",
             value: money(output, currency, locale),
-            description: fr ? "Ventes taxables documentées" : "Documented taxable sales",
+            description: fr ? "Case 076 · taxe en aval" : "Box 076 · output tax",
             icon: ReceiptText,
             tone: "info",
           },
           {
             label: fr ? "TVA déductible" : "Recoverable input VAT",
             value: money(input, currency, locale),
-            description: fr ? "Achats appuyés par des justificatifs" : "Purchases supported by evidence",
+            description: fr ? "Case 102 · taxe en amont déductible" : "Box 102 · deductible input tax",
             icon: CheckCircle2,
             tone: "success",
           },
           {
             label: fr ? "Échéance de déclaration" : "Filing deadline",
             value: due,
-            description: fr ? "Profil " + freqLabel : frequency + " profile",
+            description: formName,
             icon: Landmark,
             tone: "warning",
           },
         ]}
       />
 
-      <section className={styles.grid}>
-        <article className={styles.card}>
-          <div className={styles.head}>
+      <section className={styles.card}>
+        <div className={styles.head}>
+          <div>
+            <p>
+              {formName} · eCDF TVA_{period.form} · {source.version}
+            </p>
+            <h2>{fr ? "Déclaration case par case" : "Return box by box"}</h2>
+          </div>
+          <ReceiptText />
+        </div>
+        <p className={styles.formNote}>
+          {fr
+            ? "Montants en euros, à reporter dans le formulaire officiel sur eCDF / MyGuichet. Les cases vides ne sont pas concernées par les opérations enregistrées dans Zuelen (importations, opérations triangulaires, etc.) : complétez-les si elles s'appliquent."
+            : "Amounts in euros, to enter in the official form on eCDF / MyGuichet. Empty boxes are not covered by the transactions recorded in Zuelen (imports, triangular transactions, etc.): complete them if they apply."}{" "}
+          <a href={fr ? source.url : source.urlEn} target="_blank" rel="noreferrer">
+            {fr ? "Formulaire officiel" : "Official form"} <ExternalLink size={11} />
+          </a>
+        </p>
+        {vatFormLayout(period.form).map(section => (
+          <div key={section.title.en} className={styles.formSection}>
+            <h3>{fr ? section.title.fr : section.title.en}</h3>
+            {section.lines.map(line => (
+              <div
+                key={line.kind === "pair" ? line.base : line.box}
+                className={`${styles.formLine} ${line.total ? styles.formTotal : ""}`}
+                style={{ paddingLeft: line.depth * 14 }}
+              >
+                <span>{fr ? line.label.fr : line.label.en}</span>
+                {line.kind === "pair" ? (
+                  <>
+                    <code>{line.base}</code>
+                    <strong>{amount(boxes[line.base], locale)}</strong>
+                    <code>{line.tax}</code>
+                    <strong>{amount(boxes[line.tax], locale)}</strong>
+                  </>
+                ) : (
+                  <>
+                    <span />
+                    <span />
+                    <code>{line.box}</code>
+                    <strong>{amount(boxes[line.box], locale)}</strong>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+        {vatReturn.issues.length ? (
+          <div className={styles.notice}>
+            <AlertTriangle />
             <div>
-              <p>{fr ? `Justificatifs par taux · ${year}` : `Evidence by rate · ${year}`}</p>
-              <h2>{fr ? "Ventes et achats taxables" : "Taxable sales & purchases"}</h2>
+              <strong>
+                {fr
+                  ? `${vatReturn.issues.length} opération(s) non reprise(s) dans la déclaration`
+                  : `${vatReturn.issues.length} item(s) not included in the return`}
+              </strong>
+              <ul className={styles.issueList}>
+                {vatReturn.issues.map(issue => (
+                  <li key={issue.code + issue.itemId}>
+                    {issue.label || (fr ? "Opération" : "Item")} · {money(issue.amount, currency, locale)} —{" "}
+                    {fr ? ISSUE_TEXT[issue.code].fr : ISSUE_TEXT[issue.code].en}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ReceiptText />
           </div>
-          {Array.from(
-            new Set([
-              ...vatRatesOn(bounds.start),
-              ...vatRatesOn(bounds.end),
-              ...salesRates.keys(),
-              ...purchaseRates.keys(),
-            ]),
-          )
-            .sort((a, b) => b - a)
-            .map(rate => {
-              const sale = salesRates.get(rate) ?? { base: 0, vat: 0 },
-                purchase = purchaseRates.get(rate) ?? { base: 0, vat: 0 };
-              return (
-                <div key={rate}>
-                  <div className={styles.row}>
-                    <span>
-                      <b>{rate}%</b> {fr ? "ventes documentées" : "documented sales"}
-                    </span>
-                    <strong>
-                      {money(sale.base, currency, locale)}
-                      <small>
-                        {fr ? "TVA collectée" : "Output VAT"} {money(sale.vat, currency, locale)}
-                      </small>
-                    </strong>
-                  </div>
-                  <div className={styles.row}>
-                    <span>
-                      <b>{rate}%</b> {fr ? "achats documentés" : "documented purchases"}
-                    </span>
-                    <strong>
-                      {money(purchase.base, currency, locale)}
-                      <small>
-                        {fr ? "TVA déductible" : "Input VAT"} {money(purchase.vat, currency, locale)}
-                      </small>
-                    </strong>
-                  </div>
-                </div>
-              );
-            })}
-          <div className={styles.total}>
-            <span>{fr ? "TVA nette du grand livre" : "Net VAT from ledger"}</span>
-            <strong>{money(net, currency, locale)}</strong>
+        ) : null}
+        {vatReturn.reconciled ? (
+          <div className={styles.clear}>
+            <CheckCircle2 />
+            {fr
+              ? `Concorde avec le grand livre : TVA en aval ${money(vatReturn.ledger.output, currency, locale)} (461411), TVA déductible ${money(vatReturn.ledger.input, currency, locale)} (421611).`
+              : `Agrees with the ledger: output VAT ${money(vatReturn.ledger.output, currency, locale)} (461411), deductible VAT ${money(vatReturn.ledger.input, currency, locale)} (421611).`}
           </div>
-        </article>
+        ) : (
+          <div className={styles.notice}>
+            <AlertTriangle />
+            {fr
+              ? `Écart avec le grand livre : TVA en aval ${money(vatReturn.ledger.output, currency, locale)} (461411) contre ${money(output, currency, locale)} en case 076 ; TVA déductible ${money(vatReturn.ledger.input, currency, locale)} (421611) contre ${money(input, currency, locale)} en case 102. Réglez les opérations ci-dessus ou vérifiez les écritures manuelles sur ces comptes.`
+              : `Difference with the ledger: output VAT ${money(vatReturn.ledger.output, currency, locale)} (461411) against ${money(output, currency, locale)} in box 076; deductible VAT ${money(vatReturn.ledger.input, currency, locale)} (421611) against ${money(input, currency, locale)} in box 102. Resolve the items above or check manual entries on these accounts.`}
+          </div>
+        )}
+      </section>
+
+      <section className={styles.grid}>
         <article className={styles.card}>
           <div className={styles.head}>
             <div>
@@ -369,34 +409,29 @@ export default async function VatFilingPage() {
             <Landmark />
           </div>
           <div className={styles.big}>
-            {money(euBase, currency, locale)}
-            <small>
-              {eu.length}{" "}
-              {fr
-                ? `facture${eu.length === 1 ? "" : "s"} en autoliquidation`
-                : `reverse-charge invoice${eu.length === 1 ? "" : "s"}`}
-            </small>
+            {money(recapBase, currency, locale)}
+            <small>{fr ? "Cases 457 / 013 et 423" : "Boxes 457 / 013 and 423"}</small>
           </div>
-          {euBase > 0 ? (
+          {recapBase > 0 ? (
             <div className={styles.notice}>
               <AlertTriangle />
               {fr
-                ? "Des services B2B UE ont été détectés. Vérifiez le flux séparé de l'état récapitulatif."
-                : "EU B2B services were detected. Review the separate recapitulative-statement workflow."}
+                ? "Un montant en case 457, 013 ou 423 entraîne l'obligation de déposer un état récapitulatif (formulaire eCDF séparé)."
+                : "An amount in box 457, 013 or 423 entails the obligation to file a recapitulative statement (separate eCDF form)."}
             </div>
           ) : (
             <div className={styles.clear}>
               <CheckCircle2 />
               {fr
-                ? "Aucune vente de services B2B UE détectée dans les factures émises."
-                : "No EU B2B service sales detected in issued invoices."}
+                ? "Aucune livraison ni prestation B2B vers l'UE sur la période."
+                : "No B2B supplies to other EU countries in this period."}
             </div>
           )}
         </article>
         <article className={styles.card}>
           <div className={styles.head}>
             <div>
-              <p>{fr ? `Préparation des justificatifs · ${year}` : `Evidence readiness · ${year}`}</p>
+              <p>{fr ? `Préparation · ${periodLabel(period.key)}` : `Readiness · ${periodLabel(period.key)}`}</p>
               <h2>
                 {ready
                   ? fr
@@ -422,8 +457,8 @@ export default async function VatFilingPage() {
             <strong>{unknownNonBank}</strong>
           </div>
           <div className={styles.check}>
-            <span>{fr ? "Transactions avec TVA explicite" : "Transactions carrying explicit VAT"}</span>
-            <strong>{explicitVat}</strong>
+            <span>{fr ? "Opérations à préciser pour la déclaration" : "Items to clarify for the return"}</span>
+            <strong>{vatReturn.issues.length}</strong>
           </div>
           {bankEvidenceMissing > 0 ? (
             <div className={styles.notice}>
@@ -440,11 +475,11 @@ export default async function VatFilingPage() {
                 : "All posted bank activity has an explicit VAT/evidence treatment."}
             </div>
           )}
-          <VatFilingAction start={from} end={to} ready={ready} />
+          <VatFilingAction period={period.key} ready={ready} />
           {(filings ?? []).length ? (
             <div style={{ marginTop: 12, borderTop: "1px solid var(--z-border)", paddingTop: 10 }}>
               <strong style={{ fontSize: 12 }}>
-                {fr ? `Instantanés ${year} préparés` : `Prepared ${year} snapshots`}
+                {fr ? "Instantanés préparés pour cette période" : "Snapshots prepared for this period"}
               </strong>
               {(filings ?? []).slice(0, 3).map(f => (
                 <div
@@ -463,8 +498,8 @@ export default async function VatFilingPage() {
               <strong>{fr ? "La soumission reste sous votre contrôle" : "Submission stays controlled"}</strong>
               <p>
                 {fr
-                  ? "Zuelen prépare et fige les montants et justificatifs (TVA en aval, TVA en amont, solde). Ce n'est pas le formulaire officiel : la déclaration se dépose sur MyGuichet / eCDF avec ces montants, puis vous la marquez comme déposée."
-                  : "Zuelen prepares and freezes the amounts and evidence (output VAT, input VAT, balance). This is not the official form: file the return on MyGuichet / eCDF using these amounts, then mark it as filed."}
+                  ? "Zuelen fige les cases de la déclaration et les écritures qui les justifient. Le dépôt se fait sur eCDF / MyGuichet avec ces montants ; Zuelen ne dépose rien à votre place."
+                  : "Zuelen freezes the return boxes and the entries behind them. You file on eCDF / MyGuichet with these amounts; Zuelen does not file anything for you."}
               </p>
             </div>
           </div>

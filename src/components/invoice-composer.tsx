@@ -7,7 +7,14 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { correctAndReissueInvoice, saveOrIssueInvoice, type InvoiceActionState } from "@/app/app/invoices/actions";
 import { CountrySelect } from "@/components/country-select";
 import { useI18n } from "@/components/locale-context";
-import { EXEMPT_ACTIVITY_MENTION, FRANCHISE_MENTION, standardVatRateOn, vatRatesOn } from "@/lib/tax-rules/vat";
+import { isOtherEuCountry } from "@/lib/tax-rules/eu";
+import {
+  EXEMPT_ACTIVITY_MENTION,
+  FRANCHISE_MENTION,
+  OUTSIDE_EU_SERVICE_MENTION,
+  standardVatRateOn,
+  vatRatesOn,
+} from "@/lib/tax-rules/vat";
 import styles from "./invoice.module.css";
 import responsive from "./invoice-final-responsive.module.css";
 
@@ -332,7 +339,7 @@ export function InvoiceComposer({
                 name="customer_vat_number"
                 value={customerVat}
                 onChange={e => setCustomerVat(e.target.value)}
-                required={vatTreatment === "eu_b2b_reverse_charge"}
+                required={vatTreatment === "eu_b2b_reverse_charge" && isOtherEuCountry(customerCountry)}
               />
             </label>
           </div>
@@ -427,7 +434,7 @@ export function InvoiceComposer({
               <select name="vat_treatment" value={vatTreatment} onChange={e => setVatTreatment(e.target.value)}>
                 <option value="domestic">TVA Luxembourg</option>
                 <option value="eu_b2b_reverse_charge">
-                  {fr ? "B2B UE · autoliquidation" : "EU B2B · reverse charge"}
+                  {fr ? "Client professionnel à l’étranger · sans TVA" : "Business customer abroad · no VAT"}
                 </option>
               </select>
             </label>
@@ -471,9 +478,17 @@ export function InvoiceComposer({
             <div className={styles.ruleNote}>
               <FileCheck2 size={14} />
               <span>
-                {fr
-                  ? "La TVA est forcée à 0 % et la mention « autoliquidation » est ajoutée à la facture émise."
-                  : "VAT is forced to 0% and “auto-liquidation” is added to the issued invoice."}
+                {isOtherEuCountry(customerCountry)
+                  ? fr
+                    ? "Client assujetti dans un autre pays de l’UE : TVA à 0 %, mention « Autoliquidation » et numéro TVA du client obligatoires. La vente figure dans l’état récapitulatif."
+                    : "Business customer in another EU country: 0% VAT, the “Autoliquidation” mention and the customer’s VAT number are required. The sale goes on the recapitulative statement."
+                  : customerCountry === "LU"
+                    ? fr
+                      ? "Un client luxembourgeois est facturé avec la TVA luxembourgeoise : choisissez « TVA Luxembourg »."
+                      : "A Luxembourg customer is charged Luxembourg VAT: choose “TVA Luxembourg”."
+                    : fr
+                      ? "Client professionnel hors UE : la prestation est imposable dans le pays du client, la facture est émise sans TVA luxembourgeoise."
+                      : "Business customer outside the EU: the service is taxed in the customer’s country, so the invoice carries no Luxembourg VAT."}
               </span>
             </div>
           ) : null}
@@ -703,7 +718,9 @@ export function InvoiceComposer({
             </div>
           </div>
           {vatTreatment === "eu_b2b_reverse_charge" ? (
-            <div className={styles.reverseCharge}>AUTO-LIQUIDATION · REVERSE CHARGE</div>
+            <div className={styles.reverseCharge}>
+              {isOtherEuCountry(customerCountry) ? "AUTO-LIQUIDATION · REVERSE CHARGE" : OUTSIDE_EU_SERVICE_MENTION}
+            </div>
           ) : totals.vat === 0 && company.vat_exemption_basis === "exempt_activity" ? (
             <div className={styles.reverseCharge}>{EXEMPT_ACTIVITY_MENTION}</div>
           ) : totals.vat === 0 && (company.vat_exemption_basis === "franchise" || company.vat_registered === false) ? (

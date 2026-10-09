@@ -8,6 +8,8 @@ import { InvoiceRecordActions } from "@/components/invoice-record-actions";
 import { intlLocale, normalizeLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
+import { isOtherEuCountry } from "@/lib/tax-rules/eu";
+import { OUTSIDE_EU_SERVICE_MENTION } from "@/lib/tax-rules/vat";
 
 export const dynamic = "force-dynamic";
 type Snapshot = Record<string, unknown>;
@@ -269,10 +271,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <strong>{money(Number(invoice.total), invoice.currency)}</strong>
           </div>
         </div>
-        {invoice.vat_treatment === "eu_b2b_reverse_charge" ? (
-          <div className={styles.reverseCharge}>AUTO-LIQUIDATION · REVERSE CHARGE</div>
-        ) : invoice.vat_exemption_mention ? (
+        {invoice.vat_exemption_mention && invoice.vat_exemption_mention !== "Autoliquidation" ? (
           <div className={styles.reverseCharge}>{invoice.vat_exemption_mention}</div>
+        ) : invoice.vat_treatment === "eu_b2b_reverse_charge" ? (
+          <div className={styles.reverseCharge}>
+            {isOtherEuCountry(value(customer, "country_code"))
+              ? "AUTO-LIQUIDATION · REVERSE CHARGE"
+              : OUTSIDE_EU_SERVICE_MENTION}
+          </div>
         ) : null}
         {invoice.notes ? (
           <div className={styles.invoiceNotes}>

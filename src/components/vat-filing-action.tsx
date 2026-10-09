@@ -6,7 +6,7 @@ import { useRolePermissions } from "@/components/role-context";
 import { UpgradeWall } from "@/components/upgrade-wall";
 import { useI18n } from "@/components/locale-context";
 const initial: VatFilingState = { status: "idle", message: "" };
-export function VatFilingAction({ start, end, ready }: { start: string; end: string; ready: boolean }) {
+export function VatFilingAction({ period, ready }: { period: string; ready: boolean }) {
   const { canAccount } = useRolePermissions(),
     { locale } = useI18n(),
     fr = locale === "fr",
@@ -19,8 +19,7 @@ export function VatFilingAction({ start, end, ready }: { start: string; end: str
   return (
     <>
       <form action={action} style={{ display: "grid", gap: 8, marginTop: 14 }}>
-        <input type="hidden" name="period_start" value={start} />
-        <input type="hidden" name="period_end" value={end} />
+        <input type="hidden" name="period" value={period} />
         <button
           type="submit"
           disabled={!ready || pending}

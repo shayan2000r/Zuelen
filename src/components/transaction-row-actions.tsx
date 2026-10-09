@@ -213,8 +213,8 @@ export function TransactionRowActions({ row, accounts = [] }: { row: Row; accoun
                   <option value="domestic">Luxembourg VAT</option>
                   <option value="eu_b2b_reverse_charge">
                     {direction === "income"
-                      ? "EU business customer · reverse charge"
-                      : "EU B2B purchase · reverse charge"}
+                      ? "Service to a business abroad · no Luxembourg VAT"
+                      : "Service from a business abroad · reverse charge"}
                   </option>
                   {direction === "expense" || treatment === "eu_acquisition" ? (
                     <option value="eu_acquisition">EU purchase of goods · intra-Community acquisition</option>
@@ -281,6 +281,7 @@ export function TransactionRowActions({ row, accounts = [] }: { row: Row; accoun
                   name="counterparty_country"
                   maxLength={2}
                   defaultValue={row.counterparty_country ?? ""}
+                  required={treatment === "eu_b2b_reverse_charge" || treatment === "eu_acquisition"}
                   placeholder="LU / FR / US"
                 />
               </label>

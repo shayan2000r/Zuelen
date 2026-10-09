@@ -35,7 +35,7 @@ test("rates are checked against the transaction date", () => {
 });
 
 test("an EU purchase self-assesses VAT on the amount paid, with no separate net amount", () => {
-  const result = computeTransactionVat({ ...base, amount: 1000, treatment: "eu_b2b_reverse_charge" });
+  const result = computeTransactionVat({ ...base, amount: 1000, treatment: "eu_b2b_reverse_charge", country: "DE" });
   assert.deepEqual(result, {
     ok: true,
     gross: 1000,
@@ -46,9 +46,9 @@ test("an EU purchase self-assesses VAT on the amount paid, with no separate net 
     treatment: "eu_b2b_reverse_charge",
     selfAssessed: true,
   });
-  const goods = computeTransactionVat({ ...base, amount: 200, treatment: "eu_acquisition" });
+  const goods = computeTransactionVat({ ...base, amount: 200, treatment: "eu_acquisition", country: "NL" });
   assert.equal(goods.ok && goods.vat, 34);
-  assert.deepEqual(computeTransactionVat({ ...base, rate: 0, treatment: "eu_b2b_reverse_charge" }), {
+  assert.deepEqual(computeTransactionVat({ ...base, rate: 0, treatment: "eu_b2b_reverse_charge", country: "DE" }), {
     ok: false,
     error: "reverse_charge_rate",
   });
@@ -60,13 +60,17 @@ test("a sale to an EU business customer carries no Luxembourg VAT", () => {
     amount: 1000,
     direction: "income",
     treatment: "eu_b2b_reverse_charge",
+    country: "FR",
   });
   assert.equal(result.ok && result.vat, 0);
   assert.equal(result.ok && result.gross, 1000);
-  assert.deepEqual(computeTransactionVat({ ...base, direction: "income", treatment: "eu_acquisition" }), {
-    ok: false,
-    error: "treatment",
-  });
+  assert.deepEqual(
+    computeTransactionVat({ ...base, direction: "income", treatment: "eu_acquisition", country: "NL" }),
+    {
+      ok: false,
+      error: "treatment",
+    },
+  );
 });
 
 test("no VAT is recorded for imports, exempt items or an unconfirmed treatment", () => {
@@ -92,4 +96,15 @@ test("invalid amounts and treatments are refused", () => {
   assert.deepEqual(computeTransactionVat({ ...base, amount: 0 }), { ok: false, error: "amount" });
   assert.deepEqual(computeTransactionVat({ ...base, amount: Number.NaN }), { ok: false, error: "amount" });
   assert.deepEqual(computeTransactionVat({ ...base, treatment: "made_up" }), { ok: false, error: "treatment" });
+});
+
+test("reverse charge needs the country of the business abroad; an acquisition needs an EU country", () => {
+  const rc = { ...base, amount: 100, treatment: "eu_b2b_reverse_charge" };
+  assert.deepEqual(computeTransactionVat({ ...rc, country: "" }), { ok: false, error: "country_abroad" });
+  assert.equal(computeTransactionVat(rc).ok, true, "preview without a country");
+  assert.deepEqual(computeTransactionVat({ ...rc, country: "LU" }), { ok: false, error: "country_abroad" });
+  const fromUs = computeTransactionVat({ ...rc, country: "us" });
+  assert.equal(fromUs.ok && fromUs.vat, 17);
+  const acquisition = { ...base, amount: 100, treatment: "eu_acquisition" };
+  assert.deepEqual(computeTransactionVat({ ...acquisition, country: "US" }), { ok: false, error: "country_eu" });
 });

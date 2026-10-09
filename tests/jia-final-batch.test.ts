@@ -13,11 +13,9 @@ test("VAT page explains output VAT recoverable VAT and what still needs review",
   assert.match(page, /Output VAT/);
   assert.match(page, /Recoverable input VAT/);
   assert.match(page, /bank transaction on its own does not prove deductible VAT/);
-  assert.match(
-    page,
-    /vatRatesOn\(bounds\.end\)/,
-    "rates shown come from the dated rule set in src/lib/tax-rules/vat.ts",
-  );
+  assert.match(page, /vatRatesOn\(to\)/, "rates shown come from the dated rule set in src/lib/tax-rules/vat.ts");
+  assert.match(page, /vatFormLayout\(period\.form\)/, "boxes follow the official eCDF layout");
+  assert.match(page, /vatReturn\.issues/, "items the books cannot place are listed, not guessed");
 });
 
 test("CCSS page distinguishes estimates from official CCSS amounts", () => {

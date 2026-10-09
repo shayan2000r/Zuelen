@@ -80,6 +80,7 @@ function calculateVat(
     direction: context.direction,
     occurredOn: context.occurredOn,
     vatRegistered: context.vatRegistered,
+    country: String(formData.get("counterparty_country") ?? ""),
   });
   return result.ok ? result : { error: transactionVatErrorMessage(result.error, context.locale) };
 }
@@ -130,6 +131,14 @@ export async function createSourceTransaction(
         locale === "fr"
           ? "Indiquez avec qui l’opération a eu lieu ou à quoi elle correspond."
           : "Tell Zuelen who this was with or what the transaction was for.",
+    };
+  if (country && !/^[A-Z]{2}$/.test(country))
+    return {
+      status: "error",
+      message:
+        locale === "fr"
+          ? "Le pays doit être un code à 2 lettres (LU, FR…)."
+          : "Country must be a 2-letter code (LU, FR…).",
     };
   if (!/^[A-Z]{3}$/.test(transactionCurrency))
     return {

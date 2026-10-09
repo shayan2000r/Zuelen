@@ -334,11 +334,11 @@ function ManualEntryFlow({
                 <option value="eu_b2b_reverse_charge">
                   {direction === "income"
                     ? fr
-                      ? "Vente à une entreprise UE · autoliquidation"
-                      : "Sale to an EU business · reverse charge"
+                      ? "Service à une entreprise à l’étranger · sans TVA luxembourgeoise"
+                      : "Service to a business abroad · no Luxembourg VAT"
                     : fr
-                      ? "Achat B2B UE · autoliquidation"
-                      : "EU B2B purchase · reverse charge"}
+                      ? "Service d’une entreprise à l’étranger · autoliquidation"
+                      : "Service from a business abroad · reverse charge"}
                 </option>
                 <option value="non_eu">{fr ? "Hors UE / importation" : "Outside EU / import"}</option>
               </select>
@@ -388,10 +388,19 @@ function ManualEntryFlow({
               </small>
             ) : null}
             <label className={styles.field}>
-              <span>{fr ? "Pays du tiers · facultatif" : "Counterparty country · optional"}</span>
+              <span>
+                {vatTreatment === "eu_b2b_reverse_charge"
+                  ? fr
+                    ? "Pays de l’entreprise · obligatoire"
+                    : "Country of the business · required"
+                  : fr
+                    ? "Pays du tiers · facultatif"
+                    : "Counterparty country · optional"}
+              </span>
               <input
                 name="counterparty_country"
                 maxLength={2}
+                required={vatTreatment === "eu_b2b_reverse_charge"}
                 placeholder="LU / FR / US"
                 style={{ textTransform: "uppercase" }}
               />

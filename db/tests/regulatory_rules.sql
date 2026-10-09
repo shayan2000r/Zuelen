@@ -75,8 +75,8 @@ select pg_temp.eq('Not VAT registered: no VAT returns', (select count(*) from pu
 -- ---------------------------------------------------------------------------
 -- A5: EU recapitulative statement generated for a month with an EU B2B supply
 -- ---------------------------------------------------------------------------
-insert into public.sales_invoices (organization_id, company_id, status, invoice_number, issue_date, service_date, due_date, vat_treatment, subtotal, vat_total, total)
-select organization_id, id, 'issued', 'INV-TEST-1', date '2026-03-20', date '2026-03-18', date '2026-04-20', 'eu_b2b_reverse_charge', 1000, 0, 1000
+insert into public.sales_invoices (organization_id, company_id, status, invoice_number, issue_date, service_date, due_date, vat_treatment, subtotal, vat_total, total, customer_snapshot)
+select organization_id, id, 'issued', 'INV-TEST-1', date '2026-03-20', date '2026-03-18', date '2026-04-20', 'eu_b2b_reverse_charge', 1000, 0, 1000, '{"country_code":"DE","vat_number":"DE123456789"}'::jsonb
 from public.companies where id = (select v from ids where k = 'sas');
 
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
@@ -339,6 +339,17 @@ select pg_temp.eq('Standard VAT invoice has no exemption mention', (select vat_e
 update public.companies set vat_exemption_basis = 'exempt_activity', vat_deduction_mode = 'none', vat_deduction_ratio = null where id = (select v from ids where k='sarl');
 insert into ids values ('inv4', pg_temp.issue((select v from ids where k='sarl'), 'domestic', 'LU', null, 0));
 select pg_temp.eq('Exempt-activity invoice mentions art. 44', (select vat_exemption_mention from public.sales_invoices where id = (select v from ids where k='inv4')), 'Exonération de TVA – article 44 de la loi modifiée du 12 février 1979');
+
+-- A business customer outside the EU: no VAT number needed, factual mention, no EU recapitulative statement.
+insert into ids values ('inv_us', pg_temp.issue((select v from ids where k='sarl'), 'eu_b2b_reverse_charge', 'US', null, 0));
+select pg_temp.eq('Invoice to a US business: outside-EU mention', (select vat_exemption_mention from public.sales_invoices where id = (select v from ids where k='inv_us')), 'TVA non applicable – prestation de services à un preneur assujetti établi hors de l''Union européenne');
+select pg_temp.expect_error('EU business customer needs a VAT number',
+  format('select pg_temp.issue(%L, %L, %L, null, 0)', (select v from ids where k='sarl'), 'eu_b2b_reverse_charge', 'DE'), '%VAT number is required%');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+set local role authenticated;
+select public.sync_core_compliance_calendar((select v from ids where k = 'sarl'), 2026);
+reset role;
+select pg_temp.eq('No EU recapitulative statement for a customer outside the EU', (select count(*) from public.compliance_obligations where company_id=(select v from ids where k='sarl') and rule_key like 'eu_recap%'), 0::bigint);
 
 do $$ begin
   update public.sales_invoices set vat_exemption_mention = 'changed' where invoice_number is not null and company_id = (select v from ids where k='other');
