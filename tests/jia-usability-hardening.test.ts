@@ -25,7 +25,7 @@ test("technical backend errors are filtered before reaching accounting UI",()=>{
 });
 
 test("document matching requires the same currency when currency is known",()=>{
-  const migration=read("../db/migrations/20260922192500_currency_safe_document_matching.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260922192500_currency_safe_document_matching.sql");
   assert.match(migration,/v_currency:=upper/);
   assert.match(migration,/upper\(st\.currency\)=v_currency/);
   assert.match(migration,/Matched using currency, amount, date and counterparty evidence/);

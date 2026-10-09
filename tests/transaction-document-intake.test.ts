@@ -8,7 +8,7 @@ function read(relativePath:string){
 }
 
 test("transaction document intake creates a review transaction and links its evidence",()=>{
-  const migration=read("../db/migrations/20260922114500_transaction_document_intake.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260922114500_transaction_document_intake.sql");
   const uploader=read("../src/components/document-uploader.tsx");
   const actions=read("../src/app/app/transactions/actions.ts");
 
@@ -42,7 +42,7 @@ test("invoice compliance stays inline and does not open an issue confirmation di
 
 
 test("document-origin transactions are valid journal sources and preserve the merchant",()=>{
-  const migration=read("../db/migrations/20260922185800_fix_document_transaction_posting.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260922185800_fix_document_transaction_posting.sql");
   assert.match(migration,/'document'::text/);
   assert.match(migration,/transaction_counterparty/);
   assert.match(migration,/counterparty_name=coalesce\(v_counterparty,counterparty_name\)/);
@@ -58,7 +58,7 @@ test("confirmed document links render as linked instead of showing Apply & link 
 
 
 test("transaction intake trusts the user-selected receipt category over AI document kind",()=>{
-  const migration=read("../db/migrations/20260922190500_respect_transaction_upload_category.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260922190500_respect_transaction_upload_category.sql");
   assert.match(migration,/v_doc\.type not in \('receipt','purchase_invoice','sales_invoice'\)/);
   assert.match(migration,/v_kind='bank_statement'/);
   assert.match(migration,/v_line_count=1/);

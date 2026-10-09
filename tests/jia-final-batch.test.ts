@@ -45,7 +45,7 @@ test("accountant directory explains discovery contact and workspace access",()=>
 test("foreign currency requires an explicit FX rate and posts journals in base currency",()=>{
   const form=read("../src/components/source-transaction-form.tsx");
   const actions=read("../src/app/app/transactions/actions.ts");
-  const migration=read("../db/migrations/20260924170000_foreign_currency_audit_and_ai_guards.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260924170000_foreign_currency_audit_and_ai_guards.sql");
   assert.match(form,/Exchange rate · 1/);
   assert.match(form,/never assumes a 1:1 exchange rate/);
   assert.match(actions,/exchange_rate_to_base/);
@@ -58,7 +58,7 @@ test("foreign currency also works for invoices and settlements",()=>{
   const composer=read("../src/components/invoice-composer.tsx");
   const actions=read("../src/app/app/invoices/actions.ts");
   const payments=read("../src/components/invoice-payment-panel.tsx");
-  const migration=read("../db/migrations/20260924173000_invoice_foreign_currency.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260924173000_invoice_foreign_currency.sql");
   assert.match(composer,/Invoice currency/);
   assert.match(composer,/Exchange rate · 1/);
   assert.match(composer,/never assumes 1:1/);
@@ -74,7 +74,7 @@ test("foreign currency also works for invoices and settlements",()=>{
 test("transaction audit history is visible and records creation posting and FX changes",()=>{
   const page=read("../src/app/app/transactions/page.tsx");
   const action=read("../src/components/transaction-history-action.tsx");
-  const migration=read("../db/migrations/20260924170000_foreign_currency_audit_and_ai_guards.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260924170000_foreign_currency_audit_and_ai_guards.sql");
   assert.match(page,/audit_events/);
   assert.match(page,/historyByTransaction/);
   assert.match(action,/Transaction history/);
@@ -87,7 +87,7 @@ test("transaction audit history is visible and records creation posting and FX c
 test("AI document type conflicts stop automatic transaction creation until resolved",()=>{
   const actions=read("../src/app/app/documents/actions.ts");
   const uploader=read("../src/components/document-uploader.tsx");
-  const migration=read("../db/migrations/20260924170000_foreign_currency_audit_and_ai_guards.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260924170000_foreign_currency_audit_and_ai_guards.sql");
   assert.match(actions,/bank_statement/);
   assert.match(actions,/typeSafeguard/);
   assert.match(actions,/oppositeInvoice/);

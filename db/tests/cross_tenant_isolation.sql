@@ -7,6 +7,7 @@ begin;
 create temporary table security_test_identities on commit drop as
 select user_id, organization_id, row_number() over (order by created_at, user_id) as n
 from public.organization_members;
+grant select on security_test_identities to authenticated;
 
 do $$
 begin

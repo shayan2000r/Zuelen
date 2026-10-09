@@ -59,7 +59,7 @@ test("Company workspaces retain corporate workflows and CCSS", () => {
 });
 
 test("migration backfills Company and creates explicit transactional workspace RPCs", () => {
-  const sql = readFileSync(new URL("../db/migrations/20260825_unified_workspace_onboarding.sql", import.meta.url), "utf8");
+  const sql = readFileSync(new URL("../db/archive/pre-baseline-migrations/20260825_unified_workspace_onboarding.sql", import.meta.url), "utf8");
   assert.match(sql, /set entity_kind = 'company'\s+where entity_kind is null/i);
   assert.match(sql, /check \(entity_kind in \('independent', 'company'\)\)/i);
   assert.match(sql, /create or replace function public\.create_independent_workspace_v1/i);
@@ -69,7 +69,7 @@ test("migration backfills Company and creates explicit transactional workspace R
 });
 
 test("CCSS is a valid compliance authority and complete Independent onboarding is covered", () => {
-  const migration = readFileSync(new URL("../db/migrations/20260830082851_compliance_authority_ccss.sql", import.meta.url), "utf8");
+  const migration = readFileSync(new URL("../db/archive/pre-baseline-migrations/20260830082851_compliance_authority_ccss.sql", import.meta.url), "utf8");
   const regression = readFileSync(new URL("../db/tests/independent_workspace_ccss.sql", import.meta.url), "utf8");
   for (const authority of ["AED", "ACD", "LBR", "RCS", "RBE", "ECDF", "CCSS", "OTHER"]) {
     assert.match(migration, new RegExp(`'${authority}'`));

@@ -8,7 +8,7 @@ function read(relativePath:string){
 }
 
 test("document match confirmation uses the supported terminal extraction state",()=>{
-  const migration=read("../db/migrations/20260922111800_fix_document_linking_constraint.sql");
+  const migration=read("../db/archive/pre-baseline-migrations/20260922111800_fix_document_linking_constraint.sql");
   const extractionButton=read("../src/components/document-extraction-button.tsx");
 
   assert.match(migration,/when extraction_status = 'needs_review' then 'complete'/);

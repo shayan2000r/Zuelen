@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const migration=readFileSync("db/migrations/20260901163000_bank_import_sources.sql","utf8");
+const migration=readFileSync("db/archive/pre-baseline-migrations/20260901163000_bank_import_sources.sql","utf8");
 const bankingAction=readFileSync("src/app/app/banking/actions.ts","utf8");
 
 test("bank import constraint accepts every application ingestion value",()=>{

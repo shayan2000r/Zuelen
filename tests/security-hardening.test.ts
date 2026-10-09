@@ -33,7 +33,7 @@ test("verified TOTP factors are challenged before protected workspace access", (
   assert.match(read("../src/components/mfa-settings.tsx"), /factorType: "totp"/);
   assert.match(read("../src/components/mfa-settings.tsx"), /refreshSession\(\)/);
   assert.match(read("../src/components/mfa-challenge.tsx"), /mfa\.verify/);
-  const migration = read("../db/migrations/20260828082328_enforce_optional_mfa_gate.sql");
+  const migration = read("../db/archive/pre-baseline-migrations/20260828082328_enforce_optional_mfa_gate.sql");
   assert.match(migration, /from auth\.mfa_factors/);
   assert.match(migration, /auth\.jwt\(\) ->> 'aal'/);
   assert.match(migration, /security definer\s+set search_path = ''/i);
@@ -58,7 +58,7 @@ test("expensive authenticated actions use the database-backed limiter", () => {
     "../src/app/app/settings/billing/actions.ts",
     "../src/app/accountants/manage/actions.ts",
   ]) assert.match(read(path), /assertActionRateLimit/);
-  const migration = read("../db/migrations/20260828073949_security_hardening.sql");
+  const migration = read("../db/archive/pre-baseline-migrations/20260828073949_security_hardening.sql");
   assert.match(migration, /primary key \(user_id, action\)/i);
   assert.match(migration, /security definer\s+set search_path = ''/i);
   assert.match(migration, /grant execute on function public\.consume_security_rate_limit\(text\) to authenticated/i);
@@ -106,7 +106,7 @@ test("password recovery is isolated, browser-independent, and opened from a dedi
   const resetPage = read("../src/app/account/password-reset/page.tsx");
   const resetForm = read("../src/components/password-reset-form.tsx");
   const proxy = read("../src/lib/supabase/proxy.ts");
-  const migration = read("../db/migrations/20260913152401_password_recovery_rate_limit.sql");
+  const migration = read("../db/archive/pre-baseline-migrations/20260913152401_password_recovery_rate_limit.sql");
 
   assert.match(client, /createRecoveryClient/);
   assert.match(client, /flowType:\s*"implicit"/);
