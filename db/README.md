@@ -33,5 +33,5 @@ The Supabase connector used by Claude asks for confirmation before SQL that remo
 (DROP, or function bodies containing DELETE), and that prompt cannot be answered from a cloud session.
 Put such a change in `pending/`, test it (`scripts/test.sh` applies `pending/` after `migrations/`;
 `WITH_PENDING=0` tests the production state), run it in the Supabase SQL editor, record it in the
-migration history and move it to `migrations/`. `20261009120000_requires_approval_bundle.sql` went
-through this path.
+migration history and move it to `migrations/`. `20261009120000_requires_approval_bundle.sql` and
+`20261009130000_invoice_draft_customers_abroad.sql` went through this path.

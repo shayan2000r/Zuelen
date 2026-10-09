@@ -1,5 +1,6 @@
--- Invoice drafts for business customers abroad (run in the Supabase SQL editor: the function body removes
--- draft lines, which the connector cannot confirm from a cloud session).
+-- Invoice drafts for business customers abroad. Applied in the Supabase SQL editor on 2026-10-09 (the function
+-- body removes draft lines, which the connector cannot confirm from a cloud session) and verified against the
+-- tested version.
 --
 -- Same change as db/migrations/20261009122117_invoice_customers_abroad.sql, for save_service_invoice_draft: a VAT number is
 -- required only for a business customer in another EU Member State.
