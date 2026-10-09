@@ -45,9 +45,36 @@ export type AccountantProfile = {
   updated_at: string;
 };
 
-export const ACCOUNTANT_LANGUAGES = ["Luxembourgish", "French", "English", "German", "Portuguese", "Italian", "Spanish"] as const;
-export const ACCOUNTANT_SPECIALTIES = ["Bookkeeping", "VAT", "Annual accounts", "Corporate tax", "Payroll", "Company formation", "eCDF & RCS filings", "Management reporting"] as const;
-export const ACCOUNTANT_BUSINESS_TYPES = ["Freelancers", "Sole traders", "SARL-S", "SARL", "SA", "Startups", "Retail", "Professional services", "E-commerce"] as const;
+export const ACCOUNTANT_LANGUAGES = [
+  "Luxembourgish",
+  "French",
+  "English",
+  "German",
+  "Portuguese",
+  "Italian",
+  "Spanish",
+] as const;
+export const ACCOUNTANT_SPECIALTIES = [
+  "Bookkeeping",
+  "VAT",
+  "Annual accounts",
+  "Corporate tax",
+  "Payroll",
+  "Company formation",
+  "eCDF & RCS filings",
+  "Management reporting",
+] as const;
+export const ACCOUNTANT_BUSINESS_TYPES = [
+  "Freelancers",
+  "Sole traders",
+  "SARL-S",
+  "SARL",
+  "SA",
+  "Startups",
+  "Retail",
+  "Professional services",
+  "E-commerce",
+] as const;
 
 // Stripe Price IDs are public catalog identifiers, not secrets. Keep production
 // fallbacks here so the live accountant plans remain deployable even when an
@@ -96,11 +123,11 @@ export function accountantLanguageLabel(value: string, locale: "en" | "fr" = "en
 }
 
 export function accountantSpecialtyLabel(value: string, locale: "en" | "fr" = "en") {
-  return locale === "fr" ? SPECIALTY_FR[value] ?? value : value;
+  return locale === "fr" ? (SPECIALTY_FR[value] ?? value) : value;
 }
 
 export function accountantBusinessTypeLabel(value: string, locale: "en" | "fr" = "en") {
-  return locale === "fr" ? BUSINESS_TYPE_FR[value] ?? value : value;
+  return locale === "fr" ? (BUSINESS_TYPE_FR[value] ?? value) : value;
 }
 
 export function accountantStripeConfigured() {
@@ -124,5 +151,12 @@ export function normalizeWebsite(value: string | null | undefined) {
 }
 
 export function accountantInitials(name: string) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "A";
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join("") || "A"
+  );
 }

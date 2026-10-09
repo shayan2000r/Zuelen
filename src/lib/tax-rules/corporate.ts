@@ -3,7 +3,8 @@
 
 export const IRC_SOURCE = "https://impotsdirects.public.lu/fr/az/t/tarif-applicable-collectivites/tarif-collect.html";
 export const ICC_SOURCE = "https://impotsdirects.public.lu/fr/az/c/calc_comm.html";
-export const NWT_SOURCE = "https://impotsdirects.public.lu/fr/az/t/tarif-applicable-collectivites/tarif-collect-if.html";
+export const NWT_SOURCE =
+  "https://impotsdirects.public.lu/fr/az/t/tarif-applicable-collectivites/tarif-collect-if.html";
 
 type IrcScale = {
   fromTaxYear: number;
@@ -24,17 +25,36 @@ type IrcScale = {
 export const LAST_VERIFIED_IRC_TAX_YEAR = 2026;
 
 const IRC_SCALES: IrcScale[] = [
-  { fromTaxYear: 2019, toTaxYear: 2024, lowRate: 0.15, lowerBracket: 175000, middleBase: 26250, marginalRate: 0.31, upperBracket: 200001, normalRate: 0.17 },
-  { fromTaxYear: 2025, toTaxYear: LAST_VERIFIED_IRC_TAX_YEAR, lowRate: 0.14, lowerBracket: 175000, middleBase: 24500, marginalRate: 0.3, upperBracket: 200001, normalRate: 0.16 },
+  {
+    fromTaxYear: 2019,
+    toTaxYear: 2024,
+    lowRate: 0.15,
+    lowerBracket: 175000,
+    middleBase: 26250,
+    marginalRate: 0.31,
+    upperBracket: 200001,
+    normalRate: 0.17,
+  },
+  {
+    fromTaxYear: 2025,
+    toTaxYear: LAST_VERIFIED_IRC_TAX_YEAR,
+    lowRate: 0.14,
+    lowerBracket: 175000,
+    middleBase: 24500,
+    marginalRate: 0.3,
+    upperBracket: 200001,
+    normalRate: 0.16,
+  },
 ];
 
 /** Corporate income tax (IRC) before the employment-fund surcharge, or null when no verified scale exists. */
 export function corporateIncomeTax(taxableIncome: number, taxYear: number): number | null {
-  const scale = IRC_SCALES.find((entry) => entry.fromTaxYear <= taxYear && entry.toTaxYear >= taxYear);
+  const scale = IRC_SCALES.find(entry => entry.fromTaxYear <= taxYear && entry.toTaxYear >= taxYear);
   if (!scale) return null;
   if (taxableIncome <= 0) return 0;
   if (taxableIncome <= scale.lowerBracket) return cents(taxableIncome * scale.lowRate);
-  if (taxableIncome <= scale.upperBracket) return cents(scale.middleBase + (taxableIncome - scale.lowerBracket) * scale.marginalRate);
+  if (taxableIncome <= scale.upperBracket)
+    return cents(scale.middleBase + (taxableIncome - scale.lowerBracket) * scale.marginalRate);
   return cents(taxableIncome * scale.normalRate);
 }
 

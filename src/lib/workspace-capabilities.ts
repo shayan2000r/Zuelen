@@ -39,8 +39,10 @@ export function getWorkspaceCapabilities(input: WorkspaceCapabilityInput): Works
 }
 
 export function isCompanyOnlyPath(pathname: string) {
-  return pathname === "/app/year-end"
-    || pathname.startsWith("/app/year-end/")
-    || pathname === "/app/ecdf"
-    || pathname.startsWith("/app/ecdf/");
+  return (
+    pathname === "/app/year-end" ||
+    pathname.startsWith("/app/year-end/") ||
+    pathname === "/app/ecdf" ||
+    pathname.startsWith("/app/ecdf/")
+  );
 }

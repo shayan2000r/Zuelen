@@ -13,6 +13,8 @@ export default async function EcdfLayout({ children }: { children: React.ReactNo
       descriptionFr="Premium débloque le flux des comptes annuels et eCDF, y compris les contrôles de préparation et les sorties prêtes au dépôt."
       features={["eCDF preparation", "Annual-account checks", "Structured outputs", "Year-end workflow"]}
       featuresFr={["Préparation eCDF", "Contrôles des comptes annuels", "Sorties structurées", "Flux de clôture"]}
-    >{children}</PremiumRouteGate>
+    >
+      {children}
+    </PremiumRouteGate>
   );
 }

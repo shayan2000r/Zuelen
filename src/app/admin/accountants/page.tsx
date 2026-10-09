@@ -1,6 +1,21 @@
-import Link from "next/link";
-import { BadgeCheck, BriefcaseBusiness, Check, Clock3, ExternalLink, Languages, MapPin, Sparkles, UserRoundCheck, X } from "lucide-react";
-import { accountantInitials, accountantLanguageLabel, type AccountantListingSubscription, type AccountantProfile } from "@/lib/accountants";
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  Check,
+  Clock3,
+  ExternalLink,
+  Languages,
+  MapPin,
+  Sparkles,
+  UserRoundCheck,
+  X,
+} from "lucide-react";
+import {
+  accountantInitials,
+  accountantLanguageLabel,
+  type AccountantListingSubscription,
+  type AccountantProfile,
+} from "@/lib/accountants";
 import { requireZuelenAdmin } from "@/lib/admin";
 import { reviewAccountantProfileAction } from "./actions";
 import styles from "./review.module.css";
@@ -38,65 +53,212 @@ export default async function AccountantReviewPage({ searchParams }: { searchPar
   }
   const subscriptionByProfile = new Map(subscriptions.map(subscription => [subscription.profile_id, subscription]));
   const statusRank: Record<AccountantProfile["approval_status"], number> = { pending: 0, rejected: 1, approved: 2 };
-  const orderedProfiles = [...profiles].sort((a, b) => statusRank[a.approval_status] - statusRank[b.approval_status] || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  const orderedProfiles = [...profiles].sort(
+    (a, b) =>
+      statusRank[a.approval_status] - statusRank[b.approval_status] ||
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+  );
   const pendingCount = profiles.filter(profile => profile.approval_status === "pending").length;
 
-  return <main className={styles.shell}>
-    <div className={styles.page}>
-      <section className={styles.hero}>
-        <div><span className={styles.eyebrow}><UserRoundCheck size={14}/> Accountant directory moderation</span><h1>Review professional listings.</h1><p>Approve only profiles whose identity, positioning and public information are suitable for the Zuelen directory. Billing eligibility is handled separately by Stripe.</p></div>
-        <div className={styles.queue}><span>Review queue</span><strong>{pendingCount}</strong><small>profile{pendingCount === 1 ? "" : "s"} awaiting review</small></div>
-      </section>
+  return (
+    <main className={styles.shell}>
+      <div className={styles.page}>
+        <section className={styles.hero}>
+          <div>
+            <span className={styles.eyebrow}>
+              <UserRoundCheck size={14} /> Accountant directory moderation
+            </span>
+            <h1>Review professional listings.</h1>
+            <p>
+              Approve only profiles whose identity, positioning and public information are suitable for the Zuelen
+              directory. Billing eligibility is handled separately by Stripe.
+            </p>
+          </div>
+          <div className={styles.queue}>
+            <span>Review queue</span>
+            <strong>{pendingCount}</strong>
+            <small>profile{pendingCount === 1 ? "" : "s"} awaiting review</small>
+          </div>
+        </section>
 
-      {params.reviewed === "approved" ? <div className={styles.notice}><Check size={15}/> Profile approved. It becomes public automatically when its listing subscription is eligible.</div> : null}
-      {params.reviewed === "rejected" ? <div className={styles.notice}><X size={15}/> Profile sent back for changes with your review note.</div> : null}
+        {params.reviewed === "approved" ? (
+          <div className={styles.notice}>
+            <Check size={15} /> Profile approved. It becomes public automatically when its listing subscription is
+            eligible.
+          </div>
+        ) : null}
+        {params.reviewed === "rejected" ? (
+          <div className={styles.notice}>
+            <X size={15} /> Profile sent back for changes with your review note.
+          </div>
+        ) : null}
 
-      <section className={styles.list}>
-        {orderedProfiles.length ? orderedProfiles.map(profile => {
-          const subscription = subscriptionByProfile.get(profile.id) ?? null;
-          const isPremium = subscription?.tier === "premium";
-          return <article className={`${styles.card} ${profile.approval_status === "pending" ? styles.needsReview : ""}`} key={profile.id}>
-            <div className={styles.cardTop}>
-              <div className={styles.identity}>
-                {profile.photo_url ? <img src={profile.photo_url} alt=""/> : <span>{accountantInitials(profile.full_name)}</span>}
-                <div><div className={styles.nameLine}><h2>{profile.full_name}</h2>{isPremium ? <Sparkles size={14}/> : null}</div><p>{profile.professional_title}{profile.firm_name ? ` · ${profile.firm_name}` : ""}</p><div className={styles.meta}>{profile.location ? <span><MapPin size={12}/>{profile.location}</span> : null}{profile.years_experience !== null ? <span><BriefcaseBusiness size={12}/>{profile.years_experience} years</span> : null}</div></div>
-              </div>
-              <div className={styles.statuses}>
-                <span className={styles[profile.approval_status]}>{profile.approval_status === "approved" ? <BadgeCheck size={13}/> : <Clock3 size={13}/>} {profile.approval_status}</span>
-                <span>{subscription ? `${subscription.tier} · ${subscription.status}` : "No listing subscription"}</span>
-                {subscription?.trial_end ? <small>Trial ends {formatDate(subscription.trial_end)}</small> : null}
-              </div>
+        <section className={styles.list}>
+          {orderedProfiles.length ? (
+            orderedProfiles.map(profile => {
+              const subscription = subscriptionByProfile.get(profile.id) ?? null;
+              const isPremium = subscription?.tier === "premium";
+              return (
+                <article
+                  className={`${styles.card} ${profile.approval_status === "pending" ? styles.needsReview : ""}`}
+                  key={profile.id}
+                >
+                  <div className={styles.cardTop}>
+                    <div className={styles.identity}>
+                      {profile.photo_url ? (
+                        <img src={profile.photo_url} alt="" />
+                      ) : (
+                        <span>{accountantInitials(profile.full_name)}</span>
+                      )}
+                      <div>
+                        <div className={styles.nameLine}>
+                          <h2>{profile.full_name}</h2>
+                          {isPremium ? <Sparkles size={14} /> : null}
+                        </div>
+                        <p>
+                          {profile.professional_title}
+                          {profile.firm_name ? ` · ${profile.firm_name}` : ""}
+                        </p>
+                        <div className={styles.meta}>
+                          {profile.location ? (
+                            <span>
+                              <MapPin size={12} />
+                              {profile.location}
+                            </span>
+                          ) : null}
+                          {profile.years_experience !== null ? (
+                            <span>
+                              <BriefcaseBusiness size={12} />
+                              {profile.years_experience} years
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={styles.statuses}>
+                      <span className={styles[profile.approval_status]}>
+                        {profile.approval_status === "approved" ? <BadgeCheck size={13} /> : <Clock3 size={13} />}{" "}
+                        {profile.approval_status}
+                      </span>
+                      <span>
+                        {subscription ? `${subscription.tier} · ${subscription.status}` : "No listing subscription"}
+                      </span>
+                      {subscription?.trial_end ? <small>Trial ends {formatDate(subscription.trial_end)}</small> : null}
+                    </div>
+                  </div>
+
+                  <div className={styles.details}>
+                    <div>
+                      <span>Contact</span>
+                      <p>
+                        {profile.email || "—"}
+                        {profile.phone ? (
+                          <>
+                            <br />
+                            {profile.phone}
+                          </>
+                        ) : null}
+                      </p>
+                      {profile.website ? (
+                        <a href={profile.website} target="_blank" rel="noreferrer">
+                          Website <ExternalLink size={11} />
+                        </a>
+                      ) : null}
+                      {profile.portfolio_url ? (
+                        <a href={profile.portfolio_url} target="_blank" rel="noreferrer">
+                          Professional profile <ExternalLink size={11} />
+                        </a>
+                      ) : null}
+                    </div>
+                    <div>
+                      <span>Languages</span>
+                      <p className={styles.tags}>
+                        {profile.languages.length
+                          ? profile.languages.map(item => (
+                              <em key={item}>{accountantLanguageLabel(item, "en", true)}</em>
+                            ))
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <span>Specialties</span>
+                      <p className={styles.tags}>
+                        {profile.specialties.length ? profile.specialties.map(item => <em key={item}>{item}</em>) : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <span>Businesses</span>
+                      <p className={styles.tags}>
+                        {profile.business_types.length
+                          ? profile.business_types.map(item => <em key={item}>{item}</em>)
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className={styles.narrative}>
+                    <div>
+                      <span>About</span>
+                      <p>{profile.bio || "No biography provided."}</p>
+                    </div>
+                    <div>
+                      <span>Qualifications</span>
+                      <p>{profile.qualifications || "No qualifications provided."}</p>
+                    </div>
+                    <div>
+                      <span>Client references</span>
+                      <p>{profile.client_references || "No client references provided."}</p>
+                    </div>
+                  </div>
+
+                  {profile.rejection_reason ? (
+                    <div className={styles.previousReason}>
+                      <strong>Current review note</strong>
+                      <p>{profile.rejection_reason}</p>
+                    </div>
+                  ) : null}
+
+                  <div className={styles.actions}>
+                    <form action={reviewAccountantProfileAction}>
+                      <input type="hidden" name="profile_id" value={profile.id} />
+                      <input type="hidden" name="decision" value="approved" />
+                      <button
+                        className={styles.approve}
+                        type="submit"
+                        disabled={profile.approval_status === "approved"}
+                      >
+                        <Check size={14} />
+                        {profile.approval_status === "approved" ? "Approved" : "Approve profile"}
+                      </button>
+                    </form>
+                    <form action={reviewAccountantProfileAction} className={styles.rejectForm}>
+                      <input type="hidden" name="profile_id" value={profile.id} />
+                      <input type="hidden" name="decision" value="rejected" />
+                      <input
+                        name="rejection_reason"
+                        minLength={5}
+                        required
+                        placeholder="Reason for rejection / requested change"
+                        defaultValue={profile.approval_status === "rejected" ? (profile.rejection_reason ?? "") : ""}
+                      />
+                      <button className={styles.reject} type="submit">
+                        <X size={14} />
+                        Request changes
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              );
+            })
+          ) : (
+            <div className={styles.empty}>
+              <Languages size={22} />
+              <strong>No accountant profiles yet</strong>
+              <p>New professional applications will appear here automatically.</p>
             </div>
-
-            <div className={styles.details}>
-              <div><span>Contact</span><p>{profile.email || "—"}{profile.phone ? <><br/>{profile.phone}</> : null}</p>{profile.website ? <a href={profile.website} target="_blank" rel="noreferrer">Website <ExternalLink size={11}/></a> : null}{profile.portfolio_url ? <a href={profile.portfolio_url} target="_blank" rel="noreferrer">Professional profile <ExternalLink size={11}/></a> : null}</div>
-              <div><span>Languages</span><p className={styles.tags}>{profile.languages.length ? profile.languages.map(item => <em key={item}>{accountantLanguageLabel(item, "en", true)}</em>) : "—"}</p></div>
-              <div><span>Specialties</span><p className={styles.tags}>{profile.specialties.length ? profile.specialties.map(item => <em key={item}>{item}</em>) : "—"}</p></div>
-              <div><span>Businesses</span><p className={styles.tags}>{profile.business_types.length ? profile.business_types.map(item => <em key={item}>{item}</em>) : "—"}</p></div>
-            </div>
-
-            <div className={styles.narrative}>
-              <div><span>About</span><p>{profile.bio || "No biography provided."}</p></div>
-              <div><span>Qualifications</span><p>{profile.qualifications || "No qualifications provided."}</p></div>
-              <div><span>Client references</span><p>{profile.client_references || "No client references provided."}</p></div>
-            </div>
-
-            {profile.rejection_reason ? <div className={styles.previousReason}><strong>Current review note</strong><p>{profile.rejection_reason}</p></div> : null}
-
-            <div className={styles.actions}>
-              <form action={reviewAccountantProfileAction}>
-                <input type="hidden" name="profile_id" value={profile.id}/><input type="hidden" name="decision" value="approved"/>
-                <button className={styles.approve} type="submit" disabled={profile.approval_status === "approved"}><Check size={14}/>{profile.approval_status === "approved" ? "Approved" : "Approve profile"}</button>
-              </form>
-              <form action={reviewAccountantProfileAction} className={styles.rejectForm}>
-                <input type="hidden" name="profile_id" value={profile.id}/><input type="hidden" name="decision" value="rejected"/>
-                <input name="rejection_reason" minLength={5} required placeholder="Reason for rejection / requested change" defaultValue={profile.approval_status === "rejected" ? profile.rejection_reason ?? "" : ""}/>
-                <button className={styles.reject} type="submit"><X size={14}/>Request changes</button>
-              </form>
-            </div>
-          </article>;
-        }) : <div className={styles.empty}><Languages size={22}/><strong>No accountant profiles yet</strong><p>New professional applications will appear here automatically.</p></div>}
-      </section>
-    </div>
-  </main>;
+          )}
+        </section>
+      </div>
+    </main>
+  );
 }

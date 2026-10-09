@@ -16,11 +16,23 @@ function text(formData: FormData, key: string) {
 }
 
 function list(formData: FormData, key: string) {
-  return formData.getAll(key).filter((value): value is string => typeof value === "string").map(value => value.trim()).filter(Boolean);
+  return formData
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string")
+    .map(value => value.trim())
+    .filter(Boolean);
 }
 
 function slugify(value: string) {
-  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 54) || "accountant";
+  return (
+    value
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 54) || "accountant"
+  );
 }
 
 function imageExtension(file: File) {
@@ -38,7 +50,11 @@ async function authenticatedProfileContext() {
   const userId = workspace.userId;
   if (!workspace.authenticated || !userId) redirect("/sign-in?next=/professional");
   const supabase = await createClient();
-  const { data: profile, error } = await supabase.from("accountant_profiles").select("*").eq("user_id", userId).maybeSingle();
+  const { data: profile, error } = await supabase
+    .from("accountant_profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return { workspace, userId, supabase, profile };
 }
@@ -53,17 +69,23 @@ export async function saveAccountantProfileAction(formData: FormData) {
   const businessTypes = list(formData, "business_types");
   const yearsRaw = text(formData, "years_experience");
   const yearsExperience = yearsRaw ? Number.parseInt(yearsRaw, 10) : null;
-  if (fullName.length < 2 || professionalTitle.length < 2 || !email.includes("@")) throw new Error("Name, professional title and a valid contact email are required.");
-  if (!languages.length || !specialties.length) throw new Error("Choose at least one language and one specialty for your professional profile.");
-  if (yearsExperience !== null && (!Number.isInteger(yearsExperience) || yearsExperience < 0 || yearsExperience > 80)) throw new Error("Years of experience must be between 0 and 80.");
+  if (fullName.length < 2 || professionalTitle.length < 2 || !email.includes("@"))
+    throw new Error("Name, professional title and a valid contact email are required.");
+  if (!languages.length || !specialties.length)
+    throw new Error("Choose at least one language and one specialty for your professional profile.");
+  if (yearsExperience !== null && (!Number.isInteger(yearsExperience) || yearsExperience < 0 || yearsExperience > 80))
+    throw new Error("Years of experience must be between 0 and 80.");
 
   let photoUrl = profile?.photo_url ?? null;
   const photo = formData.get("photo");
   if (photo instanceof File && photo.size > 0) {
     if (photo.size > 5 * 1024 * 1024) throw new Error("Profile photo must be smaller than 5 MB.");
-    if (!["image/jpeg", "image/png", "image/webp"].includes(photo.type)) throw new Error("Use a JPG, PNG or WebP profile photo.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(photo.type))
+      throw new Error("Use a JPG, PNG or WebP profile photo.");
     const path = `${userId}/profile-${Date.now()}.${imageExtension(photo)}`;
-    const { error: uploadError } = await supabase.storage.from("accountant-profiles").upload(path, photo, { contentType: photo.type, upsert: false });
+    const { error: uploadError } = await supabase.storage
+      .from("accountant-profiles")
+      .upload(path, photo, { contentType: photo.type, upsert: false });
     if (uploadError) throw new Error(uploadError.message);
     photoUrl = supabase.storage.from("accountant-profiles").getPublicUrl(path).data.publicUrl;
   }
@@ -116,16 +138,23 @@ export async function saveAccountantProfileAction(formData: FormData) {
 export async function startAccountantTrialAction(formData: FormData) {
   const { workspace, profile, supabase } = await authenticatedProfileContext();
   if (!profile) throw new Error("Create your accountant profile before starting a subscription.");
-  if (!profile.languages?.length || !profile.specialties?.length) throw new Error("Add at least one language and specialty before starting your subscription.");
+  if (!profile.languages?.length || !profile.specialties?.length)
+    throw new Error("Add at least one language and specialty before starting your subscription.");
   const tier = normalizeAccountantTier(formData.get("tier"));
   await assertActionRateLimit(supabase, "checkout");
   const price = accountantPriceId(tier);
-  const { data: subscription, error } = await supabase.from("accountant_listing_subscriptions").select("*").eq("profile_id", profile.id).maybeSingle();
+  const { data: subscription, error } = await supabase
+    .from("accountant_listing_subscriptions")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .maybeSingle();
   if (error) throw new Error(error.message);
 
   if (subscription?.stripe_subscription_id && ["active", "trialing", "past_due"].includes(subscription.status)) {
     if (subscription.tier === tier) return createAccountantPortalAction();
-    const stripeSubscription = await stripeGet(`/subscriptions/${encodeURIComponent(subscription.stripe_subscription_id)}`);
+    const stripeSubscription = await stripeGet(
+      `/subscriptions/${encodeURIComponent(subscription.stripe_subscription_id)}`,
+    );
     const itemId = stripeSubscription?.items?.data?.[0]?.id;
     if (!itemId) throw new Error("Stripe did not return the current accountant subscription item.");
     await stripePost(`/subscriptions/${encodeURIComponent(subscription.stripe_subscription_id)}`, {
@@ -172,7 +201,11 @@ export async function startAccountantTrialAction(formData: FormData) {
 export async function createAccountantPortalAction() {
   const { profile, supabase } = await authenticatedProfileContext();
   if (!profile) throw new Error("No accountant profile exists yet.");
-  const { data: subscription, error } = await supabase.from("accountant_listing_subscriptions").select("stripe_customer_id").eq("profile_id", profile.id).maybeSingle();
+  const { data: subscription, error } = await supabase
+    .from("accountant_listing_subscriptions")
+    .select("stripe_customer_id")
+    .eq("profile_id", profile.id)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   if (!subscription?.stripe_customer_id) throw new Error("No Stripe billing profile exists yet.");
   const session = await stripePost("/billing_portal/sessions", {

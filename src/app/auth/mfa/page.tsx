@@ -14,5 +14,13 @@ export default async function MfaPage({ searchParams }: { searchParams: Promise<
   if (!workspace.authenticated) redirect("/sign-in");
   const params = await searchParams;
   const locale = normalizeLocale(workspace.profile?.locale);
-  return <main className={styles.challengeShell}><Link className={styles.challengeBrand} href="/"><Image src="/zuelen-icon.png" alt="" width={30} height={30}/><strong>Zuelen</strong></Link><MfaChallenge locale={locale} nextPath={safeInternalDestination(params.next)}/></main>;
+  return (
+    <main className={styles.challengeShell}>
+      <Link className={styles.challengeBrand} href="/">
+        <Image src="/zuelen-icon.png" alt="" width={30} height={30} />
+        <strong>Zuelen</strong>
+      </Link>
+      <MfaChallenge locale={locale} nextPath={safeInternalDestination(params.next)} />
+    </main>
+  );
 }

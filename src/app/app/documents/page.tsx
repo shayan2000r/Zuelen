@@ -1,4 +1,18 @@
-import { Download, ExternalLink, FileArchive, FileCheck2, FileSpreadsheet, FileText, Landmark, Paperclip, ReceiptText, Search, ShieldCheck, Sparkles, WandSparkles } from "lucide-react";
+import {
+  Download,
+  ExternalLink,
+  FileArchive,
+  FileCheck2,
+  FileSpreadsheet,
+  FileText,
+  Landmark,
+  Paperclip,
+  ReceiptText,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  WandSparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DocumentUploader } from "@/components/document-uploader";
@@ -15,64 +29,694 @@ import { canBookkeep } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 
-export const dynamic="force-dynamic";
-const typeLabels={en:{receipt:"Receipt",purchase_invoice:"Supplier invoice",bank_statement:"Bank statement",tax_notice:"Tax notice",filing:"Filing",annex:"Annual accounts",sales_invoice:"Sales invoice",other:"Business document"},fr:{receipt:"Reçu",purchase_invoice:"Facture fournisseur",bank_statement:"Relevé bancaire",tax_notice:"Avis d'imposition",filing:"Dépôt",annex:"Comptes annuels",sales_invoice:"Facture de vente",other:"Document d'entreprise"}} as const;
-const csvTypes=new Set(["profit_loss","balance_sheet","trial_balance","pcn","general_ledger","general_journal"]);
-function sizeLabel(bytes:number|null){if(!bytes)return"—";return bytes>=1024*1024?`${(bytes/1024/1024).toFixed(2)} MB`:`${Math.max(1,Math.round(bytes/1024))} KB`}
-function money(value:unknown,currency:unknown,locale:Locale){const number=Number(value);if(!Number.isFinite(number))return null;return new Intl.NumberFormat(intlLocale(locale),{style:"currency",currency:typeof currency==="string"&&currency.length===3?currency:"EUR",minimumFractionDigits:2}).format(number)}
-function extractionSummary(raw:unknown,locale:Locale){if(!raw||typeof raw!=="object")return null;const d=raw as Record<string,unknown>;if(typeof d.error==="string")return{error:d.error};const kind=typeof d.document_kind==="string"?d.document_kind:null,party=kind==="sales_invoice"?(typeof d.customer_name==="string"?d.customer_name:null):(typeof d.issuer_name==="string"?d.issuer_name:null);return{kind,party,total:money(d.total,d.currency,locale),category:typeof d.suggested_account_category==="string"?d.suggested_account_category:null,treatment:typeof d.suggested_vat_treatment==="string"?d.suggested_vat_treatment.replaceAll("_"," "):null}}
-function openingImportStatus(raw:unknown){if(!raw||typeof raw!=="object")return null;const value=(raw as Record<string,unknown>).opening_import_status;return typeof value==="string"?value:null}
-function unresolvedTypeSafeguard(raw:unknown){if(!raw||typeof raw!=="object")return null;const value=(raw as Record<string,unknown>).type_safeguard;if(!value||typeof value!=="object")return null;const guard=value as Record<string,unknown>;if(guard.resolved===true)return null;return{selectedType:String(guard.selectedType??""),detectedType:String(guard.detectedType??""),allowKeep:guard.allowKeep===true}}
-function archivedBatchId(raw:unknown){if(!raw||typeof raw!=="object")return null;const value=(raw as Record<string,unknown>).bank_import_batch_id;return typeof value==="string"?value:null}
-function customerName(raw:unknown,fr=false){if(!raw||typeof raw!=="object")return fr?"Client":"Customer";const value=(raw as Record<string,unknown>).name;return typeof value==="string"&&value?value:(fr?"Client":"Customer")}
-function dateLabel(value:string,locale:Locale){return new Date(value.length===10?`${value}T12:00:00`:value).toLocaleDateString(intlLocale(locale),{day:"2-digit",month:"short",year:"numeric"})}
-type Params=Promise<{category?:string;q?:string;create?:string}>;
-type LibraryItem={kind:"document"|"statement"|"invoice"|"report";date:string;data:any};
+export const dynamic = "force-dynamic";
+const typeLabels = {
+  en: {
+    receipt: "Receipt",
+    purchase_invoice: "Supplier invoice",
+    bank_statement: "Bank statement",
+    tax_notice: "Tax notice",
+    filing: "Filing",
+    annex: "Annual accounts",
+    sales_invoice: "Sales invoice",
+    other: "Business document",
+  },
+  fr: {
+    receipt: "Reçu",
+    purchase_invoice: "Facture fournisseur",
+    bank_statement: "Relevé bancaire",
+    tax_notice: "Avis d'imposition",
+    filing: "Dépôt",
+    annex: "Comptes annuels",
+    sales_invoice: "Facture de vente",
+    other: "Document d'entreprise",
+  },
+} as const;
+const csvTypes = new Set(["profit_loss", "balance_sheet", "trial_balance", "pcn", "general_ledger", "general_journal"]);
+function sizeLabel(bytes: number | null) {
+  if (!bytes) return "—";
+  return bytes >= 1024 * 1024
+    ? `${(bytes / 1024 / 1024).toFixed(2)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+function money(value: unknown, currency: unknown, locale: Locale) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return null;
+  return new Intl.NumberFormat(intlLocale(locale), {
+    style: "currency",
+    currency: typeof currency === "string" && currency.length === 3 ? currency : "EUR",
+    minimumFractionDigits: 2,
+  }).format(number);
+}
+function extractionSummary(raw: unknown, locale: Locale) {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  if (typeof d.error === "string") return { error: d.error };
+  const kind = typeof d.document_kind === "string" ? d.document_kind : null,
+    party =
+      kind === "sales_invoice"
+        ? typeof d.customer_name === "string"
+          ? d.customer_name
+          : null
+        : typeof d.issuer_name === "string"
+          ? d.issuer_name
+          : null;
+  return {
+    kind,
+    party,
+    total: money(d.total, d.currency, locale),
+    category: typeof d.suggested_account_category === "string" ? d.suggested_account_category : null,
+    treatment: typeof d.suggested_vat_treatment === "string" ? d.suggested_vat_treatment.replaceAll("_", " ") : null,
+  };
+}
+function openingImportStatus(raw: unknown) {
+  if (!raw || typeof raw !== "object") return null;
+  const value = (raw as Record<string, unknown>).opening_import_status;
+  return typeof value === "string" ? value : null;
+}
+function unresolvedTypeSafeguard(raw: unknown) {
+  if (!raw || typeof raw !== "object") return null;
+  const value = (raw as Record<string, unknown>).type_safeguard;
+  if (!value || typeof value !== "object") return null;
+  const guard = value as Record<string, unknown>;
+  if (guard.resolved === true) return null;
+  return {
+    selectedType: String(guard.selectedType ?? ""),
+    detectedType: String(guard.detectedType ?? ""),
+    allowKeep: guard.allowKeep === true,
+  };
+}
+function archivedBatchId(raw: unknown) {
+  if (!raw || typeof raw !== "object") return null;
+  const value = (raw as Record<string, unknown>).bank_import_batch_id;
+  return typeof value === "string" ? value : null;
+}
+function customerName(raw: unknown, fr = false) {
+  if (!raw || typeof raw !== "object") return fr ? "Client" : "Customer";
+  const value = (raw as Record<string, unknown>).name;
+  return typeof value === "string" && value ? value : fr ? "Client" : "Customer";
+}
+function dateLabel(value: string, locale: Locale) {
+  return new Date(value.length === 10 ? `${value}T12:00:00` : value).toLocaleDateString(intlLocale(locale), {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+type Params = Promise<{ category?: string; q?: string; create?: string }>;
+type LibraryItem = { kind: "document" | "statement" | "invoice" | "report"; date: string; data: any };
 
-export default async function DocumentsPage({searchParams}:{searchParams:Params}){
- const params=await searchParams,allowed=new Set(["all","invoices","bank","reports"]),category=allowed.has(params.category??"all")?params.category??"all":"all",q=(params.q??"").trim().toLowerCase();
- const workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company||!workspace.organization)redirect("/setup");const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",labels=typeLabels[locale],editable=canBookkeep(workspace.role),supabase=await createClient();
- const[{data,error},{data:links},{data:taxEvents},{data:bankBatches,error:batchError},{data:generated,error:generatedError},{data:invoices,error:invoiceError}]=await Promise.all([
-  supabase.from("documents").select("id,type,file_name,mime_type,file_size,extraction_status,extracted_data,created_at,storage_path").eq("company_id",workspace.company.id).order("created_at",{ascending:false}).limit(300),
-  supabase.from("document_transaction_links").select("id,document_id,source_transaction_id,match_score,status,match_reason,source_transactions(occurred_on,counterparty_name,description,amount_gross,currency,classification_status)").eq("company_id",workspace.company.id).in("status",["suggested","confirmed"]).order("match_score",{ascending:false}),
-  supabase.from("tax_events").select("id,source_document_id").eq("company_id",workspace.company.id),
-  supabase.from("bank_import_batches").select("id,file_name,row_count,imported_count,duplicate_count,created_at").eq("company_id",workspace.company.id).order("created_at",{ascending:false}).limit(150),
-  supabase.from("generated_documents").select("id,title,document_type,fiscal_year,generator_version,created_at").eq("company_id",workspace.company.id).order("created_at",{ascending:false}).limit(150),
-  supabase.from("sales_invoices").select("id,invoice_number,status,payment_status,issue_date,currency,total,customer_snapshot,created_at").eq("company_id",workspace.company.id).neq("status","void").order("created_at",{ascending:false}).limit(150)
- ]);
- if(error)throw new Error(`${fr?"Impossible de charger les documents":"Could not load documents"}: ${error.message}`);if(batchError)throw new Error(`${fr?"Impossible de charger les relevés bancaires":"Could not load bank statement records"}: ${batchError.message}`);if(generatedError)throw new Error(`${fr?"Impossible de charger les rapports générés":"Could not load generated reports"}: ${generatedError.message}`);if(invoiceError)throw new Error(`${fr?"Impossible de charger les factures":"Could not load invoices"}: ${invoiceError.message}`);
- const docs=data??[],reportRows=generated??[],invoiceRows=invoices??[],archivedBatchIds=new Set(docs.map(doc=>archivedBatchId(doc.extracted_data)).filter((id):id is string=>Boolean(id))),statementRecords=(bankBatches??[]).filter(batch=>!archivedBatchIds.has(batch.id));
- const bestLink=new Map<string,(typeof links extends Array<infer T>?T:never)>();for(const link of links??[]){if(!bestLink.has(link.document_id)||link.status==="confirmed")bestLink.set(link.document_id,link as never)}const taxDocs=new Set((taxEvents??[]).map(e=>e.source_document_id).filter(Boolean));
- const bankDocs=docs.filter(doc=>doc.type==="bank_statement"),bankCount=bankDocs.length+statementRecords.length,totalCount=docs.length+statementRecords.length+invoiceRows.length+reportRows.length;
- const folders=[{key:"all",label:fr?"Tous les documents":"All Documents",icon:FileArchive,count:totalCount},{key:"invoices",label:fr?"Factures":"Invoices",icon:ReceiptText,count:invoiceRows.length},{key:"bank",label:fr?"Relevés bancaires":"Bank Statements",icon:Landmark,count:bankCount},{key:"reports",label:fr?"Rapports financiers":"Financial Reports",icon:FileSpreadsheet,count:reportRows.length}];
- const items:LibraryItem[]=[];
- if(category==="all")for(const doc of docs){if(!q||`${doc.file_name} ${labels[doc.type as keyof typeof labels]??doc.type}`.toLowerCase().includes(q))items.push({kind:"document",date:doc.created_at,data:doc})}
- if(category==="all"||category==="bank")for(const batch of statementRecords){if(!q||`${batch.file_name??(fr?"Relevé bancaire":"Bank statement")} bank statement banking relevé bancaire banque`.toLowerCase().includes(q))items.push({kind:"statement",date:batch.created_at,data:batch})}
- if(category==="all"||category==="invoices")for(const invoice of invoiceRows){const haystack=`${invoice.invoice_number??(fr?"facture brouillon":"draft invoice")} ${customerName(invoice.customer_snapshot,fr)} invoice facture ${invoice.status}`.toLowerCase();if(!q||haystack.includes(q))items.push({kind:"invoice",date:invoice.created_at,data:invoice})}
- if(category==="all"||category==="reports")for(const report of reportRows){const label=financialDocumentName(report.document_type,locale);if(!q||`${label} ${report.fiscal_year} financial report rapport financier`.toLowerCase().includes(q))items.push({kind:"report",date:report.created_at,data:report})}
- if(category==="bank")for(const doc of bankDocs){if(!q||`${doc.file_name} bank statement relevé bancaire`.toLowerCase().includes(q))items.push({kind:"document",date:doc.created_at,data:doc})}
- items.sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime());const activeFolder=folders.find(folder=>folder.key===category)??folders[0],noResults=totalCount>0&&items.length===0;
+export default async function DocumentsPage({ searchParams }: { searchParams: Params }) {
+  const params = await searchParams,
+    allowed = new Set(["all", "invoices", "bank", "reports"]),
+    category = allowed.has(params.category ?? "all") ? (params.category ?? "all") : "all",
+    q = (params.q ?? "").trim().toLowerCase();
+  const workspace = await getWorkspace();
+  if (!workspace.authenticated) redirect("/sign-in");
+  if (!workspace.company || !workspace.organization) redirect("/setup");
+  const locale = normalizeLocale(workspace.profile?.locale),
+    fr = locale === "fr",
+    labels = typeLabels[locale],
+    editable = canBookkeep(workspace.role),
+    supabase = await createClient();
+  const [
+    { data, error },
+    { data: links },
+    { data: taxEvents },
+    { data: bankBatches, error: batchError },
+    { data: generated, error: generatedError },
+    { data: invoices, error: invoiceError },
+  ] = await Promise.all([
+    supabase
+      .from("documents")
+      .select("id,type,file_name,mime_type,file_size,extraction_status,extracted_data,created_at,storage_path")
+      .eq("company_id", workspace.company.id)
+      .order("created_at", { ascending: false })
+      .limit(300),
+    supabase
+      .from("document_transaction_links")
+      .select(
+        "id,document_id,source_transaction_id,match_score,status,match_reason,source_transactions(occurred_on,counterparty_name,description,amount_gross,currency,classification_status)",
+      )
+      .eq("company_id", workspace.company.id)
+      .in("status", ["suggested", "confirmed"])
+      .order("match_score", { ascending: false }),
+    supabase.from("tax_events").select("id,source_document_id").eq("company_id", workspace.company.id),
+    supabase
+      .from("bank_import_batches")
+      .select("id,file_name,row_count,imported_count,duplicate_count,created_at")
+      .eq("company_id", workspace.company.id)
+      .order("created_at", { ascending: false })
+      .limit(150),
+    supabase
+      .from("generated_documents")
+      .select("id,title,document_type,fiscal_year,generator_version,created_at")
+      .eq("company_id", workspace.company.id)
+      .order("created_at", { ascending: false })
+      .limit(150),
+    supabase
+      .from("sales_invoices")
+      .select("id,invoice_number,status,payment_status,issue_date,currency,total,customer_snapshot,created_at")
+      .eq("company_id", workspace.company.id)
+      .neq("status", "void")
+      .order("created_at", { ascending: false })
+      .limit(150),
+  ]);
+  if (error)
+    throw new Error(`${fr ? "Impossible de charger les documents" : "Could not load documents"}: ${error.message}`);
+  if (batchError)
+    throw new Error(
+      `${fr ? "Impossible de charger les relevés bancaires" : "Could not load bank statement records"}: ${batchError.message}`,
+    );
+  if (generatedError)
+    throw new Error(
+      `${fr ? "Impossible de charger les rapports générés" : "Could not load generated reports"}: ${generatedError.message}`,
+    );
+  if (invoiceError)
+    throw new Error(
+      `${fr ? "Impossible de charger les factures" : "Could not load invoices"}: ${invoiceError.message}`,
+    );
+  const docs = data ?? [],
+    reportRows = generated ?? [],
+    invoiceRows = invoices ?? [],
+    archivedBatchIds = new Set(
+      docs.map(doc => archivedBatchId(doc.extracted_data)).filter((id): id is string => Boolean(id)),
+    ),
+    statementRecords = (bankBatches ?? []).filter(batch => !archivedBatchIds.has(batch.id));
+  const bestLink = new Map<string, typeof links extends Array<infer T> ? T : never>();
+  for (const link of links ?? []) {
+    if (!bestLink.has(link.document_id) || link.status === "confirmed") bestLink.set(link.document_id, link as never);
+  }
+  const taxDocs = new Set((taxEvents ?? []).map(e => e.source_document_id).filter(Boolean));
+  const bankDocs = docs.filter(doc => doc.type === "bank_statement"),
+    bankCount = bankDocs.length + statementRecords.length,
+    totalCount = docs.length + statementRecords.length + invoiceRows.length + reportRows.length;
+  const folders = [
+    { key: "all", label: fr ? "Tous les documents" : "All Documents", icon: FileArchive, count: totalCount },
+    { key: "invoices", label: fr ? "Factures" : "Invoices", icon: ReceiptText, count: invoiceRows.length },
+    { key: "bank", label: fr ? "Relevés bancaires" : "Bank Statements", icon: Landmark, count: bankCount },
+    {
+      key: "reports",
+      label: fr ? "Rapports financiers" : "Financial Reports",
+      icon: FileSpreadsheet,
+      count: reportRows.length,
+    },
+  ];
+  const items: LibraryItem[] = [];
+  if (category === "all")
+    for (const doc of docs) {
+      if (!q || `${doc.file_name} ${labels[doc.type as keyof typeof labels] ?? doc.type}`.toLowerCase().includes(q))
+        items.push({ kind: "document", date: doc.created_at, data: doc });
+    }
+  if (category === "all" || category === "bank")
+    for (const batch of statementRecords) {
+      if (
+        !q ||
+        `${batch.file_name ?? (fr ? "Relevé bancaire" : "Bank statement")} bank statement banking relevé bancaire banque`
+          .toLowerCase()
+          .includes(q)
+      )
+        items.push({ kind: "statement", date: batch.created_at, data: batch });
+    }
+  if (category === "all" || category === "invoices")
+    for (const invoice of invoiceRows) {
+      const haystack =
+        `${invoice.invoice_number ?? (fr ? "facture brouillon" : "draft invoice")} ${customerName(invoice.customer_snapshot, fr)} invoice facture ${invoice.status}`.toLowerCase();
+      if (!q || haystack.includes(q)) items.push({ kind: "invoice", date: invoice.created_at, data: invoice });
+    }
+  if (category === "all" || category === "reports")
+    for (const report of reportRows) {
+      const label = financialDocumentName(report.document_type, locale);
+      if (!q || `${label} ${report.fiscal_year} financial report rapport financier`.toLowerCase().includes(q))
+        items.push({ kind: "report", date: report.created_at, data: report });
+    }
+  if (category === "bank")
+    for (const doc of bankDocs) {
+      if (!q || `${doc.file_name} bank statement relevé bancaire`.toLowerCase().includes(q))
+        items.push({ kind: "document", date: doc.created_at, data: doc });
+    }
+  items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const activeFolder = folders.find(folder => folder.key === category) ?? folders[0],
+    noResults = totalCount > 0 && items.length === 0;
 
- return <V2Page>
-  <PageHeader eyebrow={fr?"Centre documentaire":"Document centre"} title="Documents" description={editable?(fr?"Factures, relevés bancaires, rapports financiers et justificatifs réunis dans une bibliothèque unique et consultable.":"Invoices, bank statements, financial reports and source evidence in one searchable library."):(fr?"Accès en lecture seule aux factures, relevés bancaires, rapports financiers et justificatifs.":"Read-only access to invoices, bank statements, financial reports and source evidence.")} actions={editable?[{label:fr?"Importer un relevé":"Import statement",href:"/app/banking#bank-import",icon:Landmark,variant:"ghost"},{label:fr?"Créer une facture":"Create invoice",href:"/app/invoices/new",icon:ReceiptText,variant:"ghost"}]:[]}/>
+  return (
+    <V2Page>
+      <PageHeader
+        eyebrow={fr ? "Centre documentaire" : "Document centre"}
+        title="Documents"
+        description={
+          editable
+            ? fr
+              ? "Factures, relevés bancaires, rapports financiers et justificatifs réunis dans une bibliothèque unique et consultable."
+              : "Invoices, bank statements, financial reports and source evidence in one searchable library."
+            : fr
+              ? "Accès en lecture seule aux factures, relevés bancaires, rapports financiers et justificatifs."
+              : "Read-only access to invoices, bank statements, financial reports and source evidence."
+        }
+        actions={
+          editable
+            ? [
+                {
+                  label: fr ? "Importer un relevé" : "Import statement",
+                  href: "/app/banking#bank-import",
+                  icon: Landmark,
+                  variant: "ghost",
+                },
+                {
+                  label: fr ? "Créer une facture" : "Create invoice",
+                  href: "/app/invoices/new",
+                  icon: ReceiptText,
+                  variant: "ghost",
+                },
+              ]
+            : []
+        }
+      />
 
-  {editable?<div id="document-upload"><DocumentUploader organizationId={workspace.organization.id} companyId={workspace.company.id} autoOpen={params.create==="upload"||params.create==="scan"}/></div>:null}
-  <div style={{height:"var(--z-space-6)"}}/>
+      {editable ? (
+        <div id="document-upload">
+          <DocumentUploader
+            organizationId={workspace.organization.id}
+            companyId={workspace.company.id}
+            autoOpen={params.create === "upload" || params.create === "scan"}
+          />
+        </div>
+      ) : null}
+      <div style={{ height: "var(--z-space-6)" }} />
 
-  <section className={styles.folderGrid}>{folders.map(folder=><Link href={`/app/documents?category=${folder.key}`} className={`${styles.folderCard} ${category===folder.key?styles.folderCurrent:""}`} key={folder.key}><span><folder.icon size={18}/></span><div><strong>{folder.label}</strong><span className={styles.folderCount}>{folder.count}</span></div></Link>)}</section>
-  <div style={{height:"var(--z-space-5)"}}/>
+      <section className={styles.folderGrid}>
+        {folders.map(folder => (
+          <Link
+            href={`/app/documents?category=${folder.key}`}
+            className={`${styles.folderCard} ${category === folder.key ? styles.folderCurrent : ""}`}
+            key={folder.key}
+          >
+            <span>
+              <folder.icon size={18} />
+            </span>
+            <div>
+              <strong>{folder.label}</strong>
+              <span className={styles.folderCount}>{folder.count}</span>
+            </div>
+          </Link>
+        ))}
+      </section>
+      <div style={{ height: "var(--z-space-5)" }} />
 
-  <DataPanel>
-   <DataPanelHeader eyebrow={fr?"Bibliothèque":"Library"} title={activeFolder.label} meta={fr?`${items.length} affichés`:`${items.length} shown`}/>
-   <DataToolbar><form method="get" className={styles.searchForm}><input type="hidden" name="category" value={category}/><label><Search size={15}/><input name="q" defaultValue={params.q??""} placeholder={fr?`Rechercher dans ${activeFolder.label.toLowerCase()}`:`Search ${activeFolder.label.toLowerCase()}`}/></label><button type="submit">{fr?"Rechercher":"Search"}</button></form></DataToolbar>
-   {items.length===0?<DataEmptyState icon={noResults?Search:FileCheck2} title={noResults?(fr?"Aucun document ne correspond à cette vue":"No documents match this view"):(fr?"Votre bibliothèque de documents commence ici":"Your document library starts here")} description={noResults?(fr?"Essayez une autre catégorie ou un autre terme de recherche.":"Try another category or search term."):editable?(fr?"Créez une facture, importez un relevé bancaire, générez un rapport financier ou ajoutez un justificatif.":"Create an invoice, import a bank statement, generate a financial report or upload source evidence."):(fr?"Aucun document n'est encore disponible.":"No documents are available yet.")} action={noResults?<V2Button label={fr?"Réinitialiser la vue":"Clear view"} href="/app/documents" variant="secondary"/>:undefined}/>:<div className={styles.docList}>{items.map(item=>{
-    if(item.kind==="statement"){const batch=item.data;return <article className={styles.docRow} key={`bank-batch-${batch.id}`}><div className={styles.docIdentity}><span className={styles.docIcon}><Landmark size={17}/></span><div><strong>{batch.file_name||(fr?"Relevé bancaire importé":"Imported bank statement")}</strong><small>{fr?"Relevé bancaire · importé via Banque":"Bank statement · imported through Banking"}</small></div></div><div className={styles.docDetail}><strong>{batch.imported_count} {fr?"mouvements":"movements"}</strong><span>{batch.duplicate_count?(fr?`${batch.duplicate_count} doublons ignorés`:`${batch.duplicate_count} duplicates skipped`):(fr?"Import terminé":"Import completed")}</span></div><time className={styles.docDate}>{dateLabel(batch.created_at,locale)}</time><div className={styles.docActions}><Link href="/app/banking" className={styles.openButton}><span>{fr?"Voir":"View"}</span><ExternalLink size={12}/></Link></div></article>}
-    if(item.kind==="invoice"){const invoice=item.data;return <article className={styles.docRow} key={`invoice-${invoice.id}`}><div className={styles.docIdentity}><span className={styles.docIcon}><ReceiptText size={17}/></span><div><strong>{invoice.invoice_number||(fr?"Facture brouillon":"Draft invoice")}</strong><small>{fr?"Facture":"Invoice"} · {invoice.status==="draft"?(fr?"brouillon":"draft"):invoice.payment_status}</small></div></div><div className={styles.docDetail}><strong>{customerName(invoice.customer_snapshot,fr)}</strong><span>{money(invoice.total,invoice.currency,locale)||"—"}</span></div><time className={styles.docDate}>{dateLabel(invoice.issue_date,locale)}</time><div className={styles.docActions}><Link href={`/app/invoices/${invoice.id}`} className={styles.openButton}><span>{fr?"Voir":"View"}</span><ExternalLink size={12}/></Link></div></article>}
-    if(item.kind==="report"){const report=item.data,label=financialDocumentName(report.document_type,locale),displayTitle=`${label} · ${report.fiscal_year}`;return <article className={styles.docRow} key={`report-${report.id}`}><div className={styles.docIdentity}><span className={styles.docIcon}><FileSpreadsheet size={17}/></span><div><strong>{displayTitle}</strong><small>{fr?"Rapport financier":"Financial report"} · {fr?"générateur":"generator"} {report.generator_version}</small></div></div><div className={styles.docDetail}><strong>{fr?"Instantané de clôture figé":"Frozen closing snapshot"}</strong><span>{fr?"Sortie versionnée":"Versioned output"}</span></div><time className={styles.docDate}>{dateLabel(report.created_at,locale)}</time><div className={styles.docActions}><Link href={`/app/documents/generated/${report.id}/pdf`} className={styles.openButton}><span>PDF</span><Download size={12}/></Link>{csvTypes.has(report.document_type)?<Link href={`/app/documents/generated/${report.id}/csv`} className={styles.secondaryAction}><span>CSV</span><Download size={12}/></Link>:null}{editable?<GeneratedDocumentDelete id={report.id} title={displayTitle}/>:null}</div></article>}
-    const doc=item.data,extracted=extractionSummary(doc.extracted_data,locale),typeGuard=unresolvedTypeSafeguard(doc.extracted_data),openingSource=openingImportStatus(doc.extracted_data)==="posted",aiSupported=["application/pdf","image/jpeg","image/png","image/webp"].includes(doc.mime_type??""),salesReady=extracted&&!extracted.error&&extracted.kind==="sales_invoice",match=bestLink.get(doc.id) as {id:string;source_transaction_id:string|null;match_score:number|string;status:string;match_reason:string|null;source_transactions?:{occurred_on:string;counterparty_name:string|null;description:string|null;amount_gross:number|string;currency:string;classification_status:string}|null}|undefined,taxNotice=extracted&&!extracted.error&&extracted.kind==="tax_notice";const linkedTransaction=match?.status==="confirmed"&&match.source_transactions?match.source_transactions:null,directEvidence=Boolean(linkedTransaction&&match?.match_reason?.includes("Evidence attached directly")),transactionName=linkedTransaction?(linkedTransaction.counterparty_name||linkedTransaction.description||(fr?"Transaction":"Transaction")):null,transactionHref=linkedTransaction&&match?.source_transaction_id?(linkedTransaction.classification_status==="posted"?`/app/transactions?focus=${match.source_transaction_id}#transaction-row-${match.source_transaction_id}`:`/app/transactions?review=${match.source_transaction_id}#transaction-review`):null;const summary=typeGuard?(fr?"Type de document à confirmer":"Document type needs confirmation"):linkedTransaction?(directEvidence?(fr?"Justificatif ajouté depuis Transactions":"Evidence added from Transactions"):(fr?"Justificatif lié à une transaction":"Evidence linked to transaction")):openingSource?(fr?"Source de la situation d’ouverture":"Opening position source"):extracted&&!extracted.error?(extracted.party||extracted.total||extracted.treatment||extracted.category||(fr?"Document analysé":"Analyzed document")):extracted?.error?(fr?"Extraction à vérifier":"Needs extraction review"):(fr?"Document source":"Source document");
-    return <article className={`${styles.docRow} ${directEvidence?styles.linkedEvidenceRow:""}`} key={doc.id}><div className={styles.docIdentity}><span className={styles.docIcon}>{linkedTransaction?<Paperclip size={17}/>:<FileText size={17}/>}</span><div><strong>{doc.file_name}</strong><div className={styles.docMetaLine}><small>{labels[doc.type as keyof typeof labels]??doc.type} · {sizeLabel(doc.file_size)}</small>{linkedTransaction?<span className={styles.linkedEvidenceTag}><Paperclip size={10}/>{fr?"Justificatif lié":"Linked evidence"}</span>:null}</div></div></div><div className={styles.docDetail}>{typeGuard?<><strong><Sparkles size={11}/>{summary}</strong><span>{(labels[typeGuard.selectedType as keyof typeof labels]??typeGuard.selectedType)+" → "+(labels[typeGuard.detectedType as keyof typeof labels]??typeGuard.detectedType)}</span></>:linkedTransaction?<><strong><Paperclip size={11}/>{fr?"Lié à":"Linked to"} {transactionName}</strong><span>{dateLabel(linkedTransaction.occurred_on,locale)} · {money(linkedTransaction.amount_gross,linkedTransaction.currency,locale)} · {linkedTransaction.classification_status==="posted"?(fr?"comptabilisée":"posted"):(fr?"en attente":"pending")}</span></>:extracted&&!extracted.error?<><strong><Sparkles size={11}/>{summary}</strong><span>{extracted.total||(openingSource?(fr?"Situation d’ouverture comptabilisée":"Opening position posted"):(fr?"Analysé":"Analyzed"))}</span></>:<><strong>{summary}</strong><span>{doc.extraction_status.replaceAll("_"," ")}</span></>}</div><time className={styles.docDate}>{dateLabel(doc.created_at,locale)}</time><div className={styles.docActions}><Link href={`/app/documents/${doc.id}/open`} target="_blank" className={styles.openButton}><span>{fr?"Voir":"View"}</span><ExternalLink size={12}/></Link>{transactionHref?<Link href={transactionHref} className={styles.transactionLink}><Paperclip size={11}/>{fr?"Transaction":"Transaction"}</Link>:null}{editable&&typeGuard?<DocumentTypeSafeguardActions documentId={doc.id} selectedType={typeGuard.selectedType} detectedType={typeGuard.detectedType} allowKeep={typeGuard.allowKeep}/>:null}{editable&&aiSupported&&!openingSource&&!directEvidence&&!typeGuard?<DocumentExtractionButton documentId={doc.id} status={doc.extraction_status}/>:null}{editable&&salesReady?<Link href={`/app/invoices/new?document=${doc.id}`} className={styles.secondaryAction}><WandSparkles size={11}/>{fr?"Facture":"Invoice"}</Link>:null}{editable&&extracted&&!extracted.error&&["receipt","purchase_invoice"].includes(extracted.kind??"")?<DocumentMatchActions documentId={doc.id} linkId={match?.id} score={match?Number(match.match_score):null} status={match?.status} posted={match?.source_transactions?.classification_status==="posted"}/>:null}{editable&&taxNotice?<TaxNoticeAction documentId={doc.id} exists={taxDocs.has(doc.id)}/>:null}{editable?<DocumentRowActions id={doc.id} storagePath={doc.storage_path} fileName={doc.file_name} type={doc.type as "receipt"|"purchase_invoice"|"sales_invoice"|"bank_statement"|"tax_notice"|"filing"|"annex"|"other"}/>:null}</div></article>
-   })}</div>}
-   <div className={styles.footer}><ShieldCheck size={13}/>{fr?"Les justificatifs restent séparés des écritures comptables; les rapports générés restent liés à leur instantané de clôture.":"Source evidence stays separate from accounting entries; generated reports remain tied to their closing snapshots."}</div>
-  </DataPanel>
- </V2Page>;
+      <DataPanel>
+        <DataPanelHeader
+          eyebrow={fr ? "Bibliothèque" : "Library"}
+          title={activeFolder.label}
+          meta={fr ? `${items.length} affichés` : `${items.length} shown`}
+        />
+        <DataToolbar>
+          <form method="get" className={styles.searchForm}>
+            <input type="hidden" name="category" value={category} />
+            <label>
+              <Search size={15} />
+              <input
+                name="q"
+                defaultValue={params.q ?? ""}
+                placeholder={
+                  fr
+                    ? `Rechercher dans ${activeFolder.label.toLowerCase()}`
+                    : `Search ${activeFolder.label.toLowerCase()}`
+                }
+              />
+            </label>
+            <button type="submit">{fr ? "Rechercher" : "Search"}</button>
+          </form>
+        </DataToolbar>
+        {items.length === 0 ? (
+          <DataEmptyState
+            icon={noResults ? Search : FileCheck2}
+            title={
+              noResults
+                ? fr
+                  ? "Aucun document ne correspond à cette vue"
+                  : "No documents match this view"
+                : fr
+                  ? "Votre bibliothèque de documents commence ici"
+                  : "Your document library starts here"
+            }
+            description={
+              noResults
+                ? fr
+                  ? "Essayez une autre catégorie ou un autre terme de recherche."
+                  : "Try another category or search term."
+                : editable
+                  ? fr
+                    ? "Créez une facture, importez un relevé bancaire, générez un rapport financier ou ajoutez un justificatif."
+                    : "Create an invoice, import a bank statement, generate a financial report or upload source evidence."
+                  : fr
+                    ? "Aucun document n'est encore disponible."
+                    : "No documents are available yet."
+            }
+            action={
+              noResults ? (
+                <V2Button
+                  label={fr ? "Réinitialiser la vue" : "Clear view"}
+                  href="/app/documents"
+                  variant="secondary"
+                />
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className={styles.docList}>
+            {items.map(item => {
+              if (item.kind === "statement") {
+                const batch = item.data;
+                return (
+                  <article className={styles.docRow} key={`bank-batch-${batch.id}`}>
+                    <div className={styles.docIdentity}>
+                      <span className={styles.docIcon}>
+                        <Landmark size={17} />
+                      </span>
+                      <div>
+                        <strong>
+                          {batch.file_name || (fr ? "Relevé bancaire importé" : "Imported bank statement")}
+                        </strong>
+                        <small>
+                          {fr ? "Relevé bancaire · importé via Banque" : "Bank statement · imported through Banking"}
+                        </small>
+                      </div>
+                    </div>
+                    <div className={styles.docDetail}>
+                      <strong>
+                        {batch.imported_count} {fr ? "mouvements" : "movements"}
+                      </strong>
+                      <span>
+                        {batch.duplicate_count
+                          ? fr
+                            ? `${batch.duplicate_count} doublons ignorés`
+                            : `${batch.duplicate_count} duplicates skipped`
+                          : fr
+                            ? "Import terminé"
+                            : "Import completed"}
+                      </span>
+                    </div>
+                    <time className={styles.docDate}>{dateLabel(batch.created_at, locale)}</time>
+                    <div className={styles.docActions}>
+                      <Link href="/app/banking" className={styles.openButton}>
+                        <span>{fr ? "Voir" : "View"}</span>
+                        <ExternalLink size={12} />
+                      </Link>
+                    </div>
+                  </article>
+                );
+              }
+              if (item.kind === "invoice") {
+                const invoice = item.data;
+                return (
+                  <article className={styles.docRow} key={`invoice-${invoice.id}`}>
+                    <div className={styles.docIdentity}>
+                      <span className={styles.docIcon}>
+                        <ReceiptText size={17} />
+                      </span>
+                      <div>
+                        <strong>{invoice.invoice_number || (fr ? "Facture brouillon" : "Draft invoice")}</strong>
+                        <small>
+                          {fr ? "Facture" : "Invoice"} ·{" "}
+                          {invoice.status === "draft" ? (fr ? "brouillon" : "draft") : invoice.payment_status}
+                        </small>
+                      </div>
+                    </div>
+                    <div className={styles.docDetail}>
+                      <strong>{customerName(invoice.customer_snapshot, fr)}</strong>
+                      <span>{money(invoice.total, invoice.currency, locale) || "—"}</span>
+                    </div>
+                    <time className={styles.docDate}>{dateLabel(invoice.issue_date, locale)}</time>
+                    <div className={styles.docActions}>
+                      <Link href={`/app/invoices/${invoice.id}`} className={styles.openButton}>
+                        <span>{fr ? "Voir" : "View"}</span>
+                        <ExternalLink size={12} />
+                      </Link>
+                    </div>
+                  </article>
+                );
+              }
+              if (item.kind === "report") {
+                const report = item.data,
+                  label = financialDocumentName(report.document_type, locale),
+                  displayTitle = `${label} · ${report.fiscal_year}`;
+                return (
+                  <article className={styles.docRow} key={`report-${report.id}`}>
+                    <div className={styles.docIdentity}>
+                      <span className={styles.docIcon}>
+                        <FileSpreadsheet size={17} />
+                      </span>
+                      <div>
+                        <strong>{displayTitle}</strong>
+                        <small>
+                          {fr ? "Rapport financier" : "Financial report"} · {fr ? "générateur" : "generator"}{" "}
+                          {report.generator_version}
+                        </small>
+                      </div>
+                    </div>
+                    <div className={styles.docDetail}>
+                      <strong>{fr ? "Instantané de clôture figé" : "Frozen closing snapshot"}</strong>
+                      <span>{fr ? "Sortie versionnée" : "Versioned output"}</span>
+                    </div>
+                    <time className={styles.docDate}>{dateLabel(report.created_at, locale)}</time>
+                    <div className={styles.docActions}>
+                      <Link href={`/app/documents/generated/${report.id}/pdf`} className={styles.openButton}>
+                        <span>PDF</span>
+                        <Download size={12} />
+                      </Link>
+                      {csvTypes.has(report.document_type) ? (
+                        <Link href={`/app/documents/generated/${report.id}/csv`} className={styles.secondaryAction}>
+                          <span>CSV</span>
+                          <Download size={12} />
+                        </Link>
+                      ) : null}
+                      {editable ? <GeneratedDocumentDelete id={report.id} title={displayTitle} /> : null}
+                    </div>
+                  </article>
+                );
+              }
+              const doc = item.data,
+                extracted = extractionSummary(doc.extracted_data, locale),
+                typeGuard = unresolvedTypeSafeguard(doc.extracted_data),
+                openingSource = openingImportStatus(doc.extracted_data) === "posted",
+                aiSupported = ["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(
+                  doc.mime_type ?? "",
+                ),
+                salesReady = extracted && !extracted.error && extracted.kind === "sales_invoice",
+                match = bestLink.get(doc.id) as
+                  | {
+                      id: string;
+                      source_transaction_id: string | null;
+                      match_score: number | string;
+                      status: string;
+                      match_reason: string | null;
+                      source_transactions?: {
+                        occurred_on: string;
+                        counterparty_name: string | null;
+                        description: string | null;
+                        amount_gross: number | string;
+                        currency: string;
+                        classification_status: string;
+                      } | null;
+                    }
+                  | undefined,
+                taxNotice = extracted && !extracted.error && extracted.kind === "tax_notice";
+              const linkedTransaction =
+                  match?.status === "confirmed" && match.source_transactions ? match.source_transactions : null,
+                directEvidence = Boolean(
+                  linkedTransaction && match?.match_reason?.includes("Evidence attached directly"),
+                ),
+                transactionName = linkedTransaction
+                  ? linkedTransaction.counterparty_name ||
+                    linkedTransaction.description ||
+                    (fr ? "Transaction" : "Transaction")
+                  : null,
+                transactionHref =
+                  linkedTransaction && match?.source_transaction_id
+                    ? linkedTransaction.classification_status === "posted"
+                      ? `/app/transactions?focus=${match.source_transaction_id}#transaction-row-${match.source_transaction_id}`
+                      : `/app/transactions?review=${match.source_transaction_id}#transaction-review`
+                    : null;
+              const summary = typeGuard
+                ? fr
+                  ? "Type de document à confirmer"
+                  : "Document type needs confirmation"
+                : linkedTransaction
+                  ? directEvidence
+                    ? fr
+                      ? "Justificatif ajouté depuis Transactions"
+                      : "Evidence added from Transactions"
+                    : fr
+                      ? "Justificatif lié à une transaction"
+                      : "Evidence linked to transaction"
+                  : openingSource
+                    ? fr
+                      ? "Source de la situation d’ouverture"
+                      : "Opening position source"
+                    : extracted && !extracted.error
+                      ? extracted.party ||
+                        extracted.total ||
+                        extracted.treatment ||
+                        extracted.category ||
+                        (fr ? "Document analysé" : "Analyzed document")
+                      : extracted?.error
+                        ? fr
+                          ? "Extraction à vérifier"
+                          : "Needs extraction review"
+                        : fr
+                          ? "Document source"
+                          : "Source document";
+              return (
+                <article className={`${styles.docRow} ${directEvidence ? styles.linkedEvidenceRow : ""}`} key={doc.id}>
+                  <div className={styles.docIdentity}>
+                    <span className={styles.docIcon}>
+                      {linkedTransaction ? <Paperclip size={17} /> : <FileText size={17} />}
+                    </span>
+                    <div>
+                      <strong>{doc.file_name}</strong>
+                      <div className={styles.docMetaLine}>
+                        <small>
+                          {labels[doc.type as keyof typeof labels] ?? doc.type} · {sizeLabel(doc.file_size)}
+                        </small>
+                        {linkedTransaction ? (
+                          <span className={styles.linkedEvidenceTag}>
+                            <Paperclip size={10} />
+                            {fr ? "Justificatif lié" : "Linked evidence"}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.docDetail}>
+                    {typeGuard ? (
+                      <>
+                        <strong>
+                          <Sparkles size={11} />
+                          {summary}
+                        </strong>
+                        <span>
+                          {(labels[typeGuard.selectedType as keyof typeof labels] ?? typeGuard.selectedType) +
+                            " → " +
+                            (labels[typeGuard.detectedType as keyof typeof labels] ?? typeGuard.detectedType)}
+                        </span>
+                      </>
+                    ) : linkedTransaction ? (
+                      <>
+                        <strong>
+                          <Paperclip size={11} />
+                          {fr ? "Lié à" : "Linked to"} {transactionName}
+                        </strong>
+                        <span>
+                          {dateLabel(linkedTransaction.occurred_on, locale)} ·{" "}
+                          {money(linkedTransaction.amount_gross, linkedTransaction.currency, locale)} ·{" "}
+                          {linkedTransaction.classification_status === "posted"
+                            ? fr
+                              ? "comptabilisée"
+                              : "posted"
+                            : fr
+                              ? "en attente"
+                              : "pending"}
+                        </span>
+                      </>
+                    ) : extracted && !extracted.error ? (
+                      <>
+                        <strong>
+                          <Sparkles size={11} />
+                          {summary}
+                        </strong>
+                        <span>
+                          {extracted.total ||
+                            (openingSource
+                              ? fr
+                                ? "Situation d’ouverture comptabilisée"
+                                : "Opening position posted"
+                              : fr
+                                ? "Analysé"
+                                : "Analyzed")}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <strong>{summary}</strong>
+                        <span>{doc.extraction_status.replaceAll("_", " ")}</span>
+                      </>
+                    )}
+                  </div>
+                  <time className={styles.docDate}>{dateLabel(doc.created_at, locale)}</time>
+                  <div className={styles.docActions}>
+                    <Link href={`/app/documents/${doc.id}/open`} target="_blank" className={styles.openButton}>
+                      <span>{fr ? "Voir" : "View"}</span>
+                      <ExternalLink size={12} />
+                    </Link>
+                    {transactionHref ? (
+                      <Link href={transactionHref} className={styles.transactionLink}>
+                        <Paperclip size={11} />
+                        {fr ? "Transaction" : "Transaction"}
+                      </Link>
+                    ) : null}
+                    {editable && typeGuard ? (
+                      <DocumentTypeSafeguardActions
+                        documentId={doc.id}
+                        selectedType={typeGuard.selectedType}
+                        detectedType={typeGuard.detectedType}
+                        allowKeep={typeGuard.allowKeep}
+                      />
+                    ) : null}
+                    {editable && aiSupported && !openingSource && !directEvidence && !typeGuard ? (
+                      <DocumentExtractionButton documentId={doc.id} status={doc.extraction_status} />
+                    ) : null}
+                    {editable && salesReady ? (
+                      <Link href={`/app/invoices/new?document=${doc.id}`} className={styles.secondaryAction}>
+                        <WandSparkles size={11} />
+                        {fr ? "Facture" : "Invoice"}
+                      </Link>
+                    ) : null}
+                    {editable &&
+                    extracted &&
+                    !extracted.error &&
+                    ["receipt", "purchase_invoice"].includes(extracted.kind ?? "") ? (
+                      <DocumentMatchActions
+                        documentId={doc.id}
+                        linkId={match?.id}
+                        score={match ? Number(match.match_score) : null}
+                        status={match?.status}
+                        posted={match?.source_transactions?.classification_status === "posted"}
+                      />
+                    ) : null}
+                    {editable && taxNotice ? (
+                      <TaxNoticeAction documentId={doc.id} exists={taxDocs.has(doc.id)} />
+                    ) : null}
+                    {editable ? (
+                      <DocumentRowActions
+                        id={doc.id}
+                        storagePath={doc.storage_path}
+                        fileName={doc.file_name}
+                        type={
+                          doc.type as
+                            | "receipt"
+                            | "purchase_invoice"
+                            | "sales_invoice"
+                            | "bank_statement"
+                            | "tax_notice"
+                            | "filing"
+                            | "annex"
+                            | "other"
+                        }
+                      />
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+        <div className={styles.footer}>
+          <ShieldCheck size={13} />
+          {fr
+            ? "Les justificatifs restent séparés des écritures comptables; les rapports générés restent liés à leur instantané de clôture."
+            : "Source evidence stays separate from accounting entries; generated reports remain tied to their closing snapshots."}
+        </div>
+      </DataPanel>
+    </V2Page>
+  );
 }

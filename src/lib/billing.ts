@@ -43,8 +43,10 @@ function normalizeSnapshot(value: unknown): BillingSnapshot {
     additional_seats: Number.isFinite(raw.additional_seats) ? Number(raw.additional_seats) : 0,
     billable_seats: Number.isFinite(raw.billable_seats) ? Number(raw.billable_seats) : 0,
     stripe_customer_id: typeof raw.stripe_customer_id === "string" ? raw.stripe_customer_id : null,
-    stripe_plan_subscription_id: typeof raw.stripe_plan_subscription_id === "string" ? raw.stripe_plan_subscription_id : null,
-    stripe_seat_subscription_id: typeof raw.stripe_seat_subscription_id === "string" ? raw.stripe_seat_subscription_id : null,
+    stripe_plan_subscription_id:
+      typeof raw.stripe_plan_subscription_id === "string" ? raw.stripe_plan_subscription_id : null,
+    stripe_seat_subscription_id:
+      typeof raw.stripe_seat_subscription_id === "string" ? raw.stripe_seat_subscription_id : null,
     usage: {
       transactions: raw.usage?.transactions ?? { ...EMPTY_USAGE.transactions, limit: plan === "premium" ? null : 15 },
       documents: raw.usage?.documents ?? { ...EMPTY_USAGE.documents, limit: plan === "premium" ? null : 3 },
@@ -85,9 +87,15 @@ export function billingLimitMessage(error: unknown, locale: "en" | "fr" = "en") 
   const metric = match[1] as UsageMetric;
   const used = Number(match[2]);
   const limit = Number(match[3]);
-  const labels = locale === "fr"
-    ? { transactions: "transactions", documents: "documents", invoices: "factures", bank_imports: "imports bancaires" }
-    : { transactions: "transactions", documents: "documents", invoices: "invoices", bank_imports: "bank imports" };
+  const labels =
+    locale === "fr"
+      ? {
+          transactions: "transactions",
+          documents: "documents",
+          invoices: "factures",
+          bank_imports: "imports bancaires",
+        }
+      : { transactions: "transactions", documents: "documents", invoices: "invoices", bank_imports: "bank imports" };
   return locale === "fr"
     ? `Vous avez utilisé ${used} sur ${limit} ${labels[metric]} inclus dans Basic. Passez à Premium pour continuer sans limite.`
     : `You've used ${used} of ${limit} ${labels[metric]} included in Basic. Upgrade to Premium to continue without limits.`;

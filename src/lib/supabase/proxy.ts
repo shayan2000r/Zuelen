@@ -8,13 +8,20 @@ export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
   const passwordRecoveryPath = pathname === "/account/password-reset";
-  const protectedPath = pathname === "/app" || pathname.startsWith("/app/")
-    || pathname === "/professional" || pathname.startsWith("/professional/")
-    || pathname === "/contexts" || pathname.startsWith("/contexts/")
-    || pathname === "/setup" || pathname.startsWith("/setup/")
-    || pathname === "/admin" || pathname.startsWith("/admin/")
-    || ((pathname === "/account" || pathname.startsWith("/account/")) && !passwordRecoveryPath)
-    || pathname === "/accountants/manage" || pathname.startsWith("/accountants/manage/");
+  const protectedPath =
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname === "/professional" ||
+    pathname.startsWith("/professional/") ||
+    pathname === "/contexts" ||
+    pathname.startsWith("/contexts/") ||
+    pathname === "/setup" ||
+    pathname.startsWith("/setup/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    ((pathname === "/account" || pathname.startsWith("/account/")) && !passwordRecoveryPath) ||
+    pathname === "/accountants/manage" ||
+    pathname.startsWith("/accountants/manage/");
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
@@ -24,12 +31,8 @@ export async function updateSession(request: NextRequest) {
       setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
-        Object.entries(headers ?? {}).forEach(([key, value]) =>
-          response.headers.set(key, value),
-        );
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        Object.entries(headers ?? {}).forEach(([key, value]) => response.headers.set(key, value));
       },
     },
   });
@@ -38,9 +41,7 @@ export async function updateSession(request: NextRequest) {
   try {
     ({ data: claims } = await supabase.auth.getClaims());
   } catch {
-    const invalidSessionResponse = protectedPath
-      ? NextResponse.redirect(new URL("/sign-in", request.url))
-      : response;
+    const invalidSessionResponse = protectedPath ? NextResponse.redirect(new URL("/sign-in", request.url)) : response;
     for (const cookie of request.cookies.getAll()) {
       if (cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token")) {
         invalidSessionResponse.cookies.delete(cookie.name);

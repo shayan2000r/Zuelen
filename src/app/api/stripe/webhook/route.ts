@@ -11,7 +11,8 @@ type JsonObject = Record<string, any>;
 
 function idOf(value: unknown) {
   if (typeof value === "string") return value;
-  if (value && typeof value === "object" && "id" in value && typeof (value as { id?: unknown }).id === "string") return (value as { id: string }).id;
+  if (value && typeof value === "object" && "id" in value && typeof (value as { id?: unknown }).id === "string")
+    return (value as { id: string }).id;
   return null;
 }
 
@@ -26,7 +27,9 @@ function subscriptionItems(subscription: JsonObject) {
 
 function normalizedSubscriptionStatus(value: unknown) {
   const status = typeof value === "string" ? value : "incomplete";
-  return ["active", "trialing", "past_due", "unpaid", "incomplete", "canceled"].includes(status) ? status : "incomplete";
+  return ["active", "trialing", "past_due", "unpaid", "incomplete", "canceled"].includes(status)
+    ? status
+    : "incomplete";
 }
 
 async function syncAccountantSubscription(subscription: JsonObject, metadata: Record<string, string>) {
@@ -40,33 +43,37 @@ async function syncAccountantSubscription(subscription: JsonObject, metadata: Re
   const configuredPremium = accountantPriceId("premium");
   // Price is the source of truth after an upgrade or downgrade. Metadata remains
   // a fallback for the original Checkout-created subscription.
-  const tier: AccountantTier | null = priceId === configuredPremium
-    ? "premium"
-    : priceId === configuredBasic
-      ? "basic"
-      : metadata.tier === "premium"
-        ? "premium"
-        : metadata.tier === "basic"
-          ? "basic"
-          : null;
+  const tier: AccountantTier | null =
+    priceId === configuredPremium
+      ? "premium"
+      : priceId === configuredBasic
+        ? "basic"
+        : metadata.tier === "premium"
+          ? "premium"
+          : metadata.tier === "basic"
+            ? "basic"
+            : null;
   if (!tier) return null;
   const status = normalizedSubscriptionStatus(subscription.status);
   const periodStart = unixDate(subscription.current_period_start ?? firstItem.current_period_start);
   const periodEnd = unixDate(subscription.current_period_end ?? firstItem.current_period_end);
   const trialEnd = unixDate(subscription.trial_end);
   const customerId = idOf(subscription.customer);
-  const { error } = await admin.from("accountant_listing_subscriptions").upsert({
-    profile_id: profileId,
-    tier,
-    status,
-    trial_end: trialEnd,
-    current_period_start: periodStart,
-    current_period_end: periodEnd,
-    cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
-    stripe_customer_id: customerId,
-    stripe_subscription_id: status === "canceled" ? null : String(subscription.id),
-    stripe_price_id: priceId,
-  }, { onConflict: "profile_id" });
+  const { error } = await admin.from("accountant_listing_subscriptions").upsert(
+    {
+      profile_id: profileId,
+      tier,
+      status,
+      trial_end: trialEnd,
+      current_period_start: periodStart,
+      current_period_end: periodEnd,
+      cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
+      stripe_customer_id: customerId,
+      stripe_subscription_id: status === "canceled" ? null : String(subscription.id),
+      stripe_price_id: priceId,
+    },
+    { onConflict: "profile_id" },
+  );
   if (error) throw new Error(error.message);
   const price = firstItem?.price && typeof firstItem.price === "object" ? firstItem.price : null;
   return {
@@ -116,7 +123,10 @@ async function syncSubscription(subscription: JsonObject) {
       cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
     };
     if (periodStart) update.billing_anchor = periodStart;
-    const { error } = await admin.from("organization_subscriptions").update(update).eq("organization_id", organizationId);
+    const { error } = await admin
+      .from("organization_subscriptions")
+      .update(update)
+      .eq("organization_id", organizationId);
     if (error) throw new Error(error.message);
     return null;
   }
@@ -125,12 +135,15 @@ async function syncSubscription(subscription: JsonObject) {
     ? items.reduce((sum: number, item: JsonObject) => sum + Math.max(0, Number(item.quantity ?? 0)), 0)
     : 0;
   const priceId = idOf(firstItem?.price);
-  const { error } = await admin.from("organization_subscriptions").update({
-    stripe_customer_id: customerId,
-    stripe_seat_subscription_id: active || normalizedStatus !== "canceled" ? String(subscription.id) : null,
-    stripe_seat_price_id: priceId,
-    additional_seats: quantity,
-  }).eq("organization_id", organizationId);
+  const { error } = await admin
+    .from("organization_subscriptions")
+    .update({
+      stripe_customer_id: customerId,
+      stripe_seat_subscription_id: active || normalizedStatus !== "canceled" ? String(subscription.id) : null,
+      stripe_seat_price_id: priceId,
+      additional_seats: quantity,
+    })
+    .eq("organization_id", organizationId);
   if (error) throw new Error(error.message);
   return null;
 }
@@ -154,11 +167,22 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   const processingStartedAt = new Date().toISOString();
-  const { error: claimError } = await admin.from("stripe_webhook_events").insert({ event_id: eventId, event_type: eventType, status: "processing", processing_started_at: processingStartedAt });
+  const { error: claimError } = await admin.from("stripe_webhook_events").insert({
+    event_id: eventId,
+    event_type: eventType,
+    status: "processing",
+    processing_started_at: processingStartedAt,
+  });
   if (claimError?.code === "23505") {
     const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data: reclaimed, error: reclaimError } = await admin.from("stripe_webhook_events")
-      .update({ event_type: eventType, status: "processing", processing_started_at: processingStartedAt, last_error: null })
+    const { data: reclaimed, error: reclaimError } = await admin
+      .from("stripe_webhook_events")
+      .update({
+        event_type: eventType,
+        status: "processing",
+        processing_started_at: processingStartedAt,
+        last_error: null,
+      })
       .eq("event_id", eventId)
       .or(`status.eq.failed,and(status.eq.processing,processing_started_at.lt.${staleBefore})`)
       .select("event_id")
@@ -180,19 +204,56 @@ export async function POST(request: Request) {
       const subscriptionId = idOf(object.subscription);
       if (subscriptionId) {
         const synced = await syncSubscription(await stripeGet(`/subscriptions/${encodeURIComponent(subscriptionId)}`));
-        if (synced?.status === "trialing" && synced.trialEnd && synced.nextBillingDate && synced.unitAmount !== null && synced.currency) await sendAccountantTrialConfirmation({ ...synced, trialEnd: synced.trialEnd, nextBillingDate: synced.nextBillingDate, unitAmount: synced.unitAmount, currency: synced.currency });
+        if (
+          synced?.status === "trialing" &&
+          synced.trialEnd &&
+          synced.nextBillingDate &&
+          synced.unitAmount !== null &&
+          synced.currency
+        )
+          await sendAccountantTrialConfirmation({
+            ...synced,
+            trialEnd: synced.trialEnd,
+            nextBillingDate: synced.nextBillingDate,
+            unitAmount: synced.unitAmount,
+            currency: synced.currency,
+          });
       }
-    } else if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(eventType) && object) {
+    } else if (
+      ["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(
+        eventType,
+      ) &&
+      object
+    ) {
       const synced = await syncSubscription(object);
-      if (synced?.status === "trialing" && synced.trialEnd && synced.nextBillingDate && synced.unitAmount !== null && synced.currency) await sendAccountantTrialConfirmation({ ...synced, trialEnd: synced.trialEnd, nextBillingDate: synced.nextBillingDate, unitAmount: synced.unitAmount, currency: synced.currency });
+      if (
+        synced?.status === "trialing" &&
+        synced.trialEnd &&
+        synced.nextBillingDate &&
+        synced.unitAmount !== null &&
+        synced.currency
+      )
+        await sendAccountantTrialConfirmation({
+          ...synced,
+          trialEnd: synced.trialEnd,
+          nextBillingDate: synced.nextBillingDate,
+          unitAmount: synced.unitAmount,
+          currency: synced.currency,
+        });
     }
 
-    const { error: completeError } = await admin.from("stripe_webhook_events").update({ status: "processed", processed_at: new Date().toISOString(), last_error: null }).eq("event_id", eventId);
+    const { error: completeError } = await admin
+      .from("stripe_webhook_events")
+      .update({ status: "processed", processed_at: new Date().toISOString(), last_error: null })
+      .eq("event_id", eventId);
     if (completeError) throw new Error(completeError.message);
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error("Stripe webhook processing failed", eventId, eventType, error);
-    await admin.from("stripe_webhook_events").update({ status: "failed", last_error: "Processing failed; safe to retry." }).eq("event_id", eventId);
+    await admin
+      .from("stripe_webhook_events")
+      .update({ status: "failed", last_error: "Processing failed; safe to retry." })
+      .eq("event_id", eventId);
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }

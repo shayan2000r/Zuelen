@@ -12,9 +12,7 @@ function missing(value: string | null | undefined) {
   return !value || value.trim().length === 0;
 }
 
-export async function getInvoiceComplianceStatus(
-  workspace: Workspace,
-): Promise<InvoiceComplianceStatus> {
+export async function getInvoiceComplianceStatus(workspace: Workspace): Promise<InvoiceComplianceStatus> {
   const company = workspace.company;
   if (!company) return { missingRcs: false, missingBusinessPermit: false };
 
@@ -36,7 +34,6 @@ export async function getInvoiceComplianceStatus(
 
   return {
     missingRcs: Boolean(data?.rcs_registered) && missing(company.rcs_number),
-    missingBusinessPermit:
-      Boolean(data?.business_permit_held) && missing(company.business_permit_number),
+    missingBusinessPermit: Boolean(data?.business_permit_held) && missing(company.business_permit_number),
   };
 }

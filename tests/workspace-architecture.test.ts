@@ -5,25 +5,61 @@ import { chooseContextDestination } from "../src/lib/context-destination.ts";
 import { safeInternalDestination } from "../src/lib/safe-navigation.ts";
 import { getWorkspaceCapabilities } from "../src/lib/workspace-capabilities.ts";
 import { selectActiveWorkspace } from "../src/lib/workspace-selection.ts";
+import { readSource } from "./source-text.ts";
 
 test("single accessible workspace is the deterministic fallback", () => {
-  const only = { companyId:"owned", label:"Owned" };
+  const only = { companyId: "owned", label: "Owned" };
   assert.equal(selectActiveWorkspace([only], null), only);
   assert.equal(selectActiveWorkspace([only], "spoofed"), only);
 });
 
 test("an unvalidated ID cannot select from multiple workspaces", () => {
-  const accessible = [{ companyId:"one" }, { companyId:"two" }];
+  const accessible = [{ companyId: "one" }, { companyId: "two" }];
   assert.equal(selectActiveWorkspace(accessible, "outside-org"), null);
   assert.equal(selectActiveWorkspace(accessible, "two"), accessible[1]);
 });
 
 test("post-login routing honors economic and professional context without creating an account type", () => {
-  assert.equal(chooseContextDestination({ hasActiveEconomicWorkspace:true, economicWorkspaceCount:2, hasProfessionalProfile:true }), "/app");
-  assert.equal(chooseContextDestination({ hasActiveEconomicWorkspace:false, economicWorkspaceCount:2, hasProfessionalProfile:false }), "/contexts");
-  assert.equal(chooseContextDestination({ hasActiveEconomicWorkspace:false, economicWorkspaceCount:1, hasProfessionalProfile:true }), "/contexts");
-  assert.equal(chooseContextDestination({ hasActiveEconomicWorkspace:false, economicWorkspaceCount:0, hasProfessionalProfile:true }), "/professional");
-  assert.equal(chooseContextDestination({ hasActiveEconomicWorkspace:false, economicWorkspaceCount:0, hasProfessionalProfile:false }), "/setup");
+  assert.equal(
+    chooseContextDestination({
+      hasActiveEconomicWorkspace: true,
+      economicWorkspaceCount: 2,
+      hasProfessionalProfile: true,
+    }),
+    "/app",
+  );
+  assert.equal(
+    chooseContextDestination({
+      hasActiveEconomicWorkspace: false,
+      economicWorkspaceCount: 2,
+      hasProfessionalProfile: false,
+    }),
+    "/contexts",
+  );
+  assert.equal(
+    chooseContextDestination({
+      hasActiveEconomicWorkspace: false,
+      economicWorkspaceCount: 1,
+      hasProfessionalProfile: true,
+    }),
+    "/contexts",
+  );
+  assert.equal(
+    chooseContextDestination({
+      hasActiveEconomicWorkspace: false,
+      economicWorkspaceCount: 0,
+      hasProfessionalProfile: true,
+    }),
+    "/professional",
+  );
+  assert.equal(
+    chooseContextDestination({
+      hasActiveEconomicWorkspace: false,
+      economicWorkspaceCount: 0,
+      hasProfessionalProfile: false,
+    }),
+    "/setup",
+  );
 });
 
 test("invitation and deep-link destinations are restricted to safe internal paths", () => {
@@ -36,7 +72,7 @@ test("invitation and deep-link destinations are restricted to safe internal path
 });
 
 test("Independent capabilities never expose corporate taxes, year-end, or eCDF", () => {
-  const capabilities = getWorkspaceCapabilities({ entityKind:"independent", vatRegistered:false });
+  const capabilities = getWorkspaceCapabilities({ entityKind: "independent", vatRegistered: false });
   assert.equal(capabilities.hasAccounting, true);
   assert.equal(capabilities.hasCcss, true);
   assert.equal(capabilities.hasCorporateTaxes, false);
@@ -46,12 +82,12 @@ test("Independent capabilities never expose corporate taxes, year-end, or eCDF",
 });
 
 test("Independent VAT is applicability-driven", () => {
-  assert.equal(getWorkspaceCapabilities({ entityKind:"independent", vatRegistered:true }).hasVat, true);
-  assert.equal(getWorkspaceCapabilities({ entityKind:"independent", vatRegistered:false }).hasVat, false);
+  assert.equal(getWorkspaceCapabilities({ entityKind: "independent", vatRegistered: true }).hasVat, true);
+  assert.equal(getWorkspaceCapabilities({ entityKind: "independent", vatRegistered: false }).hasVat, false);
 });
 
 test("Company workspaces retain corporate workflows and CCSS", () => {
-  const capabilities = getWorkspaceCapabilities({ entityKind:"company", vatRegistered:false });
+  const capabilities = getWorkspaceCapabilities({ entityKind: "company", vatRegistered: false });
   assert.equal(capabilities.hasCorporateTaxes, true);
   assert.equal(capabilities.hasCompanyYearEnd, true);
   assert.equal(capabilities.hasEcdf, true);
@@ -59,7 +95,10 @@ test("Company workspaces retain corporate workflows and CCSS", () => {
 });
 
 test("migration backfills Company and creates explicit transactional workspace RPCs", () => {
-  const sql = readFileSync(new URL("../db/archive/pre-baseline-migrations/20260825_unified_workspace_onboarding.sql", import.meta.url), "utf8");
+  const sql = readFileSync(
+    new URL("../db/archive/pre-baseline-migrations/20260825_unified_workspace_onboarding.sql", import.meta.url),
+    "utf8",
+  );
   assert.match(sql, /set entity_kind = 'company'\s+where entity_kind is null/i);
   assert.match(sql, /check \(entity_kind in \('independent', 'company'\)\)/i);
   assert.match(sql, /create or replace function public\.create_independent_workspace_v1/i);
@@ -69,8 +108,11 @@ test("migration backfills Company and creates explicit transactional workspace R
 });
 
 test("CCSS is a valid compliance authority and complete Independent onboarding is covered", () => {
-  const migration = readFileSync(new URL("../db/archive/pre-baseline-migrations/20260830082851_compliance_authority_ccss.sql", import.meta.url), "utf8");
-  const regression = readFileSync(new URL("../db/tests/independent_workspace_ccss.sql", import.meta.url), "utf8");
+  const migration = readFileSync(
+    new URL("../db/archive/pre-baseline-migrations/20260830082851_compliance_authority_ccss.sql", import.meta.url),
+    "utf8",
+  );
+  const regression = readSource(new URL("../db/tests/independent_workspace_ccss.sql", import.meta.url));
   for (const authority of ["AED", "ACD", "LBR", "RCS", "RBE", "ECDF", "CCSS", "OTHER"]) {
     assert.match(migration, new RegExp(`'${authority}'`));
   }
@@ -81,8 +123,8 @@ test("CCSS is a valid compliance authority and complete Independent onboarding i
 });
 
 test("normal authentication is neutral and setup exposes all three paths with visible examples", () => {
-  const auth = readFileSync(new URL("../src/components/sign-in-form.tsx", import.meta.url), "utf8");
-  const setup = readFileSync(new URL("../src/app/setup/page.tsx", import.meta.url), "utf8");
+  const auth = readSource(new URL("../src/components/sign-in-form.tsx", import.meta.url));
+  const setup = readSource(new URL("../src/app/setup/page.tsx", import.meta.url));
   assert.doesNotMatch(auth, /type Audience|audienceSwitcher|Create accountant account|Start with your company/);
   assert.match(auth, /Create account/);
   assert.match(setup, /Independent/);
@@ -94,7 +136,7 @@ test("normal authentication is neutral and setup exposes all three paths with vi
 });
 
 test("Independent tax route exits before corporate calculations", () => {
-  const taxes = readFileSync(new URL("../src/app/app/taxes/page.tsx", import.meta.url), "utf8");
+  const taxes = readSource(new URL("../src/app/app/taxes/page.tsx", import.meta.url));
   const guard = taxes.indexOf('if(workspace.company.entity_kind==="independent")');
   const corporateQueries = taxes.indexOf('supabase.from("company_tax_profiles")');
   assert.ok(guard >= 0 && corporateQueries > guard);

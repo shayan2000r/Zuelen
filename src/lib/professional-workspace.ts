@@ -39,22 +39,33 @@ export async function getProfessionalWorkspace(requireProfile = true) {
 
 export function accountantSubscriptionStatusLabel(status: string | null | undefined) {
   switch (status) {
-    case "trialing": return "Free Trial";
-    case "active": return "Active";
-    case "past_due": return "Payment issue";
-    case "canceled": return "Cancelled";
-    case "incomplete": return "Incomplete";
-    case "unpaid": return "Unpaid";
-    default: return status ? status.replaceAll("_", " ").replace(/^./, value => value.toUpperCase()) : "Not started";
+    case "trialing":
+      return "Free Trial";
+    case "active":
+      return "Active";
+    case "past_due":
+      return "Payment issue";
+    case "canceled":
+      return "Cancelled";
+    case "incomplete":
+      return "Incomplete";
+    case "unpaid":
+      return "Unpaid";
+    default:
+      return status ? status.replaceAll("_", " ").replace(/^./, value => value.toUpperCase()) : "Not started";
   }
 }
 
 export function accountantApprovalStatusLabel(status: string | null | undefined) {
   switch (status) {
-    case "approved": return "Approved";
-    case "pending": return "Pending review";
-    case "rejected": return "Changes required";
-    default: return "Draft";
+    case "approved":
+      return "Approved";
+    case "pending":
+      return "Pending review";
+    case "rejected":
+      return "Changes required";
+    default:
+      return "Draft";
   }
 }
 

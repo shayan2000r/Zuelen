@@ -9,9 +9,7 @@ export function normalizeEarlyAccessEmail(email: string) {
 }
 
 export function earlyAccessPublicUrl(locale: EarlyAccessLocale = "en") {
-  return locale === "fr"
-    ? "https://zuelen.lu/acces-anticipe"
-    : "https://zuelen.lu/en/early-access";
+  return locale === "fr" ? "https://zuelen.lu/acces-anticipe" : "https://zuelen.lu/en/early-access";
 }
 
 export async function isEarlyAccessAllowed(email: string | null | undefined) {

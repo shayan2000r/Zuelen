@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { closestVatRate, franchiseStatus, isVatRateAllowed, standardVatRateOn, vatRatesOn } from "../src/lib/tax-rules/vat.ts";
+import {
+  closestVatRate,
+  franchiseStatus,
+  isVatRateAllowed,
+  standardVatRateOn,
+  vatRatesOn,
+} from "../src/lib/tax-rules/vat.ts";
 import { corporateIncomeTax, minimumNetWealthTax, municipalBusinessTax } from "../src/lib/tax-rules/corporate.ts";
 
 test("VAT rates follow the supply date, including the temporary 2023 rates", () => {

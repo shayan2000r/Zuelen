@@ -16,7 +16,7 @@ export function localizeFinancialPayload(payload: Payload, requestedLocale: Loca
   const locale = normalizeLocale(requestedLocale);
   const cloned = structuredClone(payload) as Payload;
   cloned.locale = locale;
-  const byCode = new Map(accounts.map((account) => [account.code, account]));
+  const byCode = new Map(accounts.map(account => [account.code, account]));
   const display = (code: string, fallback: string) => {
     const account = byCode.get(code);
     return account ? localizedAccountLabel(locale, account) : fallback;
@@ -24,7 +24,7 @@ export function localizeFinancialPayload(payload: Payload, requestedLocale: Loca
 
   const snapshot = obj(cloned.ledger_snapshot);
   if (snapshot) {
-    snapshot.trial_balance = arr(snapshot.trial_balance).map((raw) => {
+    snapshot.trial_balance = arr(snapshot.trial_balance).map(raw => {
       const row = obj(raw);
       if (!row) return raw;
       const code = str(row.code);
@@ -34,12 +34,12 @@ export function localizeFinancialPayload(payload: Payload, requestedLocale: Loca
 
   const localizeEntries = (container: Record<string, unknown> | null) => {
     if (!container) return;
-    container.entries = arr(container.entries).map((rawEntry) => {
+    container.entries = arr(container.entries).map(rawEntry => {
       const entry = obj(rawEntry);
       if (!entry) return rawEntry;
       return {
         ...entry,
-        lines: arr(entry.lines).map((rawLine) => {
+        lines: arr(entry.lines).map(rawLine => {
           const line = obj(rawLine);
           if (!line) return rawLine;
           const code = str(line.account_code);

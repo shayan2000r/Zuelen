@@ -65,12 +65,26 @@
 }
 
 @media (max-width: 860px) {
-  .hero { grid-template-columns: 1fr; }
-  .contact { border-top: 1px solid var(--z-border); padding: 22px; }
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  .contact {
+    border-top: 1px solid var(--z-border);
+    padding: 22px;
+  }
 }
 
 @media (max-width: 620px) {
-  .hero { padding: 22px; }
-  .identity img, .identity > span { width: 76px; height: 76px; border-radius: 20px; }
-  .contact { padding: 18px; }
+  .hero {
+    padding: 22px;
+  }
+  .identity img,
+  .identity > span {
+    width: 76px;
+    height: 76px;
+    border-radius: 20px;
+  }
+  .contact {
+    padding: 18px;
+  }
 }

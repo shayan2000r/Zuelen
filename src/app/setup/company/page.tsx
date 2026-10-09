@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
 export default async function CompanySetupPage() {
   const workspace = await getWorkspace();
   if (!workspace.authenticated) redirect("/sign-in?next=/setup/company");
-  return <CompanySetup locale={normalizeLocale(workspace.profile?.locale)}/>;
+  return <CompanySetup locale={normalizeLocale(workspace.profile?.locale)} />;
 }

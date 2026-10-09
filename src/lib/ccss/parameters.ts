@@ -19,7 +19,8 @@ export const CCSS_2026_PARAMETER_PERIODS: CcssParameterPeriod[] = [
     mdeClass3Rate: "1.560000",
     mdeClass4Rate: "2.660000",
     sourceAuthority: "CCSS",
-    sourceReference: "https://igss.gouvernement.lu/dam-assets/publications/param%C3%A8tres-sociaux/2026/par-soc-202601.pdf",
+    sourceReference:
+      "https://igss.gouvernement.lu/dam-assets/publications/param%C3%A8tres-sociaux/2026/par-soc-202601.pdf",
     verifiedAt: "2026-10-09T00:00:00Z",
   },
   {
@@ -46,7 +47,9 @@ export const CCSS_2026_PARAMETER_PERIODS: CcssParameterPeriod[] = [
 ];
 
 export function selectParameterPeriod(periods: CcssParameterPeriod[], month: string) {
-  const selected = periods.find((period) => period.effectiveFrom <= month && (!period.effectiveTo || period.effectiveTo >= month));
+  const selected = periods.find(
+    period => period.effectiveFrom <= month && (!period.effectiveTo || period.effectiveTo >= month),
+  );
   if (!selected) throw new Error(`No verified CCSS parameter period covers ${month}.`);
   return selected;
 }

@@ -1,1 +1,75 @@
-.wrap{position:relative}.inputWrap{display:flex;align-items:center;gap:7px;border:1px solid var(--invoice-form-border,var(--z-border));background:var(--invoice-field-bg,var(--z-surface-1));border-radius:10px;padding:0 10px}.inputWrap:focus-within{border-color:var(--z-brand);box-shadow:var(--z-focus-ring)}.inputWrap svg{color:var(--z-text-tertiary);flex:none}.inputWrap input{width:100%;border:0!important;box-shadow:none!important;outline:0;padding:10px 0!important}:global(html) .wrap .inputWrap input{background:transparent!important}.menu{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 6px);background:var(--z-surface-elevated,var(--z-surface-1));border:1px solid var(--z-border);border-radius:12px;padding:5px;box-shadow:var(--z-shadow-md);max-height:260px;overflow:auto}.menu button{width:100%;border:0;background:transparent;border-radius:8px;padding:9px 10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:left;color:var(--z-text)}.menu button:hover{background:var(--z-surface-2)}.menu button span{font-size:12px;font-weight:600}.menu button small{font-size:12px;color:var(--z-text-tertiary);font-family:'DM Mono',monospace}.menu p{font-size:12px;color:var(--z-text-secondary);padding:9px;margin:0}
+.wrap {
+  position: relative;
+}
+.inputWrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--invoice-form-border, var(--z-border));
+  background: var(--invoice-field-bg, var(--z-surface-1));
+  border-radius: 10px;
+  padding: 0 10px;
+}
+.inputWrap:focus-within {
+  border-color: var(--z-brand);
+  box-shadow: var(--z-focus-ring);
+}
+.inputWrap svg {
+  color: var(--z-text-tertiary);
+  flex: none;
+}
+.inputWrap input {
+  width: 100%;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0;
+  padding: 10px 0 !important;
+}
+:global(html) .wrap .inputWrap input {
+  background: transparent !important;
+}
+.menu {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--z-surface-elevated, var(--z-surface-1));
+  border: 1px solid var(--z-border);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: var(--z-shadow-md);
+  max-height: 260px;
+  overflow: auto;
+}
+.menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 9px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  text-align: left;
+  color: var(--z-text);
+}
+.menu button:hover {
+  background: var(--z-surface-2);
+}
+.menu button span {
+  font-size: 12px;
+  font-weight: 600;
+}
+.menu button small {
+  font-size: 12px;
+  color: var(--z-text-tertiary);
+  font-family: "DM Mono", monospace;
+}
+.menu p {
+  font-size: 12px;
+  color: var(--z-text-secondary);
+  padding: 9px;
+  margin: 0;
+}

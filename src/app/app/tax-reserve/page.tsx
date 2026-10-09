@@ -1,2 +1,4 @@
 import { redirect } from "next/navigation";
-export default function TaxReservePage(){redirect("/app/taxes")}
+export default function TaxReservePage() {
+  redirect("/app/taxes");
+}

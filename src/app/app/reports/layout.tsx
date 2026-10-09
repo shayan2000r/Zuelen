@@ -9,6 +9,8 @@ export default function ReportsLayout({ children }: { children: React.ReactNode 
       descriptionFr="Les rapports restent visibles avec Basic afin que vous puissiez découvrir les possibilités de Zuelen. Premium débloque les chiffres, états et analyses financières de votre entreprise."
       features={["Profit & loss", "Balance sheet", "Financial analytics", "Trial balance"]}
       featuresFr={["Compte de résultat", "Bilan", "Analyses financières", "Balance générale"]}
-    >{children}</PremiumRouteGate>
+    >
+      {children}
+    </PremiumRouteGate>
   );
 }

@@ -14,65 +14,514 @@ import { canBookkeep } from "@/lib/permissions";
 import { userFacingDataError } from "@/lib/user-facing-error";
 import styles from "./transactions.module.css";
 
-export const dynamic="force-dynamic";
-type SearchParams=Promise<{q?:string;status?:string;create?:string;review?:string;focus?:string}>;
-const suggestionThreshold=.70;
-const riskyBulkKind=/tax|shareholder|loan|asset|vehicle|personal|cash|transfer|registry|capital|refund/i;
-function meaningful(value:unknown){return typeof value==="string"&&value.trim()&&!/^r[eé]f\.?\s*:/i.test(value.trim())?value.trim():null}
-function bankDisplay(row:{counterparty_name:string|null;description:string|null},bank?:{counterparty_name:string|null;reference:string|null;raw_data:unknown}){
- const raw=bank?.raw_data&&typeof bank.raw_data==="object"?bank.raw_data as Record<string,unknown>:{};
- const rawDetails=meaningful(raw.raw_details),communication=meaningful(raw.communication);
- const candidates=[meaningful(row.counterparty_name),meaningful(bank?.counterparty_name),rawDetails?rawDetails.split(" / ")[0]:null,communication?communication.replace(/^comm\.?\s*:\s*/i,""):null,meaningful(row.description)];
- return candidates.find(Boolean)??(row.description||"Transaction");
+export const dynamic = "force-dynamic";
+type SearchParams = Promise<{ q?: string; status?: string; create?: string; review?: string; focus?: string }>;
+const suggestionThreshold = 0.7;
+const riskyBulkKind = /tax|shareholder|loan|asset|vehicle|personal|cash|transfer|registry|capital|refund/i;
+function meaningful(value: unknown) {
+  return typeof value === "string" && value.trim() && !/^r[eé]f\.?\s*:/i.test(value.trim()) ? value.trim() : null;
 }
-function bankEvidence(bank?:{counterparty_name:string|null;reference:string|null;raw_data:unknown}){if(!bank)return null;const raw=bank.raw_data&&typeof bank.raw_data==="object"?bank.raw_data as Record<string,unknown>:{};return [bank.counterparty_name,bank.reference,raw.raw_details,raw.communication].filter(value=>typeof value==="string"&&value.trim()).join(" · ")||null}
+function bankDisplay(
+  row: { counterparty_name: string | null; description: string | null },
+  bank?: { counterparty_name: string | null; reference: string | null; raw_data: unknown },
+) {
+  const raw = bank?.raw_data && typeof bank.raw_data === "object" ? (bank.raw_data as Record<string, unknown>) : {};
+  const rawDetails = meaningful(raw.raw_details),
+    communication = meaningful(raw.communication);
+  const candidates = [
+    meaningful(row.counterparty_name),
+    meaningful(bank?.counterparty_name),
+    rawDetails ? rawDetails.split(" / ")[0] : null,
+    communication ? communication.replace(/^comm\.?\s*:\s*/i, "") : null,
+    meaningful(row.description),
+  ];
+  return candidates.find(Boolean) ?? (row.description || "Transaction");
+}
+function bankEvidence(bank?: { counterparty_name: string | null; reference: string | null; raw_data: unknown }) {
+  if (!bank) return null;
+  const raw = bank.raw_data && typeof bank.raw_data === "object" ? (bank.raw_data as Record<string, unknown>) : {};
+  return (
+    [bank.counterparty_name, bank.reference, raw.raw_details, raw.communication]
+      .filter(value => typeof value === "string" && value.trim())
+      .join(" · ") || null
+  );
+}
 
-export default async function TransactionsPage({searchParams}:{searchParams:SearchParams}){
- const params=await searchParams,q=(params.q??"").trim().toLowerCase(),status=params.status??"all";const workspace=await getWorkspace();if(!workspace.authenticated)redirect("/sign-in");if(!workspace.company)redirect("/setup");const locale=normalizeLocale(workspace.profile?.locale),fr=locale==="fr",editable=canBookkeep(workspace.role),year=await getActiveFiscalYear(workspace.company.fiscal_year_start_month),bounds=fiscalYearBounds(year,workspace.company.fiscal_year_start_month),defaultDate=defaultDateForFiscalYear(year,workspace.company.fiscal_year_start_month),supabase=await createClient();
- const[{data,error},{data:accountData,error:accountError},{data:pcnData,error:pcnError}]=await Promise.all([
-  supabase.from("source_transactions").select("id,occurred_on,direction,amount_gross,amount_net,vat_amount,vat_rate,vat_treatment,counterparty_country,currency,exchange_rate_to_base,counterparty_name,description,classification_status,posted_journal_entry_id,suggested_account_id,suggestion_confidence,suggestion_reason,suggestion_kind,source_id,source_type").eq("company_id",workspace.company.id).not("classification_status","in",'(reversed,ignored)').gte("occurred_on",bounds.start).lte("occurred_on",bounds.end).order("occurred_on",{ascending:false}).order("created_at",{ascending:false}).limit(500),
-  supabase.from("company_accounts").select("id,code,label,label_en,label_fr,account_type,is_active").eq("company_id",workspace.company.id).eq("is_active",true).order("code",{ascending:true}),
-  supabase.from("pcn_accounts").select("id,code,label_en,label_fr,account_type,account_class,parent_code").eq("is_active",true).eq("source_version","PCN2020").order("code",{ascending:true})]);
- if(error)throw new Error(userFacingDataError(error,fr?"Impossible de charger les transactions. Réessayez.":"Could not load transactions. Please try again.",locale));if(accountError)throw new Error(userFacingDataError(accountError,fr?"Impossible de charger les catégories comptables. Réessayez.":"Could not load accounting categories. Please try again.",locale));if(pcnError)throw new Error(userFacingDataError(pcnError,fr?"Impossible de charger le PCN. Réessayez.":"Could not load the Luxembourg PCN. Please try again.",locale));
- const rows=data??[],accounts=(accountData??[]).filter(a=>["expense","revenue","asset","liability"].includes(a.account_type)).map(a=>({...a,label:localizedAccountLabel(locale,a)})),pcnAccounts=(pcnData??[]).filter(a=>["expense","revenue","asset","liability","equity"].includes(a.account_type)).map(a=>({id:a.id,code:a.code,label:locale==="fr"?a.label_fr:(a.label_en||a.label_fr),account_type:a.account_type,account_class:a.account_class,parent_code:a.parent_code}));
- const accountById=new Map(accounts.map(a=>[a.id,a]));
- const bankIds=rows.filter(r=>r.source_type==="bank"&&r.source_id).map(r=>r.source_id as string),bankMap=new Map<string,{counterparty_name:string|null;reference:string|null;raw_data:unknown}>();if(bankIds.length){const{data:banks}=await supabase.from("bank_transactions").select("id,counterparty_name,reference,raw_data").in("id",bankIds);for(const bank of banks??[])bankMap.set(bank.id,{counterparty_name:bank.counterparty_name,reference:bank.reference,raw_data:bank.raw_data})}
- const evidenceByTransaction=new Map<string,{id:string;file_name:string;type:string;file_size:number|null;created_at:string}[]>();if(rows.length){const rowIds=new Set(rows.map(row=>row.id));const{data:links}=await supabase.from("document_transaction_links").select("source_transaction_id,documents(id,file_name,type,file_size,created_at)").eq("company_id",workspace.company.id).eq("status","confirmed").not("source_transaction_id","is",null).limit(5000);for(const link of links??[]){const document=Array.isArray(link.documents)?link.documents[0]:link.documents;if(link.source_transaction_id&&rowIds.has(link.source_transaction_id)&&document){const current=evidenceByTransaction.get(link.source_transaction_id)??[];current.push({id:document.id,file_name:document.file_name,type:document.type,file_size:document.file_size,created_at:document.created_at});evidenceByTransaction.set(link.source_transaction_id,current)}}}
- const historyByTransaction=new Map<string,{id:number;event_type:string;actor_user_id:string|null;actor_name:string|null;metadata:Record<string,unknown>;created_at:string}[]>();
- if(rows.length){
-  const rowIds=new Set(rows.map(row=>row.id));
-  const{data:auditRows}=await supabase.from("audit_events").select("id,event_type,entity_id,actor_user_id,metadata,created_at").eq("company_id",workspace.company.id).eq("entity_type","source_transaction").order("created_at",{ascending:false}).limit(5000);
-  const relevant=(auditRows??[]).filter(event=>event.entity_id&&rowIds.has(event.entity_id));
-  const actorIds=[...new Set(relevant.map(event=>event.actor_user_id).filter((id):id is string=>Boolean(id)))];
-  const actorNames=new Map<string,string>();if(actorIds.length){const{data:profiles}=await supabase.from("user_profiles").select("user_id,full_name").in("user_id",actorIds);for(const profile of profiles??[])if(profile.full_name)actorNames.set(profile.user_id,profile.full_name)}
-  for(const event of relevant){if(!event.entity_id)continue;const current=historyByTransaction.get(event.entity_id)??[];if(current.length<20)current.push({id:Number(event.id),event_type:event.event_type,actor_user_id:event.actor_user_id,actor_name:event.actor_user_id?actorNames.get(event.actor_user_id)??null:null,metadata:(event.metadata&&typeof event.metadata==="object"?event.metadata:{}) as Record<string,unknown>,created_at:event.created_at});historyByTransaction.set(event.entity_id,current)}
- }
- const postedIds=rows.map(r=>r.posted_journal_entry_id).filter((id):id is string=>Boolean(id)),entryNumbers=new Map<string,number>();if(postedIds.length){const{data:entries}=await supabase.from("journal_entries").select("id,entry_number").in("id",postedIds);for(const e of entries??[])entryNumbers.set(e.id,Number(e.entry_number))}
- const pendingRows=rows.filter(r=>["unclassified","review","classified"].includes(r.classification_status));
- const suggestedRows=pendingRows.filter(r=>r.suggested_account_id&&Number(r.suggestion_confidence??0)>=suggestionThreshold),needsInputRows=pendingRows.filter(r=>!r.suggested_account_id||Number(r.suggestion_confidence??0)<suggestionThreshold),postedCount=rows.filter(r=>r.classification_status==="posted").length;
- const safeBulkCount=suggestedRows.filter(r=>{const account=r.suggested_account_id?accountById.get(r.suggested_account_id):null;return Number(r.suggestion_confidence??0)>=.95&&Boolean(account)&&["expense","revenue"].includes(account!.account_type)&&!riskyBulkKind.test(r.suggestion_kind??"")}).length;
- const reviewRows=pendingRows.map(row=>{const bank=row.source_id?bankMap.get(row.source_id):undefined;return{...row,display_name:bankDisplay(row,bank),bank_evidence:bankEvidence(bank)}}),reviewById=new Map(reviewRows.map(row=>[row.id,row]));
- const requestedReview=params.review&&status!=="posted"?reviewById.get(params.review)??null:null;
- const nextReview=requestedReview??(status==="posted"?null:status==="review"?(needsInputRows[0]?reviewById.get(needsInputRows[0].id)??null:null):status==="suggestions"?(suggestedRows[0]?reviewById.get(suggestedRows[0].id)??null:null):(suggestedRows[0]?reviewById.get(suggestedRows[0].id)??null:needsInputRows[0]?reviewById.get(needsInputRows[0].id)??null:null));
- const visibleRows=rows.filter(r=>{const isSuggestion=Boolean(r.suggested_account_id)&&Number(r.suggestion_confidence??0)>=suggestionThreshold,isPending=["unclassified","review","classified"].includes(r.classification_status);const statusMatch=status==="all"||(status==="posted"?r.classification_status==="posted":status==="suggestions"?isPending&&isSuggestion:status==="review"?isPending&&!isSuggestion:true);if(!statusMatch)return false;if(!q)return true;return[r.counterparty_name,r.description,r.currency,r.classification_status,r.vat_treatment,r.counterparty_country].filter(Boolean).join(" ").toLowerCase().includes(q)}).map(row=>{const suggested=row.suggested_account_id?accounts.find(a=>a.id===row.suggested_account_id):undefined;return{...row,entry_number:row.posted_journal_entry_id?entryNumbers.get(row.posted_journal_entry_id)??null:null,suggested_code:suggested?.code??null,suggested_label:suggested?.label??null,evidence:evidenceByTransaction.get(row.id)??[],history:historyByTransaction.get(row.id)??[]}});
- const focusedId=params.focus&&rows.some(row=>row.id===params.focus)?params.focus:(nextReview?.id??null);const noResults=rows.length>0&&visibleRows.length===0,reviewComplete=status==="review"&&needsInputRows.length===0;
+export default async function TransactionsPage({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams,
+    q = (params.q ?? "").trim().toLowerCase(),
+    status = params.status ?? "all";
+  const workspace = await getWorkspace();
+  if (!workspace.authenticated) redirect("/sign-in");
+  if (!workspace.company) redirect("/setup");
+  const locale = normalizeLocale(workspace.profile?.locale),
+    fr = locale === "fr",
+    editable = canBookkeep(workspace.role),
+    year = await getActiveFiscalYear(workspace.company.fiscal_year_start_month),
+    bounds = fiscalYearBounds(year, workspace.company.fiscal_year_start_month),
+    defaultDate = defaultDateForFiscalYear(year, workspace.company.fiscal_year_start_month),
+    supabase = await createClient();
+  const [{ data, error }, { data: accountData, error: accountError }, { data: pcnData, error: pcnError }] =
+    await Promise.all([
+      supabase
+        .from("source_transactions")
+        .select(
+          "id,occurred_on,direction,amount_gross,amount_net,vat_amount,vat_rate,vat_treatment,counterparty_country,currency,exchange_rate_to_base,counterparty_name,description,classification_status,posted_journal_entry_id,suggested_account_id,suggestion_confidence,suggestion_reason,suggestion_kind,source_id,source_type",
+        )
+        .eq("company_id", workspace.company.id)
+        .not("classification_status", "in", "(reversed,ignored)")
+        .gte("occurred_on", bounds.start)
+        .lte("occurred_on", bounds.end)
+        .order("occurred_on", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase
+        .from("company_accounts")
+        .select("id,code,label,label_en,label_fr,account_type,is_active")
+        .eq("company_id", workspace.company.id)
+        .eq("is_active", true)
+        .order("code", { ascending: true }),
+      supabase
+        .from("pcn_accounts")
+        .select("id,code,label_en,label_fr,account_type,account_class,parent_code")
+        .eq("is_active", true)
+        .eq("source_version", "PCN2020")
+        .order("code", { ascending: true }),
+    ]);
+  if (error)
+    throw new Error(
+      userFacingDataError(
+        error,
+        fr ? "Impossible de charger les transactions. Réessayez." : "Could not load transactions. Please try again.",
+        locale,
+      ),
+    );
+  if (accountError)
+    throw new Error(
+      userFacingDataError(
+        accountError,
+        fr
+          ? "Impossible de charger les catégories comptables. Réessayez."
+          : "Could not load accounting categories. Please try again.",
+        locale,
+      ),
+    );
+  if (pcnError)
+    throw new Error(
+      userFacingDataError(
+        pcnError,
+        fr ? "Impossible de charger le PCN. Réessayez." : "Could not load the Luxembourg PCN. Please try again.",
+        locale,
+      ),
+    );
+  const rows = data ?? [],
+    accounts = (accountData ?? [])
+      .filter(a => ["expense", "revenue", "asset", "liability"].includes(a.account_type))
+      .map(a => ({ ...a, label: localizedAccountLabel(locale, a) })),
+    pcnAccounts = (pcnData ?? [])
+      .filter(a => ["expense", "revenue", "asset", "liability", "equity"].includes(a.account_type))
+      .map(a => ({
+        id: a.id,
+        code: a.code,
+        label: locale === "fr" ? a.label_fr : a.label_en || a.label_fr,
+        account_type: a.account_type,
+        account_class: a.account_class,
+        parent_code: a.parent_code,
+      }));
+  const accountById = new Map(accounts.map(a => [a.id, a]));
+  const bankIds = rows.filter(r => r.source_type === "bank" && r.source_id).map(r => r.source_id as string),
+    bankMap = new Map<string, { counterparty_name: string | null; reference: string | null; raw_data: unknown }>();
+  if (bankIds.length) {
+    const { data: banks } = await supabase
+      .from("bank_transactions")
+      .select("id,counterparty_name,reference,raw_data")
+      .in("id", bankIds);
+    for (const bank of banks ?? [])
+      bankMap.set(bank.id, {
+        counterparty_name: bank.counterparty_name,
+        reference: bank.reference,
+        raw_data: bank.raw_data,
+      });
+  }
+  const evidenceByTransaction = new Map<
+    string,
+    { id: string; file_name: string; type: string; file_size: number | null; created_at: string }[]
+  >();
+  if (rows.length) {
+    const rowIds = new Set(rows.map(row => row.id));
+    const { data: links } = await supabase
+      .from("document_transaction_links")
+      .select("source_transaction_id,documents(id,file_name,type,file_size,created_at)")
+      .eq("company_id", workspace.company.id)
+      .eq("status", "confirmed")
+      .not("source_transaction_id", "is", null)
+      .limit(5000);
+    for (const link of links ?? []) {
+      const document = Array.isArray(link.documents) ? link.documents[0] : link.documents;
+      if (link.source_transaction_id && rowIds.has(link.source_transaction_id) && document) {
+        const current = evidenceByTransaction.get(link.source_transaction_id) ?? [];
+        current.push({
+          id: document.id,
+          file_name: document.file_name,
+          type: document.type,
+          file_size: document.file_size,
+          created_at: document.created_at,
+        });
+        evidenceByTransaction.set(link.source_transaction_id, current);
+      }
+    }
+  }
+  const historyByTransaction = new Map<
+    string,
+    {
+      id: number;
+      event_type: string;
+      actor_user_id: string | null;
+      actor_name: string | null;
+      metadata: Record<string, unknown>;
+      created_at: string;
+    }[]
+  >();
+  if (rows.length) {
+    const rowIds = new Set(rows.map(row => row.id));
+    const { data: auditRows } = await supabase
+      .from("audit_events")
+      .select("id,event_type,entity_id,actor_user_id,metadata,created_at")
+      .eq("company_id", workspace.company.id)
+      .eq("entity_type", "source_transaction")
+      .order("created_at", { ascending: false })
+      .limit(5000);
+    const relevant = (auditRows ?? []).filter(event => event.entity_id && rowIds.has(event.entity_id));
+    const actorIds = [...new Set(relevant.map(event => event.actor_user_id).filter((id): id is string => Boolean(id)))];
+    const actorNames = new Map<string, string>();
+    if (actorIds.length) {
+      const { data: profiles } = await supabase
+        .from("user_profiles")
+        .select("user_id,full_name")
+        .in("user_id", actorIds);
+      for (const profile of profiles ?? []) if (profile.full_name) actorNames.set(profile.user_id, profile.full_name);
+    }
+    for (const event of relevant) {
+      if (!event.entity_id) continue;
+      const current = historyByTransaction.get(event.entity_id) ?? [];
+      if (current.length < 20)
+        current.push({
+          id: Number(event.id),
+          event_type: event.event_type,
+          actor_user_id: event.actor_user_id,
+          actor_name: event.actor_user_id ? (actorNames.get(event.actor_user_id) ?? null) : null,
+          metadata: (event.metadata && typeof event.metadata === "object" ? event.metadata : {}) as Record<
+            string,
+            unknown
+          >,
+          created_at: event.created_at,
+        });
+      historyByTransaction.set(event.entity_id, current);
+    }
+  }
+  const postedIds = rows.map(r => r.posted_journal_entry_id).filter((id): id is string => Boolean(id)),
+    entryNumbers = new Map<string, number>();
+  if (postedIds.length) {
+    const { data: entries } = await supabase.from("journal_entries").select("id,entry_number").in("id", postedIds);
+    for (const e of entries ?? []) entryNumbers.set(e.id, Number(e.entry_number));
+  }
+  const pendingRows = rows.filter(r => ["unclassified", "review", "classified"].includes(r.classification_status));
+  const suggestedRows = pendingRows.filter(
+      r => r.suggested_account_id && Number(r.suggestion_confidence ?? 0) >= suggestionThreshold,
+    ),
+    needsInputRows = pendingRows.filter(
+      r => !r.suggested_account_id || Number(r.suggestion_confidence ?? 0) < suggestionThreshold,
+    ),
+    postedCount = rows.filter(r => r.classification_status === "posted").length;
+  const safeBulkCount = suggestedRows.filter(r => {
+    const account = r.suggested_account_id ? accountById.get(r.suggested_account_id) : null;
+    return (
+      Number(r.suggestion_confidence ?? 0) >= 0.95 &&
+      Boolean(account) &&
+      ["expense", "revenue"].includes(account!.account_type) &&
+      !riskyBulkKind.test(r.suggestion_kind ?? "")
+    );
+  }).length;
+  const reviewRows = pendingRows.map(row => {
+      const bank = row.source_id ? bankMap.get(row.source_id) : undefined;
+      return { ...row, display_name: bankDisplay(row, bank), bank_evidence: bankEvidence(bank) };
+    }),
+    reviewById = new Map(reviewRows.map(row => [row.id, row]));
+  const requestedReview = params.review && status !== "posted" ? (reviewById.get(params.review) ?? null) : null;
+  const nextReview =
+    requestedReview ??
+    (status === "posted"
+      ? null
+      : status === "review"
+        ? needsInputRows[0]
+          ? (reviewById.get(needsInputRows[0].id) ?? null)
+          : null
+        : status === "suggestions"
+          ? suggestedRows[0]
+            ? (reviewById.get(suggestedRows[0].id) ?? null)
+            : null
+          : suggestedRows[0]
+            ? (reviewById.get(suggestedRows[0].id) ?? null)
+            : needsInputRows[0]
+              ? (reviewById.get(needsInputRows[0].id) ?? null)
+              : null);
+  const visibleRows = rows
+    .filter(r => {
+      const isSuggestion =
+          Boolean(r.suggested_account_id) && Number(r.suggestion_confidence ?? 0) >= suggestionThreshold,
+        isPending = ["unclassified", "review", "classified"].includes(r.classification_status);
+      const statusMatch =
+        status === "all" ||
+        (status === "posted"
+          ? r.classification_status === "posted"
+          : status === "suggestions"
+            ? isPending && isSuggestion
+            : status === "review"
+              ? isPending && !isSuggestion
+              : true);
+      if (!statusMatch) return false;
+      if (!q) return true;
+      return [
+        r.counterparty_name,
+        r.description,
+        r.currency,
+        r.classification_status,
+        r.vat_treatment,
+        r.counterparty_country,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+    })
+    .map(row => {
+      const suggested = row.suggested_account_id ? accounts.find(a => a.id === row.suggested_account_id) : undefined;
+      return {
+        ...row,
+        entry_number: row.posted_journal_entry_id ? (entryNumbers.get(row.posted_journal_entry_id) ?? null) : null,
+        suggested_code: suggested?.code ?? null,
+        suggested_label: suggested?.label ?? null,
+        evidence: evidenceByTransaction.get(row.id) ?? [],
+        history: historyByTransaction.get(row.id) ?? [],
+      };
+    });
+  const focusedId = params.focus && rows.some(row => row.id === params.focus) ? params.focus : (nextReview?.id ?? null);
+  const noResults = rows.length > 0 && visibleRows.length === 0,
+    reviewComplete = status === "review" && needsInputRows.length === 0;
 
- return <V2Page>
-  <PageHeader eyebrow={fr?`Source comptable · ${year}`:`Bookkeeping source · ${year}`} title="Transactions" description={editable?(fr?`Vérifiez, classez et gérez l'activité ${year} sans perdre la piste d'audit.`:`Review, classify and manage ${year} activity without losing the audit trail.`):(fr?`Accès en lecture seule à l'activité transactionnelle ${year} et à l'historique de comptabilisation.`:`Read-only access to ${year} transaction activity and posting history.`)}/>
-  <DataSummary items={[
-   {label:fr?"À compléter":"Needs Input",value:needsInputRows.length,icon:CircleHelp,tone:needsInputRows.length?"warning":"success",description:needsInputRows.length?(fr?"Choisissez ou confirmez la catégorie comptable":"Choose or confirm the accounting category"):undefined},
-   {label:fr?"Suggestions":"Suggestions",value:suggestedRows.length,icon:Sparkles,tone:suggestedRows.length?"info":"neutral",description:suggestedRows.length?(safeBulkCount?(fr?`${safeBulkCount} peuvent être approuvées en lot`:`${safeBulkCount} safe to approve in bulk`):(fr?"À vérifier avant comptabilisation":"Review before posting")):undefined,action:editable?<TransactionBulkActions suggestedCount={suggestedRows.length} safeBulkCount={safeBulkCount} locale={locale}/>:undefined},
-   {label:fr?"Comptabilisées":"Posted",value:postedCount,icon:CheckCircle2,tone:"success"},
-   {label:fr?"Toutes les transactions":"All Transactions",value:rows.length,icon:WalletCards}
-  ]}/>
-  <div className={styles.flow}>
-   {editable?<div id="add-transaction"><SourceTransactionForm key={params.create==="1"?"open":"closed"} defaultDate={defaultDate} initialOpen={params.create==="1"} locale={locale} currency={workspace.company.base_currency||"EUR"} accounts={accounts.map(account=>({code:account.code,label:account.label,accountType:account.account_type}))}/></div>:<div className={styles.reviewBanner}><span><Eye size={16}/></span><div><strong>{fr?"Accès lecteur · lecture seule":"Viewer access · read only"}</strong><small>{fr?"Vous pouvez consulter les transactions et les références de journal, mais pas créer, modifier, comptabiliser ou supprimer une activité.":"You can inspect transactions and journal references, but you cannot create, edit, post or delete activity."}</small></div></div>}
-   {editable&&nextReview?<div id="transaction-review" className={styles.reviewAnchor}><TransactionReviewCard key={nextReview.id} transaction={nextReview} accounts={accounts} pcnAccounts={pcnAccounts} locale={locale} baseCurrency={String(workspace.company.base_currency||"EUR").trim().toUpperCase()}/></div>:editable&&!nextReview&&rows.length&&status!=="posted"?<div className={styles.reviewBanner}><span><CheckCircle2 size={16}/></span><div><strong>{fr?`Boîte comptable ${year} traitée`:`${year} accounting inbox cleared`}</strong><small>{fr?"Toutes les transactions actives de cet exercice ont été classées et comptabilisées.":"Every active transaction in this financial year has been classified and posted."}</small></div></div>:null}
-   <DataPanel>
-    <DataPanelHeader eyebrow={fr?`Journal d'activité · ${year}`:`Activity log · ${year}`} title={fr?"Transactions enregistrées":"Recorded transactions"} meta={fr?`${visibleRows.length} affichées · plus récentes d'abord`:`${visibleRows.length} shown · newest first`}/>
-    <DataToolbar><form className={styles.searchForm} method="get"><label><Search size={15}/><input name="q" defaultValue={params.q??""} placeholder={fr?`Rechercher dans les transactions ${year}`:`Search ${year} transactions`}/></label><select name="status" defaultValue={status}><option value="all">{fr?"Toutes les transactions":"All Transactions"}</option><option value="posted">{fr?"Comptabilisées":"Posted"}</option><option value="suggestions">{fr?"Suggestions":"Suggestions"}</option><option value="review">{fr?"À vérifier":"Needs Review"}</option></select><button type="submit">{fr?"Appliquer":"Apply"}</button></form></DataToolbar>
-    {visibleRows.length===0?<DataEmptyState icon={reviewComplete?CheckCircle2:noResults?Search:ListChecks} title={reviewComplete?(fr?"Rien à vérifier":"Nothing to review"):noResults?(fr?"Aucun résultat":"No matching transactions"):(fr?"Aucune transaction pour le moment":"No transactions yet")} description={reviewComplete?(fr?"Toutes les transactions sans suggestion sont actuellement traitées.":"All transactions that need your input are currently reviewed."):noResults?(fr?"Aucune transaction ne correspond à votre recherche ou à vos filtres. Essayez de les modifier ou de les réinitialiser.":"No transactions match your current search or filters. Try changing or clearing them."):(editable?(fr?"Ajoutez une transaction ou importez un relevé bancaire pour commencer à suivre votre activité financière.":"Add a transaction or import a bank statement to start tracking your financial activity."):(fr?`Aucune transaction n'est disponible pour l'exercice ${year}.`:`No transactions are available for financial year ${year}.`))} action={reviewComplete||noResults?<V2Button label={reviewComplete?(fr?"Voir toutes les transactions":"View all transactions"):(fr?"Réinitialiser les filtres":"Clear filters")} href="/app/transactions" variant="secondary"/>:editable?<div className="transaction-empty-actions"><V2Button label={fr?"Ajouter":"Add"} href="/app/transactions?create=1" icon={Plus} variant="primary"/><V2Button label={fr?"Importer un relevé":"Import statement"} href="/app/banking" icon={FileUp} variant="secondary"/></div>:undefined}/>:<TransactionTable rows={visibleRows} accounts={accounts} readOnly={!editable} focusedId={focusedId}/>} 
-   </DataPanel>
-  </div>
- </V2Page>;
+  return (
+    <V2Page>
+      <PageHeader
+        eyebrow={fr ? `Source comptable · ${year}` : `Bookkeeping source · ${year}`}
+        title="Transactions"
+        description={
+          editable
+            ? fr
+              ? `Vérifiez, classez et gérez l'activité ${year} sans perdre la piste d'audit.`
+              : `Review, classify and manage ${year} activity without losing the audit trail.`
+            : fr
+              ? `Accès en lecture seule à l'activité transactionnelle ${year} et à l'historique de comptabilisation.`
+              : `Read-only access to ${year} transaction activity and posting history.`
+        }
+      />
+      <DataSummary
+        items={[
+          {
+            label: fr ? "À compléter" : "Needs Input",
+            value: needsInputRows.length,
+            icon: CircleHelp,
+            tone: needsInputRows.length ? "warning" : "success",
+            description: needsInputRows.length
+              ? fr
+                ? "Choisissez ou confirmez la catégorie comptable"
+                : "Choose or confirm the accounting category"
+              : undefined,
+          },
+          {
+            label: fr ? "Suggestions" : "Suggestions",
+            value: suggestedRows.length,
+            icon: Sparkles,
+            tone: suggestedRows.length ? "info" : "neutral",
+            description: suggestedRows.length
+              ? safeBulkCount
+                ? fr
+                  ? `${safeBulkCount} peuvent être approuvées en lot`
+                  : `${safeBulkCount} safe to approve in bulk`
+                : fr
+                  ? "À vérifier avant comptabilisation"
+                  : "Review before posting"
+              : undefined,
+            action: editable ? (
+              <TransactionBulkActions
+                suggestedCount={suggestedRows.length}
+                safeBulkCount={safeBulkCount}
+                locale={locale}
+              />
+            ) : undefined,
+          },
+          { label: fr ? "Comptabilisées" : "Posted", value: postedCount, icon: CheckCircle2, tone: "success" },
+          { label: fr ? "Toutes les transactions" : "All Transactions", value: rows.length, icon: WalletCards },
+        ]}
+      />
+      <div className={styles.flow}>
+        {editable ? (
+          <div id="add-transaction">
+            <SourceTransactionForm
+              key={params.create === "1" ? "open" : "closed"}
+              defaultDate={defaultDate}
+              initialOpen={params.create === "1"}
+              locale={locale}
+              currency={workspace.company.base_currency || "EUR"}
+              accounts={accounts.map(account => ({
+                code: account.code,
+                label: account.label,
+                accountType: account.account_type,
+              }))}
+            />
+          </div>
+        ) : (
+          <div className={styles.reviewBanner}>
+            <span>
+              <Eye size={16} />
+            </span>
+            <div>
+              <strong>{fr ? "Accès lecteur · lecture seule" : "Viewer access · read only"}</strong>
+              <small>
+                {fr
+                  ? "Vous pouvez consulter les transactions et les références de journal, mais pas créer, modifier, comptabiliser ou supprimer une activité."
+                  : "You can inspect transactions and journal references, but you cannot create, edit, post or delete activity."}
+              </small>
+            </div>
+          </div>
+        )}
+        {editable && nextReview ? (
+          <div id="transaction-review" className={styles.reviewAnchor}>
+            <TransactionReviewCard
+              key={nextReview.id}
+              transaction={nextReview}
+              accounts={accounts}
+              pcnAccounts={pcnAccounts}
+              locale={locale}
+              baseCurrency={String(workspace.company.base_currency || "EUR")
+                .trim()
+                .toUpperCase()}
+            />
+          </div>
+        ) : editable && !nextReview && rows.length && status !== "posted" ? (
+          <div className={styles.reviewBanner}>
+            <span>
+              <CheckCircle2 size={16} />
+            </span>
+            <div>
+              <strong>{fr ? `Boîte comptable ${year} traitée` : `${year} accounting inbox cleared`}</strong>
+              <small>
+                {fr
+                  ? "Toutes les transactions actives de cet exercice ont été classées et comptabilisées."
+                  : "Every active transaction in this financial year has been classified and posted."}
+              </small>
+            </div>
+          </div>
+        ) : null}
+        <DataPanel>
+          <DataPanelHeader
+            eyebrow={fr ? `Journal d'activité · ${year}` : `Activity log · ${year}`}
+            title={fr ? "Transactions enregistrées" : "Recorded transactions"}
+            meta={
+              fr
+                ? `${visibleRows.length} affichées · plus récentes d'abord`
+                : `${visibleRows.length} shown · newest first`
+            }
+          />
+          <DataToolbar>
+            <form className={styles.searchForm} method="get">
+              <label>
+                <Search size={15} />
+                <input
+                  name="q"
+                  defaultValue={params.q ?? ""}
+                  placeholder={fr ? `Rechercher dans les transactions ${year}` : `Search ${year} transactions`}
+                />
+              </label>
+              <select name="status" defaultValue={status}>
+                <option value="all">{fr ? "Toutes les transactions" : "All Transactions"}</option>
+                <option value="posted">{fr ? "Comptabilisées" : "Posted"}</option>
+                <option value="suggestions">{fr ? "Suggestions" : "Suggestions"}</option>
+                <option value="review">{fr ? "À vérifier" : "Needs Review"}</option>
+              </select>
+              <button type="submit">{fr ? "Appliquer" : "Apply"}</button>
+            </form>
+          </DataToolbar>
+          {visibleRows.length === 0 ? (
+            <DataEmptyState
+              icon={reviewComplete ? CheckCircle2 : noResults ? Search : ListChecks}
+              title={
+                reviewComplete
+                  ? fr
+                    ? "Rien à vérifier"
+                    : "Nothing to review"
+                  : noResults
+                    ? fr
+                      ? "Aucun résultat"
+                      : "No matching transactions"
+                    : fr
+                      ? "Aucune transaction pour le moment"
+                      : "No transactions yet"
+              }
+              description={
+                reviewComplete
+                  ? fr
+                    ? "Toutes les transactions sans suggestion sont actuellement traitées."
+                    : "All transactions that need your input are currently reviewed."
+                  : noResults
+                    ? fr
+                      ? "Aucune transaction ne correspond à votre recherche ou à vos filtres. Essayez de les modifier ou de les réinitialiser."
+                      : "No transactions match your current search or filters. Try changing or clearing them."
+                    : editable
+                      ? fr
+                        ? "Ajoutez une transaction ou importez un relevé bancaire pour commencer à suivre votre activité financière."
+                        : "Add a transaction or import a bank statement to start tracking your financial activity."
+                      : fr
+                        ? `Aucune transaction n'est disponible pour l'exercice ${year}.`
+                        : `No transactions are available for financial year ${year}.`
+              }
+              action={
+                reviewComplete || noResults ? (
+                  <V2Button
+                    label={
+                      reviewComplete
+                        ? fr
+                          ? "Voir toutes les transactions"
+                          : "View all transactions"
+                        : fr
+                          ? "Réinitialiser les filtres"
+                          : "Clear filters"
+                    }
+                    href="/app/transactions"
+                    variant="secondary"
+                  />
+                ) : editable ? (
+                  <div className="transaction-empty-actions">
+                    <V2Button
+                      label={fr ? "Ajouter" : "Add"}
+                      href="/app/transactions?create=1"
+                      icon={Plus}
+                      variant="primary"
+                    />
+                    <V2Button
+                      label={fr ? "Importer un relevé" : "Import statement"}
+                      href="/app/banking"
+                      icon={FileUp}
+                      variant="secondary"
+                    />
+                  </div>
+                ) : undefined
+              }
+            />
+          ) : (
+            <TransactionTable rows={visibleRows} accounts={accounts} readOnly={!editable} focusedId={focusedId} />
+          )}
+        </DataPanel>
+      </div>
+    </V2Page>
+  );
 }

@@ -31,12 +31,15 @@ function eventYear(facts: PersonalFiscalFacts) {
 }
 
 export function deriveResidentTaxClass(facts: PersonalFiscalFacts): TaxClassDerivation {
-  if (facts.residencyStatus !== "resident") return { taxClass: "needs_confirmation", reason: "non_resident_requires_acd_confirmation" };
-  if (!Number.isInteger(facts.taxYear) || facts.taxYear < 2000 || facts.taxYear > 2100) return { taxClass: "needs_confirmation", reason: "invalid_tax_year" };
+  if (facts.residencyStatus !== "resident")
+    return { taxClass: "needs_confirmation", reason: "non_resident_requires_acd_confirmation" };
+  if (!Number.isInteger(facts.taxYear) || facts.taxYear < 2000 || facts.taxYear > 2100)
+    return { taxClass: "needs_confirmation", reason: "invalid_tax_year" };
 
   if (facts.civilStatus === "married") {
     if (facts.taxationMode === "joint") return { taxClass: "2", reason: "married_joint_taxation" };
-    if (facts.taxationMode === "individual" || facts.taxationMode === "individual_reallocation") return { taxClass: "1", reason: "married_individual_class_1_framework" };
+    if (facts.taxationMode === "individual" || facts.taxationMode === "individual_reallocation")
+      return { taxClass: "1", reason: "married_individual_class_1_framework" };
     return { taxClass: "needs_confirmation", reason: "married_taxation_mode_required" };
   }
 
@@ -49,7 +52,8 @@ export function deriveResidentTaxClass(facts: PersonalFiscalFacts): TaxClassDeri
 
   if (["widowed", "divorced", "separated"].includes(facts.civilStatus)) {
     const year = eventYear(facts);
-    if (year === null || year > facts.taxYear) return { taxClass: "needs_confirmation", reason: "civil_status_event_date_required" };
+    if (year === null || year > facts.taxYear)
+      return { taxClass: "needs_confirmation", reason: "civil_status_event_date_required" };
     const recognized = facts.civilStatus !== "separated" || facts.legallyRecognizedSeparation;
     const priorUseBlocks = facts.civilStatus !== "widowed" && facts.transitionalClass2UsedInPriorFiveYears;
     if (recognized && !priorUseBlocks && facts.taxYear <= year + 3) {
@@ -68,6 +72,7 @@ export function resolveDisplayedTaxClass(input: {
   acdTaxRatePercent?: string | null;
 }) {
   if (input.manualOverride) return { value: input.manualOverride, source: "acd_override" as const };
-  if (input.derived.taxClass === "needs_confirmation" && input.acdTaxRatePercent) return { value: input.acdTaxRatePercent, source: "acd_rate" as const };
+  if (input.derived.taxClass === "needs_confirmation" && input.acdTaxRatePercent)
+    return { value: input.acdTaxRatePercent, source: "acd_rate" as const };
   return { value: input.derived.taxClass, source: "derived" as const };
 }

@@ -13,16 +13,30 @@ type SummaryItem = {
 };
 
 export function DataSummary({ items, label = "Data summary" }: { items: SummaryItem[]; label?: string }) {
-  return <section className={styles.summaryGrid} aria-label={label}>
-    {items.map((item) => {
-      const Icon = item.icon;
-      return <article key={item.label} className={`${styles.summaryCard} ${styles[item.tone ?? "neutral"]}`}>
-        <div className={styles.summaryTop}><span>{item.label}</span>{Icon ? <i><Icon size={16}/></i> : null}</div>
-        <div className={styles.summaryValueRow}><strong>{item.value}</strong>{item.action ? <div className={styles.summaryAction}>{item.action}</div> : null}</div>
-        {item.description ? <small>{item.description}</small> : null}
-      </article>;
-    })}
-  </section>;
+  return (
+    <section className={styles.summaryGrid} aria-label={label}>
+      {items.map(item => {
+        const Icon = item.icon;
+        return (
+          <article key={item.label} className={`${styles.summaryCard} ${styles[item.tone ?? "neutral"]}`}>
+            <div className={styles.summaryTop}>
+              <span>{item.label}</span>
+              {Icon ? (
+                <i>
+                  <Icon size={16} />
+                </i>
+              ) : null}
+            </div>
+            <div className={styles.summaryValueRow}>
+              <strong>{item.value}</strong>
+              {item.action ? <div className={styles.summaryAction}>{item.action}</div> : null}
+            </div>
+            {item.description ? <small>{item.description}</small> : null}
+          </article>
+        );
+      })}
+    </section>
+  );
 }
 
 export function DataPanel({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -30,7 +44,15 @@ export function DataPanel({ children, className = "" }: { children: ReactNode; c
 }
 
 export function DataPanelHeader({ eyebrow, title, meta }: { eyebrow?: ReactNode; title: ReactNode; meta?: ReactNode }) {
-  return <div className={styles.dataPanelHeader}><div>{eyebrow ? <span>{eyebrow}</span> : null}<h2>{title}</h2></div>{meta ? <small>{meta}</small> : null}</div>;
+  return (
+    <div className={styles.dataPanelHeader}>
+      <div>
+        {eyebrow ? <span>{eyebrow}</span> : null}
+        <h2>{title}</h2>
+      </div>
+      {meta ? <small>{meta}</small> : null}
+    </div>
+  );
 }
 
 export function DataToolbar({ children }: { children: ReactNode }) {
@@ -41,13 +63,45 @@ export function DataTableFrame({ children }: { children: ReactNode }) {
   return <div className={styles.tableFrame}>{children}</div>;
 }
 
-export function BulkActionBar({ count, selectedLabel = "selected", children }: { count: number; selectedLabel?: string; children: ReactNode }) {
-  return <div className={styles.bulkActionBar} role="region" aria-label={`${count} ${selectedLabel}`}>
-    <div className={styles.bulkCount}><strong>{count}</strong><span>{selectedLabel}</span></div>
-    <div className={styles.bulkActions}>{children}</div>
-  </div>;
+export function BulkActionBar({
+  count,
+  selectedLabel = "selected",
+  children,
+}: {
+  count: number;
+  selectedLabel?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={styles.bulkActionBar} role="region" aria-label={`${count} ${selectedLabel}`}>
+      <div className={styles.bulkCount}>
+        <strong>{count}</strong>
+        <span>{selectedLabel}</span>
+      </div>
+      <div className={styles.bulkActions}>{children}</div>
+    </div>
+  );
 }
 
-export function DataEmptyState({ icon: Icon, title, description, action }: { icon: IconType; title: ReactNode; description: ReactNode; action?: ReactNode }) {
-  return <div className={styles.emptyState}><span><Icon size={27}/></span><h3>{title}</h3><p>{description}</p>{action ? <div>{action}</div> : null}</div>;
+export function DataEmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+}: {
+  icon: IconType;
+  title: ReactNode;
+  description: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className={styles.emptyState}>
+      <span>
+        <Icon size={27} />
+      </span>
+      <h3>{title}</h3>
+      <p>{description}</p>
+      {action ? <div>{action}</div> : null}
+    </div>
+  );
 }

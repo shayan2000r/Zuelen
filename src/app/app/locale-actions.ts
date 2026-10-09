@@ -11,16 +11,14 @@ export async function setLocalePreference(locale: Locale) {
   if (!workspace.authenticated || !workspace.userId) throw new Error("Your session expired. Please sign in again.");
   const nextLocale = normalizeLocale(locale);
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("user_profiles")
-    .upsert(
-      {
-        user_id: workspace.userId,
-        locale: nextLocale,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" },
-    );
+  const { error } = await supabase.from("user_profiles").upsert(
+    {
+      user_id: workspace.userId,
+      locale: nextLocale,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
   if (error) throw new Error(userFacingDataError(error));
   revalidatePath("/app", "layout");
   revalidatePath("/app/settings/profile");

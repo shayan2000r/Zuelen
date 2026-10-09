@@ -27,7 +27,12 @@ function situation(overrides: Partial<CcssSituation> = {}): CcssSituation {
 }
 
 function monthly(income: string, options: Partial<CcssSituation> = {}, parameters = june) {
-  return calculateMonthlyCcss({ month: parameters.effectiveFrom, monthlyProfessionalIncome: income, situation: situation(options), parameters });
+  return calculateMonthlyCcss({
+    month: parameters.effectiveFrom,
+    monthlyProfessionalIncome: income,
+    situation: situation(options),
+    parameters,
+  });
 }
 
 test("post-June 2026 reference fixture at SSM is rounded component by component", () => {
@@ -104,13 +109,17 @@ test("insignificant-income exemption only applies after explicit configuration",
 });
 
 test("CCSS-confirmed monthly bases reproduce the May 2026 statement without hardcoding a person", () => {
-  const result = monthly("1577.19", {
-    mdeClass: 2,
-    pensionReductionStatus: "approved",
-    confirmedMonthlyNormalBase: "2703.74",
-    confirmedMonthlyPensionBase: "901.25",
-    confirmedMonthlyDependencyBase: "901.25",
-  }, january);
+  const result = monthly(
+    "1577.19",
+    {
+      mdeClass: 2,
+      pensionReductionStatus: "approved",
+      confirmedMonthlyNormalBase: "2703.74",
+      confirmedMonthlyPensionBase: "901.25",
+      confirmedMonthlyDependencyBase: "901.25",
+    },
+    january,
+  );
   assert.equal(result.principal.components.health.amountCents, 15141);
   assert.equal(result.principal.components.sicknessCash.amountCents, 1352);
   assert.equal(result.principal.components.accident.amountCents, 1757);
@@ -122,14 +131,28 @@ test("CCSS-confirmed monthly bases reproduce the May 2026 statement without hard
 
 test("MDE is zero when disabled and uses each exact class rate when enabled", () => {
   assert.equal(monthly("2771.33").principal.components.mde.amountCents, 0);
-  const expected = new Map([[1, 637], [2, 2633], [3, 4323], [4, 7372]]);
+  const expected = new Map([
+    [1, 637],
+    [2, 2633],
+    [3, 4323],
+    [4, 7372],
+  ]);
   for (const [mdeClass, amount] of expected) {
-    assert.equal(monthly("2771.33", { mdeClass: mdeClass as 1 | 2 | 3 | 4 }).principal.components.mde.amountCents, amount);
+    assert.equal(
+      monthly("2771.33", { mdeClass: mdeClass as 1 | 2 | 3 | 4 }).principal.components.mde.amountCents,
+      amount,
+    );
   }
 });
 
 test("AAA factors multiply only the accident rate", () => {
-  const expected = new Map([["0.8500", 1531], ["1.0000", 1801], ["1.1000", 1982], ["1.3000", 2342], ["1.5000", 2702]]);
+  const expected = new Map([
+    ["0.8500", 1531],
+    ["1.0000", 1801],
+    ["1.1000", 1982],
+    ["1.3000", 2342],
+    ["1.5000", 2702],
+  ]);
   for (const [aaaFactor, accidentAmount] of expected) {
     const result = monthly("2771.33", { aaaFactor });
     assert.equal(result.principal.components.accident.amountCents, accidentAmount);
@@ -155,7 +178,10 @@ test("annual calculation spans June indexation month by month", () => {
   assert.equal(result.parameterChanges[0], "2026-06-01");
   assert.equal(result.months[0].principal.normalBaseCents, 270374);
   assert.equal(result.months[5].principal.normalBaseCents, 277133);
-  assert.equal(result.totalCents, result.months.reduce((total, month) => total + month.combinedTotalCents, 0));
+  assert.equal(
+    result.totalCents,
+    result.months.reduce((total, month) => total + month.combinedTotalCents, 0),
+  );
 });
 
 test("months before affiliation remain inactive instead of manufacturing contributions", () => {
@@ -174,22 +200,39 @@ test("months before affiliation remain inactive instead of manufacturing contrib
 test("assisting-spouse treatment is gated and caps the spouse allocation at 2x SSM", () => {
   const eligible = situation({ assistingSpouse: { enabled: true, qualifyingRelationship: true, mainActivity: true } });
   assert.equal(isAssistingSpouseEligible(eligible), true);
-  const result = calculateMonthlyCcss({ month: "2026-06-01", monthlyProfessionalIncome: "12000.00", situation: eligible, parameters: june });
+  const result = calculateMonthlyCcss({
+    month: "2026-06-01",
+    monthlyProfessionalIncome: "12000.00",
+    situation: eligible,
+    parameters: june,
+  });
   assert.equal(result.assistingSpouse?.actualProfessionalIncomeCents, 554265);
   assert.equal(result.principal.actualProfessionalIncomeCents, 645735);
   assert.equal(result.combinedTotalCents, result.principal.totalCents + (result.assistingSpouse?.totalCents ?? 0));
 });
 
 test("a company spouse cannot use assisting-spouse treatment", () => {
-  assert.throws(() => monthly("5000.00", {
-    activityLegalForm: "company",
-    incomeSource: "manager_remuneration",
-    assistingSpouse: { enabled: true, qualifyingRelationship: true, mainActivity: true },
-  }), /must not be calculated as an assisting spouse/);
+  assert.throws(
+    () =>
+      monthly("5000.00", {
+        activityLegalForm: "company",
+        incomeSource: "manager_remuneration",
+        assistingSpouse: { enabled: true, qualifyingRelationship: true, mainActivity: true },
+      }),
+    /must not be calculated as an assisting spouse/,
+  );
 });
 
 test("manager/director income can never be sourced from corporate accounting profit", () => {
-  assert.throws(() => monthly("5000.00", { affiliationType: "manager", activityLegalForm: "company", incomeSource: "accounting_proxy" }), /cannot use corporate accounting profit/);
+  assert.throws(
+    () =>
+      monthly("5000.00", {
+        affiliationType: "manager",
+        activityLegalForm: "company",
+        incomeSource: "accounting_proxy",
+      }),
+    /cannot use corporate accounting profit/,
+  );
 });
 
 test("tax class is technically absent from the CCSS input and cannot change a result", () => {

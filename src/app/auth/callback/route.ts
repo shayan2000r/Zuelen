@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
         try {
           if (!(await isEarlyAccessAllowed(user.email))) {
             await supabase.auth.signOut();
-            try { await createAdminClient().auth.admin.deleteUser(user.id); } catch (deleteError) { console.error("Unauthorized OAuth user cleanup failed", deleteError); }
+            try {
+              await createAdminClient().auth.admin.deleteUser(user.id);
+            } catch (deleteError) {
+              console.error("Unauthorized OAuth user cleanup failed", deleteError);
+            }
             const locale = user.user_metadata?.locale === "fr" ? "fr" : "en";
             return NextResponse.redirect(earlyAccessPublicUrl(locale));
           }

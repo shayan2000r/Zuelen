@@ -13,10 +13,14 @@ export async function resolveAuthenticatedDestination(explicitNext?: string | nu
   const workspace = await getWorkspace();
   if (!workspace.authenticated || !workspace.userId) return "/sign-in";
   const supabase = await createClient();
-  const { data: professional } = await supabase.from("accountant_profiles").select("id").eq("user_id", workspace.userId).maybeSingle();
+  const { data: professional } = await supabase
+    .from("accountant_profiles")
+    .select("id")
+    .eq("user_id", workspace.userId)
+    .maybeSingle();
   return chooseContextDestination({
-    hasActiveEconomicWorkspace:Boolean(workspace.company),
-    economicWorkspaceCount:workspace.workspaces.length,
-    hasProfessionalProfile:Boolean(professional),
+    hasActiveEconomicWorkspace: Boolean(workspace.company),
+    economicWorkspaceCount: workspace.workspaces.length,
+    hasProfessionalProfile: Boolean(professional),
   });
 }

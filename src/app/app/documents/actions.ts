@@ -7,62 +7,436 @@ import { canBookkeep } from "@/lib/permissions";
 import { assertActionRateLimit, localizedRateLimitMessage, SecurityRateLimitError } from "@/lib/rate-limit";
 import { userFacingDataError } from "@/lib/user-facing-error";
 
-export type DocumentTypeSafeguard={selectedType:string;detectedType:string;severity:"warning"|"blocked";allowKeep:boolean;message:string};
-export type DocumentExtractionState={status:"idle"|"success"|"error";message:string;safeguard?:DocumentTypeSafeguard};
-function validUuid(value:string){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)}
-function refresh(){for(const p of ["/app","/app/documents","/app/transactions","/app/taxes","/app/compliance","/app/year-end"])revalidatePath(p)}
-const lineSchema={type:"object",additionalProperties:false,required:["description","quantity","unit_price_net","vat_rate"],properties:{description:{type:"string"},quantity:{type:"number"},unit_price_net:{type:["number","null"]},vat_rate:{type:["number","null"]}}};
-const schema={type:"object",additionalProperties:false,required:["document_kind","issuer_name","issuer_country","issuer_vat_number","customer_name","customer_country","customer_vat_number","customer_street","customer_postal_code","customer_city","invoice_number","document_date","service_date","due_date","currency","subtotal","vat_amount","total","vat_rate","tax_type","tax_year","authority","payment_reference","line_items","transaction_counterparty","transaction_direction","suggested_vat_treatment","suggested_account_category","confidence","notes"],properties:{document_kind:{type:"string",enum:["receipt","purchase_invoice","sales_invoice","bank_statement","tax_notice","other"]},issuer_name:{type:["string","null"]},issuer_country:{type:["string","null"]},issuer_vat_number:{type:["string","null"]},customer_name:{type:["string","null"]},customer_country:{type:["string","null"]},customer_vat_number:{type:["string","null"]},customer_street:{type:["string","null"]},customer_postal_code:{type:["string","null"]},customer_city:{type:["string","null"]},invoice_number:{type:["string","null"]},document_date:{type:["string","null"]},service_date:{type:["string","null"]},due_date:{type:["string","null"]},currency:{type:["string","null"]},subtotal:{type:["number","null"]},vat_amount:{type:["number","null"]},total:{type:["number","null"]},vat_rate:{type:["number","null"]},tax_type:{type:["string","null"]},tax_year:{type:["integer","null"]},authority:{type:["string","null"]},payment_reference:{type:["string","null"]},line_items:{type:"array",items:lineSchema},transaction_counterparty:{type:["string","null"]},transaction_direction:{type:"string",enum:["income","expense","unknown"]},suggested_vat_treatment:{type:"string",enum:["domestic","eu_b2b_reverse_charge","non_eu","exempt_or_zero","unknown"]},suggested_account_category:{type:["string","null"]},confidence:{type:"number",minimum:0,maximum:1},notes:{type:"string"}}} as const;
-function extractOutputText(payload:unknown){if(!payload||typeof payload!=="object")return null;const output=(payload as{output?:unknown[]}).output;if(!Array.isArray(output))return null;for(const item of output){if(!item||typeof item!=="object")continue;const content=(item as{content?:unknown[]}).content;if(!Array.isArray(content))continue;for(const part of content){if(part&&typeof part==="object"&&(part as{type?:string}).type==="output_text"){const text=(part as{text?:unknown}).text;if(typeof text==="string")return text}}}return null}
-function openingImportStatus(raw:unknown){if(!raw||typeof raw!=="object")return null;const value=(raw as Record<string,unknown>).opening_import_status;return typeof value==="string"?value:null}
-function documentTypeLabel(value:string){return({receipt:"Receipt",purchase_invoice:"Supplier invoice",sales_invoice:"Sales invoice",bank_statement:"Bank statement",tax_notice:"Tax notice",other:"Other document"} as Record<string,string>)[value]??value.replaceAll("_"," ")}
-function typeSafeguard(selectedType:string,extracted:Record<string,unknown>):DocumentTypeSafeguard|undefined{
- const detectedType=String(extracted.document_kind??"other"),confidence=Number(extracted.confidence??0),lineItems=Array.isArray(extracted.line_items)?extracted.line_items.length:0;
- if(!detectedType||selectedType===detectedType||detectedType==="other"||selectedType==="other")return undefined;
- const oppositeInvoice=(selectedType==="sales_invoice"&&["purchase_invoice","receipt"].includes(detectedType))||(detectedType==="sales_invoice"&&["purchase_invoice","receipt"].includes(selectedType));
- const multiStatement=detectedType==="bank_statement"&&lineItems>1,singleStatement=detectedType==="bank_statement"&&lineItems<=1,compatibleExpensePair=["receipt","purchase_invoice"].includes(selectedType)&&["receipt","purchase_invoice"].includes(detectedType);
- const highRisk=oppositeInvoice||multiStatement||(confidence>=.92&&!singleStatement&&!compatibleExpensePair);
- const allowKeep=!oppositeInvoice&&!multiStatement&&(singleStatement||compatibleExpensePair||confidence<.92);
- let reason="You selected "+documentTypeLabel(selectedType)+", but Zuelen detected "+documentTypeLabel(detectedType)+(confidence?" ("+Math.round(confidence*100)+"% confidence).":".");
- if(multiStatement)reason="You selected "+documentTypeLabel(selectedType)+", but Zuelen detected a bank statement with multiple movements. It should not be turned into one transaction.";
- if(oppositeInvoice)reason="You selected "+documentTypeLabel(selectedType)+", but Zuelen detected "+documentTypeLabel(detectedType)+". That changes whether the document represents money in or money out, so the type must be confirmed first.";
- return{selectedType,detectedType,severity:highRisk?"blocked":"warning",allowKeep,message:reason};
+export type DocumentTypeSafeguard = {
+  selectedType: string;
+  detectedType: string;
+  severity: "warning" | "blocked";
+  allowKeep: boolean;
+  message: string;
+};
+export type DocumentExtractionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  safeguard?: DocumentTypeSafeguard;
+};
+function validUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+function refresh() {
+  for (const p of ["/app", "/app/documents", "/app/transactions", "/app/taxes", "/app/compliance", "/app/year-end"])
+    revalidatePath(p);
+}
+const lineSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["description", "quantity", "unit_price_net", "vat_rate"],
+  properties: {
+    description: { type: "string" },
+    quantity: { type: "number" },
+    unit_price_net: { type: ["number", "null"] },
+    vat_rate: { type: ["number", "null"] },
+  },
+};
+const schema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "document_kind",
+    "issuer_name",
+    "issuer_country",
+    "issuer_vat_number",
+    "customer_name",
+    "customer_country",
+    "customer_vat_number",
+    "customer_street",
+    "customer_postal_code",
+    "customer_city",
+    "invoice_number",
+    "document_date",
+    "service_date",
+    "due_date",
+    "currency",
+    "subtotal",
+    "vat_amount",
+    "total",
+    "vat_rate",
+    "tax_type",
+    "tax_year",
+    "authority",
+    "payment_reference",
+    "line_items",
+    "transaction_counterparty",
+    "transaction_direction",
+    "suggested_vat_treatment",
+    "suggested_account_category",
+    "confidence",
+    "notes",
+  ],
+  properties: {
+    document_kind: {
+      type: "string",
+      enum: ["receipt", "purchase_invoice", "sales_invoice", "bank_statement", "tax_notice", "other"],
+    },
+    issuer_name: { type: ["string", "null"] },
+    issuer_country: { type: ["string", "null"] },
+    issuer_vat_number: { type: ["string", "null"] },
+    customer_name: { type: ["string", "null"] },
+    customer_country: { type: ["string", "null"] },
+    customer_vat_number: { type: ["string", "null"] },
+    customer_street: { type: ["string", "null"] },
+    customer_postal_code: { type: ["string", "null"] },
+    customer_city: { type: ["string", "null"] },
+    invoice_number: { type: ["string", "null"] },
+    document_date: { type: ["string", "null"] },
+    service_date: { type: ["string", "null"] },
+    due_date: { type: ["string", "null"] },
+    currency: { type: ["string", "null"] },
+    subtotal: { type: ["number", "null"] },
+    vat_amount: { type: ["number", "null"] },
+    total: { type: ["number", "null"] },
+    vat_rate: { type: ["number", "null"] },
+    tax_type: { type: ["string", "null"] },
+    tax_year: { type: ["integer", "null"] },
+    authority: { type: ["string", "null"] },
+    payment_reference: { type: ["string", "null"] },
+    line_items: { type: "array", items: lineSchema },
+    transaction_counterparty: { type: ["string", "null"] },
+    transaction_direction: { type: "string", enum: ["income", "expense", "unknown"] },
+    suggested_vat_treatment: {
+      type: "string",
+      enum: ["domestic", "eu_b2b_reverse_charge", "non_eu", "exempt_or_zero", "unknown"],
+    },
+    suggested_account_category: { type: ["string", "null"] },
+    confidence: { type: "number", minimum: 0, maximum: 1 },
+    notes: { type: "string" },
+  },
+} as const;
+function extractOutputText(payload: unknown) {
+  if (!payload || typeof payload !== "object") return null;
+  const output = (payload as { output?: unknown[] }).output;
+  if (!Array.isArray(output)) return null;
+  for (const item of output) {
+    if (!item || typeof item !== "object") continue;
+    const content = (item as { content?: unknown[] }).content;
+    if (!Array.isArray(content)) continue;
+    for (const part of content) {
+      if (part && typeof part === "object" && (part as { type?: string }).type === "output_text") {
+        const text = (part as { text?: unknown }).text;
+        if (typeof text === "string") return text;
+      }
+    }
+  }
+  return null;
+}
+function openingImportStatus(raw: unknown) {
+  if (!raw || typeof raw !== "object") return null;
+  const value = (raw as Record<string, unknown>).opening_import_status;
+  return typeof value === "string" ? value : null;
+}
+function documentTypeLabel(value: string) {
+  return (
+    (
+      {
+        receipt: "Receipt",
+        purchase_invoice: "Supplier invoice",
+        sales_invoice: "Sales invoice",
+        bank_statement: "Bank statement",
+        tax_notice: "Tax notice",
+        other: "Other document",
+      } as Record<string, string>
+    )[value] ?? value.replaceAll("_", " ")
+  );
+}
+function typeSafeguard(selectedType: string, extracted: Record<string, unknown>): DocumentTypeSafeguard | undefined {
+  const detectedType = String(extracted.document_kind ?? "other"),
+    confidence = Number(extracted.confidence ?? 0),
+    lineItems = Array.isArray(extracted.line_items) ? extracted.line_items.length : 0;
+  if (!detectedType || selectedType === detectedType || detectedType === "other" || selectedType === "other")
+    return undefined;
+  const oppositeInvoice =
+    (selectedType === "sales_invoice" && ["purchase_invoice", "receipt"].includes(detectedType)) ||
+    (detectedType === "sales_invoice" && ["purchase_invoice", "receipt"].includes(selectedType));
+  const multiStatement = detectedType === "bank_statement" && lineItems > 1,
+    singleStatement = detectedType === "bank_statement" && lineItems <= 1,
+    compatibleExpensePair =
+      ["receipt", "purchase_invoice"].includes(selectedType) && ["receipt", "purchase_invoice"].includes(detectedType);
+  const highRisk =
+    oppositeInvoice || multiStatement || (confidence >= 0.92 && !singleStatement && !compatibleExpensePair);
+  const allowKeep =
+    !oppositeInvoice && !multiStatement && (singleStatement || compatibleExpensePair || confidence < 0.92);
+  let reason =
+    "You selected " +
+    documentTypeLabel(selectedType) +
+    ", but Zuelen detected " +
+    documentTypeLabel(detectedType) +
+    (confidence ? " (" + Math.round(confidence * 100) + "% confidence)." : ".");
+  if (multiStatement)
+    reason =
+      "You selected " +
+      documentTypeLabel(selectedType) +
+      ", but Zuelen detected a bank statement with multiple movements. It should not be turned into one transaction.";
+  if (oppositeInvoice)
+    reason =
+      "You selected " +
+      documentTypeLabel(selectedType) +
+      ", but Zuelen detected " +
+      documentTypeLabel(detectedType) +
+      ". That changes whether the document represents money in or money out, so the type must be confirmed first.";
+  return { selectedType, detectedType, severity: highRisk ? "blocked" : "warning", allowKeep, message: reason };
 }
 
-export async function extractDocumentAction(_previous:DocumentExtractionState,formData:FormData):Promise<DocumentExtractionState>{
- const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};const documentId=String(formData.get("document_id")??"").trim();if(!validUuid(documentId))return{status:"error",message:"Invalid document reference."};const apiKey=process.env.OPENAI_API_KEY;if(!apiKey)return{status:"error",message:"OpenAI extraction is not configured on this deployment yet."};
- if(!canBookkeep(workspace.role))return{status:"error",message:"You do not have permission to extract document data."};
- const locale=workspace.profile?.locale==="fr"?"fr":"en",supabase=await createClient();try{await assertActionRateLimit(supabase,"document_extract")}catch(error){return{status:"error",message:error instanceof SecurityRateLimitError?localizedRateLimitMessage(locale,error.retryAfterSeconds):"The security check could not be completed. Please try again."}}const{data:doc,error:docError}=await supabase.from("documents").select("id,company_id,file_name,mime_type,file_size,storage_path,type,extracted_data").eq("id",documentId).eq("company_id",workspace.company.id).maybeSingle();if(docError||!doc)return{status:"error",message:docError?userFacingDataError(docError,"Document not found.",locale):"Document not found."};
- if(openingImportStatus(doc.extracted_data)==="posted")return{status:"error",message:locale==="fr"?"Ce document est lié à une situation d’ouverture déjà comptabilisée et ne peut pas être réanalysé ici.":"This document is linked to a posted opening position and cannot be re-analyzed here."};
- const mime=doc.mime_type??"";if(!["application/pdf","image/jpeg","image/png","image/webp"].includes(mime))return{status:"error",message:"AI extraction currently supports PDF, JPG, PNG and WebP documents."};if(Number(doc.file_size??0)>12*1024*1024)return{status:"error",message:"AI extraction currently supports documents up to 12 MB."};
- await supabase.from("documents").update({extraction_status:"processing"}).eq("id",doc.id);
- try{
-  const{data:file,error:fileError}=await supabase.storage.from("company-documents").download(doc.storage_path);if(fileError||!file)throw new Error(userFacingDataError(fileError,"Could not read the private document.",locale));const bytes=Buffer.from(await file.arrayBuffer()),base64=bytes.toString("base64");const filePart=mime.startsWith("image/")?{type:"input_image",image_url:`data:${mime};base64,${base64}`,detail:"high"}:{type:"input_file",filename:doc.file_name,file_data:`data:${mime};base64,${base64}`};
-  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"gpt-5-mini",store:false,input:[{role:"developer",content:[{type:"input_text",text:`Extract bookkeeping facts for a Luxembourg accounting application. The company is ${workspace.company.legal_name}${workspace.company.vat_number?` (VAT ${workspace.company.vat_number})`:""}. Determine whether it is issuer or recipient. Extract only visible facts and never invent a legal conclusion or PCN code. Country values should be ISO-2 when visible/inferable from a printed address/VAT prefix. For tax notices, identify the printed authority, tax type/year, amount, due date and payment/reference identifiers. transaction_counterparty is the merchant, supplier or customer in the underlying financial movement; for bank/card/payment-provider statements, do not use the bank or payment provider as the counterparty when the underlying merchant/client is visible. transaction_direction describes the movement from the Zuelen company perspective. suggested_vat_treatment is a review suggestion, not a filing decision. IMPORTANT: document_kind must be determined independently from the file itself. The user-selected upload category is only a hint and may be wrong; never force document_kind to match it. Distinguish receipts, supplier invoices, sales invoices and bank statements from their visible structure and contents.`}]},{role:"user",content:[{type:"input_text",text:`The user selected the upload category "${doc.type.replaceAll("_"," ")}". Independently inspect the file, determine its actual document_kind, and return structured accounting facts. If the selected category appears wrong, return the detected type rather than agreeing with the user.`},filePart]}],text:{format:{type:"json_schema",name:"compta_document_extraction",strict:true,schema}},max_output_tokens:2000})});
-  const payload=await response.json();if(!response.ok){console.error("OpenAI document extraction failed",response.status);throw new Error("The document extraction service is temporarily unavailable.")}const outputText=extractOutputText(payload);if(!outputText)throw new Error("The extraction model returned no structured result.");const extracted=JSON.parse(outputText) as Record<string,unknown>;
-  const safeguard=typeSafeguard(doc.type,extracted),safeguardData=safeguard?{...safeguard,resolved:false}:null;
-  await supabase.from("documents").update({extraction_status:"needs_review",extracted_data:{...extracted,model:"gpt-5-mini",extracted_at:new Date().toISOString(),selected_document_type:doc.type,type_safeguard:safeguardData}}).eq("id",doc.id);
-  let matches=0;if(!safeguard&&["receipt","purchase_invoice"].includes(String(extracted.document_kind??""))){const{data}=await supabase.rpc("refresh_document_matches",{p_document_id:doc.id});matches=Number(data??0)}
-  refresh();if(safeguard)return{status:"success",message:"Document type needs confirmation before Zuelen continues.",safeguard};return{status:"success",message:matches?`Extraction ready · ${matches} possible transaction match${matches===1?"":"es"} found.`:"Extraction ready for review."};
- }catch(error){const message=userFacingDataError(error,"Document extraction failed.",locale);await supabase.from("documents").update({extraction_status:"failed",extracted_data:{error:message,failed_at:new Date().toISOString()}}).eq("id",doc.id);refresh();return{status:"error",message}}
+export async function extractDocumentAction(
+  _previous: DocumentExtractionState,
+  formData: FormData,
+): Promise<DocumentExtractionState> {
+  const workspace = await getWorkspace();
+  if (!workspace.authenticated || !workspace.company)
+    return { status: "error", message: "Your session expired. Please sign in again." };
+  const documentId = String(formData.get("document_id") ?? "").trim();
+  if (!validUuid(documentId)) return { status: "error", message: "Invalid document reference." };
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { status: "error", message: "OpenAI extraction is not configured on this deployment yet." };
+  if (!canBookkeep(workspace.role))
+    return { status: "error", message: "You do not have permission to extract document data." };
+  const locale = workspace.profile?.locale === "fr" ? "fr" : "en",
+    supabase = await createClient();
+  try {
+    await assertActionRateLimit(supabase, "document_extract");
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof SecurityRateLimitError
+          ? localizedRateLimitMessage(locale, error.retryAfterSeconds)
+          : "The security check could not be completed. Please try again.",
+    };
+  }
+  const { data: doc, error: docError } = await supabase
+    .from("documents")
+    .select("id,company_id,file_name,mime_type,file_size,storage_path,type,extracted_data")
+    .eq("id", documentId)
+    .eq("company_id", workspace.company.id)
+    .maybeSingle();
+  if (docError || !doc)
+    return {
+      status: "error",
+      message: docError ? userFacingDataError(docError, "Document not found.", locale) : "Document not found.",
+    };
+  if (openingImportStatus(doc.extracted_data) === "posted")
+    return {
+      status: "error",
+      message:
+        locale === "fr"
+          ? "Ce document est lié à une situation d’ouverture déjà comptabilisée et ne peut pas être réanalysé ici."
+          : "This document is linked to a posted opening position and cannot be re-analyzed here.",
+    };
+  const mime = doc.mime_type ?? "";
+  if (!["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(mime))
+    return { status: "error", message: "AI extraction currently supports PDF, JPG, PNG and WebP documents." };
+  if (Number(doc.file_size ?? 0) > 12 * 1024 * 1024)
+    return { status: "error", message: "AI extraction currently supports documents up to 12 MB." };
+  await supabase.from("documents").update({ extraction_status: "processing" }).eq("id", doc.id);
+  try {
+    const { data: file, error: fileError } = await supabase.storage
+      .from("company-documents")
+      .download(doc.storage_path);
+    if (fileError || !file)
+      throw new Error(userFacingDataError(fileError, "Could not read the private document.", locale));
+    const bytes = Buffer.from(await file.arrayBuffer()),
+      base64 = bytes.toString("base64");
+    const filePart = mime.startsWith("image/")
+      ? { type: "input_image", image_url: `data:${mime};base64,${base64}`, detail: "high" }
+      : { type: "input_file", filename: doc.file_name, file_data: `data:${mime};base64,${base64}` };
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-5-mini",
+        store: false,
+        input: [
+          {
+            role: "developer",
+            content: [
+              {
+                type: "input_text",
+                text: `Extract bookkeeping facts for a Luxembourg accounting application. The company is ${workspace.company.legal_name}${workspace.company.vat_number ? ` (VAT ${workspace.company.vat_number})` : ""}. Determine whether it is issuer or recipient. Extract only visible facts and never invent a legal conclusion or PCN code. Country values should be ISO-2 when visible/inferable from a printed address/VAT prefix. For tax notices, identify the printed authority, tax type/year, amount, due date and payment/reference identifiers. transaction_counterparty is the merchant, supplier or customer in the underlying financial movement; for bank/card/payment-provider statements, do not use the bank or payment provider as the counterparty when the underlying merchant/client is visible. transaction_direction describes the movement from the Zuelen company perspective. suggested_vat_treatment is a review suggestion, not a filing decision. IMPORTANT: document_kind must be determined independently from the file itself. The user-selected upload category is only a hint and may be wrong; never force document_kind to match it. Distinguish receipts, supplier invoices, sales invoices and bank statements from their visible structure and contents.`,
+              },
+            ],
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `The user selected the upload category "${doc.type.replaceAll("_", " ")}". Independently inspect the file, determine its actual document_kind, and return structured accounting facts. If the selected category appears wrong, return the detected type rather than agreeing with the user.`,
+              },
+              filePart,
+            ],
+          },
+        ],
+        text: { format: { type: "json_schema", name: "compta_document_extraction", strict: true, schema } },
+        max_output_tokens: 2000,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      console.error("OpenAI document extraction failed", response.status);
+      throw new Error("The document extraction service is temporarily unavailable.");
+    }
+    const outputText = extractOutputText(payload);
+    if (!outputText) throw new Error("The extraction model returned no structured result.");
+    const extracted = JSON.parse(outputText) as Record<string, unknown>;
+    const safeguard = typeSafeguard(doc.type, extracted),
+      safeguardData = safeguard ? { ...safeguard, resolved: false } : null;
+    await supabase
+      .from("documents")
+      .update({
+        extraction_status: "needs_review",
+        extracted_data: {
+          ...extracted,
+          model: "gpt-5-mini",
+          extracted_at: new Date().toISOString(),
+          selected_document_type: doc.type,
+          type_safeguard: safeguardData,
+        },
+      })
+      .eq("id", doc.id);
+    let matches = 0;
+    if (!safeguard && ["receipt", "purchase_invoice"].includes(String(extracted.document_kind ?? ""))) {
+      const { data } = await supabase.rpc("refresh_document_matches", { p_document_id: doc.id });
+      matches = Number(data ?? 0);
+    }
+    refresh();
+    if (safeguard)
+      return { status: "success", message: "Document type needs confirmation before Zuelen continues.", safeguard };
+    return {
+      status: "success",
+      message: matches
+        ? `Extraction ready · ${matches} possible transaction match${matches === 1 ? "" : "es"} found.`
+        : "Extraction ready for review.",
+    };
+  } catch (error) {
+    const message = userFacingDataError(error, "Document extraction failed.", locale);
+    await supabase
+      .from("documents")
+      .update({ extraction_status: "failed", extracted_data: { error: message, failed_at: new Date().toISOString() } })
+      .eq("id", doc.id);
+    refresh();
+    return { status: "error", message };
+  }
 }
 
-export async function resolveDocumentTypeSafeguardAction(documentId:string,choice:"detected"|"selected"):Promise<DocumentExtractionState>{
- const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};if(!canBookkeep(workspace.role))return{status:"error",message:"You do not have permission to change document classification."};if(!validUuid(documentId))return{status:"error",message:"Invalid document reference."};
- const locale=workspace.profile?.locale==="fr"?"fr":"en",supabase=await createClient();const{data:doc,error}=await supabase.from("documents").select("id,type,extracted_data").eq("id",documentId).eq("company_id",workspace.company.id).maybeSingle();if(error||!doc)return{status:"error",message:error?userFacingDataError(error,"Document not found.",locale):"Document not found."};
- const extracted=doc.extracted_data&&typeof doc.extracted_data==="object"?doc.extracted_data as Record<string,unknown>:{},raw=extracted.type_safeguard&&typeof extracted.type_safeguard==="object"?extracted.type_safeguard as Record<string,unknown>:null;
- if(!raw)return{status:"success",message:"Document type is already confirmed."};
- const detectedType=String(raw.detectedType??extracted.document_kind??"other"),selectedType=String(raw.selectedType??doc.type),allowKeep=raw.allowKeep===true;
- if(choice==="selected"&&!allowKeep)return{status:"error",message:locale==="fr"?"Ce conflit de type peut changer le traitement comptable. Utilisez le type détecté ou importez le document par le flux approprié.":"This document-type conflict can change the accounting treatment. Use the detected type or import the document through the appropriate workflow."};
- const nextType=choice==="detected"?detectedType:selectedType;
- const{error:updateError}=await supabase.from("documents").update({type:nextType,extracted_data:{...extracted,type_safeguard:{...raw,resolved:true,resolution:choice,resolved_at:new Date().toISOString()}}}).eq("id",documentId).eq("company_id",workspace.company.id);
- if(updateError)return{status:"error",message:userFacingDataError(updateError,"The document type could not be confirmed.",locale)};
- refresh();
- if(nextType==="bank_statement"&&Array.isArray(extracted.line_items)&&extracted.line_items.length>1)return{status:"success",message:locale==="fr"?"Type confirmé comme relevé bancaire. Utilisez Importer un relevé dans Banque pour traiter plusieurs mouvements.":"Confirmed as a bank statement. Use Import statement in Banking to process multiple movements."};
- return{status:"success",message:choice==="detected"?(locale==="fr"?"Type du document corrigé.":"Document type corrected."):(locale==="fr"?"Votre type a été conservé et le conflit est enregistré.":"Your selected type was kept and the conflict was recorded.")};
+export async function resolveDocumentTypeSafeguardAction(
+  documentId: string,
+  choice: "detected" | "selected",
+): Promise<DocumentExtractionState> {
+  const workspace = await getWorkspace();
+  if (!workspace.authenticated || !workspace.company)
+    return { status: "error", message: "Your session expired. Please sign in again." };
+  if (!canBookkeep(workspace.role))
+    return { status: "error", message: "You do not have permission to change document classification." };
+  if (!validUuid(documentId)) return { status: "error", message: "Invalid document reference." };
+  const locale = workspace.profile?.locale === "fr" ? "fr" : "en",
+    supabase = await createClient();
+  const { data: doc, error } = await supabase
+    .from("documents")
+    .select("id,type,extracted_data")
+    .eq("id", documentId)
+    .eq("company_id", workspace.company.id)
+    .maybeSingle();
+  if (error || !doc)
+    return {
+      status: "error",
+      message: error ? userFacingDataError(error, "Document not found.", locale) : "Document not found.",
+    };
+  const extracted =
+      doc.extracted_data && typeof doc.extracted_data === "object"
+        ? (doc.extracted_data as Record<string, unknown>)
+        : {},
+    raw =
+      extracted.type_safeguard && typeof extracted.type_safeguard === "object"
+        ? (extracted.type_safeguard as Record<string, unknown>)
+        : null;
+  if (!raw) return { status: "success", message: "Document type is already confirmed." };
+  const detectedType = String(raw.detectedType ?? extracted.document_kind ?? "other"),
+    selectedType = String(raw.selectedType ?? doc.type),
+    allowKeep = raw.allowKeep === true;
+  if (choice === "selected" && !allowKeep)
+    return {
+      status: "error",
+      message:
+        locale === "fr"
+          ? "Ce conflit de type peut changer le traitement comptable. Utilisez le type détecté ou importez le document par le flux approprié."
+          : "This document-type conflict can change the accounting treatment. Use the detected type or import the document through the appropriate workflow.",
+    };
+  const nextType = choice === "detected" ? detectedType : selectedType;
+  const { error: updateError } = await supabase
+    .from("documents")
+    .update({
+      type: nextType,
+      extracted_data: {
+        ...extracted,
+        type_safeguard: { ...raw, resolved: true, resolution: choice, resolved_at: new Date().toISOString() },
+      },
+    })
+    .eq("id", documentId)
+    .eq("company_id", workspace.company.id);
+  if (updateError)
+    return {
+      status: "error",
+      message: userFacingDataError(updateError, "The document type could not be confirmed.", locale),
+    };
+  refresh();
+  if (nextType === "bank_statement" && Array.isArray(extracted.line_items) && extracted.line_items.length > 1)
+    return {
+      status: "success",
+      message:
+        locale === "fr"
+          ? "Type confirmé comme relevé bancaire. Utilisez Importer un relevé dans Banque pour traiter plusieurs mouvements."
+          : "Confirmed as a bank statement. Use Import statement in Banking to process multiple movements.",
+    };
+  return {
+    status: "success",
+    message:
+      choice === "detected"
+        ? locale === "fr"
+          ? "Type du document corrigé."
+          : "Document type corrected."
+        : locale === "fr"
+          ? "Votre type a été conservé et le conflit est enregistré."
+          : "Your selected type was kept and the conflict was recorded.",
+  };
 }
-async function rpcAction(formData:FormData,rpc:string,param:string,success:string):Promise<DocumentExtractionState>{const w=await getWorkspace();if(!w.authenticated||!w.company)return{status:"error",message:"Your session expired."};const id=String(formData.get(param.replace(/^p_/,""))??formData.get("id")??"");if(!validUuid(id))return{status:"error",message:"Invalid reference."};const s=await createClient();const{data,error}=await s.rpc(rpc,{[param]:id});if(error)return{status:"error",message:userFacingDataError(error)};refresh();return{status:"success",message:success.replace("{count}",String(data??""))}}
-export async function refreshDocumentMatchesAction(_p:DocumentExtractionState,f:FormData){return rpcAction(f,"refresh_document_matches","p_document_id","Matching refreshed · {count} candidate(s).")}
-export async function confirmDocumentMatchAction(_p:DocumentExtractionState,f:FormData){return rpcAction(f,"confirm_document_match","p_link_id","Evidence link confirmed.")}
-export async function applyDocumentMatchAction(_p:DocumentExtractionState,f:FormData){return rpcAction(f,"apply_document_facts_to_transaction","p_link_id","Document facts applied to the transaction and evidence linked.")}
-export async function createTaxEventAction(_p:DocumentExtractionState,f:FormData){return rpcAction(f,"create_tax_event_from_document","p_document_id","Tax notice added to Taxes and Compliance.")}
+async function rpcAction(
+  formData: FormData,
+  rpc: string,
+  param: string,
+  success: string,
+): Promise<DocumentExtractionState> {
+  const w = await getWorkspace();
+  if (!w.authenticated || !w.company) return { status: "error", message: "Your session expired." };
+  const id = String(formData.get(param.replace(/^p_/, "")) ?? formData.get("id") ?? "");
+  if (!validUuid(id)) return { status: "error", message: "Invalid reference." };
+  const s = await createClient();
+  const { data, error } = await s.rpc(rpc, { [param]: id });
+  if (error) return { status: "error", message: userFacingDataError(error) };
+  refresh();
+  return { status: "success", message: success.replace("{count}", String(data ?? "")) };
+}
+export async function refreshDocumentMatchesAction(_p: DocumentExtractionState, f: FormData) {
+  return rpcAction(f, "refresh_document_matches", "p_document_id", "Matching refreshed · {count} candidate(s).");
+}
+export async function confirmDocumentMatchAction(_p: DocumentExtractionState, f: FormData) {
+  return rpcAction(f, "confirm_document_match", "p_link_id", "Evidence link confirmed.");
+}
+export async function applyDocumentMatchAction(_p: DocumentExtractionState, f: FormData) {
+  return rpcAction(
+    f,
+    "apply_document_facts_to_transaction",
+    "p_link_id",
+    "Document facts applied to the transaction and evidence linked.",
+  );
+}
+export async function createTaxEventAction(_p: DocumentExtractionState, f: FormData) {
+  return rpcAction(f, "create_tax_event_from_document", "p_document_id", "Tax notice added to Taxes and Compliance.");
+}

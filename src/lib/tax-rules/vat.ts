@@ -38,9 +38,9 @@ function isoDay(date: string | Date | null | undefined) {
 export function vatRatesOn(date?: string | Date | null): number[] {
   const day = isoDay(date);
   return VAT_RATE_PERIODS.filter(
-    (period) => period.effectiveFrom <= day && (!period.effectiveTo || period.effectiveTo >= day),
+    period => period.effectiveFrom <= day && (!period.effectiveTo || period.effectiveTo >= day),
   )
-    .map((period) => period.rate)
+    .map(period => period.rate)
     .sort((a, b) => b - a);
 }
 
@@ -55,8 +55,11 @@ export function isVatRateAllowed(rate: number, date?: string | Date | null): boo
 
 /** Closest rate in force on the date to an observed VAT / net ratio (ignores 0 %). */
 export function closestVatRate(observedPercent: number, date?: string | Date | null): number {
-  const rates = vatRatesOn(date).filter((rate) => rate > 0);
-  return rates.reduce((best, rate) => (Math.abs(rate - observedPercent) < Math.abs(best - observedPercent) ? rate : best), rates[0]);
+  const rates = vatRatesOn(date).filter(rate => rate > 0);
+  return rates.reduce(
+    (best, rate) => (Math.abs(rate - observedPercent) < Math.abs(best - observedPercent) ? rate : best),
+    rates[0],
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -69,7 +72,12 @@ export const FRANCHISE_SOURCE = "https://pfi.public.lu/dam-assets/pdf/tva/sme/fa
 export const FRANCHISE_MENTION = "TVA non applicable – Article 57bis de la loi modifiée du 12 février 1979";
 export const EXEMPT_ACTIVITY_MENTION = "Exonération de TVA – article 44 de la loi modifiée du 12 février 1979";
 
-type FranchiseThreshold = { effectiveFromYear: number; effectiveToYear: number | null; threshold: number; tolerancePercent: number };
+type FranchiseThreshold = {
+  effectiveFromYear: number;
+  effectiveToYear: number | null;
+  threshold: number;
+  tolerancePercent: number;
+};
 
 const FRANCHISE_THRESHOLDS: FranchiseThreshold[] = [
   // EUR 35,000 is the threshold the AED FAQ says was in force before 2025.
@@ -83,7 +91,7 @@ export const EU_FRANCHISE_THRESHOLD = 100000;
 export function franchiseThreshold(year: number): FranchiseThreshold | null {
   return (
     FRANCHISE_THRESHOLDS.find(
-      (entry) => entry.effectiveFromYear <= year && (entry.effectiveToYear === null || entry.effectiveToYear >= year),
+      entry => entry.effectiveFromYear <= year && (entry.effectiveToYear === null || entry.effectiveToYear >= year),
     ) ?? null
   );
 }

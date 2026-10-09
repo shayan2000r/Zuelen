@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { deriveResidentTaxClass, type CivilStatus, type FiscalResidency, type TaxationMode } from "@/lib/personal-fiscal/tax-class";
+import {
+  deriveResidentTaxClass,
+  type CivilStatus,
+  type FiscalResidency,
+  type TaxationMode,
+} from "@/lib/personal-fiscal/tax-class";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/workspace";
 import { userFacingDataError } from "@/lib/user-facing-error";
@@ -10,7 +15,13 @@ export type CcssActionState = { status: "idle" | "success" | "error"; message: s
 
 const residencyValues = new Set(["resident", "non_resident"]);
 const civilStatusValues = new Set(["single", "married", "registered_partnership", "divorced", "separated", "widowed"]);
-const taxationModeValues = new Set(["joint", "individual", "individual_reallocation", "not_applicable", "needs_confirmation"]);
+const taxationModeValues = new Set([
+  "joint",
+  "individual",
+  "individual_reallocation",
+  "not_applicable",
+  "needs_confirmation",
+]);
 const affiliationValues = new Set(["principal", "secondary", "manager"]);
 const legalFormValues = new Set(["own_name", "company"]);
 const incomeStatusValues = new Set(["provisional", "user_confirmed", "final_acd"]);
@@ -50,7 +61,14 @@ function validPercent(value: string) {
 export async function saveCcssConfiguration(_previous: CcssActionState, formData: FormData): Promise<CcssActionState> {
   const workspace = await getWorkspace();
   if (!workspace.authenticated || !workspace.userId || !workspace.company) {
-    return { status: "error", message: localized(workspace, "Your session expired. Please sign in again.", "Votre session a expiré. Veuillez vous reconnecter.") };
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Your session expired. Please sign in again.",
+        "Votre session a expiré. Veuillez vous reconnecter.",
+      ),
+    };
   }
 
   const taxYear = Number(text(formData, "tax_year"));
@@ -78,46 +96,131 @@ export async function saveCcssConfiguration(_previous: CcssActionState, formData
   const overrideSource = text(formData, "override_source");
   const overrideReason = text(formData, "override_reason");
 
-  if (!Number.isInteger(taxYear) || taxYear < 2000 || taxYear > 2100
-      || !residencyValues.has(residencyStatus) || !civilStatusValues.has(civilStatus) || !taxationModeValues.has(taxationMode)
-      || !Number.isInteger(qualifyingChildrenCount) || qualifyingChildrenCount < 0 || qualifyingChildrenCount > 30
-      || !affiliationValues.has(affiliationType) || !legalFormValues.has(activityLegalForm) || !validDate(affiliationStartDate)
-      || !validMoney(annualIncome) || !incomeStatusValues.has(incomeStatus) || !incomeSourceValues.has(incomeSource)
-      || !/^\d(?:\.\d{1,4})?$/.test(aaaFactor) || Number(aaaFactor) < 0.1 || Number(aaaFactor) > 5
-      || !["not_affiliated", "affiliated"].includes(mdeMembership) || !reliefValues.has(pensionReductionStatus) || !reliefValues.has(exemptionStatus)) {
-    return { status: "error", message: localized(workspace, "Review the highlighted CCSS and fiscal-profile values.", "Vérifiez les valeurs du profil CCSS et fiscal.") };
+  if (
+    !Number.isInteger(taxYear) ||
+    taxYear < 2000 ||
+    taxYear > 2100 ||
+    !residencyValues.has(residencyStatus) ||
+    !civilStatusValues.has(civilStatus) ||
+    !taxationModeValues.has(taxationMode) ||
+    !Number.isInteger(qualifyingChildrenCount) ||
+    qualifyingChildrenCount < 0 ||
+    qualifyingChildrenCount > 30 ||
+    !affiliationValues.has(affiliationType) ||
+    !legalFormValues.has(activityLegalForm) ||
+    !validDate(affiliationStartDate) ||
+    !validMoney(annualIncome) ||
+    !incomeStatusValues.has(incomeStatus) ||
+    !incomeSourceValues.has(incomeSource) ||
+    !/^\d(?:\.\d{1,4})?$/.test(aaaFactor) ||
+    Number(aaaFactor) < 0.1 ||
+    Number(aaaFactor) > 5 ||
+    !["not_affiliated", "affiliated"].includes(mdeMembership) ||
+    !reliefValues.has(pensionReductionStatus) ||
+    !reliefValues.has(exemptionStatus)
+  ) {
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Review the highlighted CCSS and fiscal-profile values.",
+        "Vérifiez les valeurs du profil CCSS et fiscal.",
+      ),
+    };
   }
   if (civilStatusEventDate && !validDate(civilStatusEventDate)) {
-    return { status: "error", message: localized(workspace, "Enter a valid civil-status event date.", "Saisissez une date d’événement d’état civil valide.") };
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Enter a valid civil-status event date.",
+        "Saisissez une date d’événement d’état civil valide.",
+      ),
+    };
   }
-  if (affiliationType === "manager" && incomeSource === "accounting_proxy" || incomeSource === "accounting_proxy" && activityLegalForm !== "own_name") {
-    return { status: "error", message: localized(workspace, "Company turnover or profit cannot be used as a manager’s personal CCSS income.", "Le chiffre d’affaires ou le bénéfice de la société ne peut pas servir de revenu CCSS personnel du dirigeant.") };
+  if (
+    (affiliationType === "manager" && incomeSource === "accounting_proxy") ||
+    (incomeSource === "accounting_proxy" && activityLegalForm !== "own_name")
+  ) {
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Company turnover or profit cannot be used as a manager’s personal CCSS income.",
+        "Le chiffre d’affaires ou le bénéfice de la société ne peut pas servir de revenu CCSS personnel du dirigeant.",
+      ),
+    };
   }
 
   const mdeClass = mdeMembership === "affiliated" ? Number(mdeClassRaw) : null;
-  if (mdeMembership === "affiliated" && (![1, 2, 3, 4].includes(mdeClass ?? 0))) {
-    return { status: "error", message: localized(workspace, "Confirm the MDE class shown by CCSS.", "Confirmez la classe MDE indiquée par le CCSS.") };
+  if (mdeMembership === "affiliated" && ![1, 2, 3, 4].includes(mdeClass ?? 0)) {
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Confirm the MDE class shown by CCSS.",
+        "Confirmez la classe MDE indiquée par le CCSS.",
+      ),
+    };
   }
   const confirmedBases = [confirmedNormalBase, confirmedPensionBase, confirmedDependencyBase];
-  if (confirmedBases.some(Boolean) && (!confirmedBases.every(Boolean) || confirmedBases.some(value => !validMoney(value)))) {
-    return { status: "error", message: localized(workspace, "Enter all three monthly bases exactly as confirmed on the same CCSS statement.", "Saisissez les trois assiettes mensuelles exactement comme elles figurent sur le même extrait CCSS.") };
+  if (
+    confirmedBases.some(Boolean) &&
+    (!confirmedBases.every(Boolean) || confirmedBases.some(value => !validMoney(value)))
+  ) {
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Enter all three monthly bases exactly as confirmed on the same CCSS statement.",
+        "Saisissez les trois assiettes mensuelles exactement comme elles figurent sur le même extrait CCSS.",
+      ),
+    };
   }
   if (confirmedPensionBase && pensionReductionStatus !== "approved") {
-    return { status: "error", message: localized(workspace, "A confirmed reduced pension base requires CCSS-approved status.", "Une assiette pension réduite confirmée exige le statut approuvé par le CCSS.") };
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "A confirmed reduced pension base requires CCSS-approved status.",
+        "Une assiette pension réduite confirmée exige le statut approuvé par le CCSS.",
+      ),
+    };
   }
   const manualOverride = manualOverrideRaw ? manualOverrideRaw : null;
-  if (manualOverride && !["1", "1a", "2"].includes(manualOverride) || manualOverride && !overrideSource) {
-    return { status: "error", message: localized(workspace, "An ACD source is required for a manual tax-class override.", "Une source ACD est requise pour remplacer manuellement la classe d’impôt.") };
+  if ((manualOverride && !["1", "1a", "2"].includes(manualOverride)) || (manualOverride && !overrideSource)) {
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "An ACD source is required for a manual tax-class override.",
+        "Une source ACD est requise pour remplacer manuellement la classe d’impôt.",
+      ),
+    };
   }
   if (acdRateRaw && !validPercent(acdRateRaw)) {
-    return { status: "error", message: localized(workspace, "Enter the ACD rate exactly as shown on the tax document.", "Saisissez le taux ACD exactement comme indiqué sur le document fiscal.") };
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Enter the ACD rate exactly as shown on the tax document.",
+        "Saisissez le taux ACD exactement comme indiqué sur le document fiscal.",
+      ),
+    };
   }
 
   const assistingEnabled = checked(formData, "assisting_spouse_enabled");
   const qualifyingRelationship = civilStatus === "married" || civilStatus === "registered_partnership";
   const spouseMainActivity = checked(formData, "assisting_spouse_main_activity");
   if (assistingEnabled && (!qualifyingRelationship || activityLegalForm !== "own_name" || !spouseMainActivity)) {
-    return { status: "error", message: localized(workspace, "Assisting-spouse treatment requires a qualifying relationship, genuine main assistance, and an activity in your own name.", "Le statut de conjoint aidant exige une relation admissible, une aide constituant l’activité principale et une activité exercée en nom propre.") };
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Assisting-spouse treatment requires a qualifying relationship, genuine main assistance, and an activity in your own name.",
+        "Le statut de conjoint aidant exige une relation admissible, une aide constituant l’activité principale et une activité exercée en nom propre.",
+      ),
+    };
   }
 
   const fiscalFacts = {
@@ -184,13 +287,27 @@ export async function saveCcssConfiguration(_previous: CcssActionState, formData
   const error = fiscalResult.error ?? ccssResult.error;
   if (error) return { status: "error", message: userFacingDataError(error) };
   refresh();
-  return { status: "success", message: localized(workspace, "Your CCSS and personal fiscal profiles are confirmed.", "Vos profils CCSS et fiscal personnel sont confirmés.") };
+  return {
+    status: "success",
+    message: localized(
+      workspace,
+      "Your CCSS and personal fiscal profiles are confirmed.",
+      "Vos profils CCSS et fiscal personnel sont confirmés.",
+    ),
+  };
 }
 
 export async function saveCcssStatement(_previous: CcssActionState, formData: FormData): Promise<CcssActionState> {
   const workspace = await getWorkspace();
   if (!workspace.authenticated || !workspace.userId || !workspace.company) {
-    return { status: "error", message: localized(workspace, "Your session expired. Please sign in again.", "Votre session a expiré. Veuillez vous reconnecter.") };
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Your session expired. Please sign in again.",
+        "Votre session a expiré. Veuillez vous reconnecter.",
+      ),
+    };
   }
   const taxYear = Number(text(formData, "tax_year"));
   const contributionPeriod = text(formData, "contribution_period");
@@ -199,39 +316,86 @@ export async function saveCcssStatement(_previous: CcssActionState, formData: Fo
   const paymentStatus = text(formData, "payment_status");
   const paidDate = text(formData, "paid_date") || null;
   const sourceDocumentId = text(formData, "source_document_id") || null;
-  if (!Number.isInteger(taxYear) || !/^\d{4}-\d{2}$/.test(contributionPeriod) || !validDate(issueDate) || !validMoney(amountDue)
-      || !["unpaid", "paid", "disputed"].includes(paymentStatus) || paymentStatus === "paid" && (!paidDate || !validDate(paidDate))
-      || paymentStatus !== "paid" && paidDate) {
-    return { status: "error", message: localized(workspace, "Review the CCSS statement dates, amount and payment status.", "Vérifiez les dates, le montant et le statut de paiement de l’extrait CCSS.") };
+  if (
+    !Number.isInteger(taxYear) ||
+    !/^\d{4}-\d{2}$/.test(contributionPeriod) ||
+    !validDate(issueDate) ||
+    !validMoney(amountDue) ||
+    !["unpaid", "paid", "disputed"].includes(paymentStatus) ||
+    (paymentStatus === "paid" && (!paidDate || !validDate(paidDate))) ||
+    (paymentStatus !== "paid" && paidDate)
+  ) {
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Review the CCSS statement dates, amount and payment status.",
+        "Vérifiez les dates, le montant et le statut de paiement de l’extrait CCSS.",
+      ),
+    };
   }
   if (sourceDocumentId && !/^[0-9a-f-]{36}$/i.test(sourceDocumentId)) {
-    return { status: "error", message: localized(workspace, "Choose a valid source document.", "Choisissez un document source valide.") };
+    return {
+      status: "error",
+      message: localized(workspace, "Choose a valid source document.", "Choisissez un document source valide."),
+    };
   }
   const supabase = await createClient();
   const [{ data: profile, error: profileError }, documentResult] = await Promise.all([
     supabase.from("ccss_profiles").select("id").eq("user_id", workspace.userId).eq("tax_year", taxYear).maybeSingle(),
     sourceDocumentId
-      ? supabase.from("documents").select("id").eq("id", sourceDocumentId).eq("company_id", workspace.company.id).maybeSingle()
+      ? supabase
+          .from("documents")
+          .select("id")
+          .eq("id", sourceDocumentId)
+          .eq("company_id", workspace.company.id)
+          .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ]);
-  if (profileError || !profile) return { status: "error", message: localized(workspace, "Configure your CCSS situation before recording a statement.", "Configurez votre situation CCSS avant d’enregistrer un extrait.") };
-  if (sourceDocumentId && (documentResult.error || !documentResult.data)) return { status: "error", message: localized(workspace, "The selected document is not available in this workspace.", "Le document sélectionné n’est pas disponible dans cet espace.") };
+  if (profileError || !profile)
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "Configure your CCSS situation before recording a statement.",
+        "Configurez votre situation CCSS avant d’enregistrer un extrait.",
+      ),
+    };
+  if (sourceDocumentId && (documentResult.error || !documentResult.data))
+    return {
+      status: "error",
+      message: localized(
+        workspace,
+        "The selected document is not available in this workspace.",
+        "Le document sélectionné n’est pas disponible dans cet espace.",
+      ),
+    };
   const due = new Date(`${issueDate}T12:00:00Z`);
   due.setUTCDate(due.getUTCDate() + 10);
   const contributionMonth = `${contributionPeriod}-01`;
-  const { error } = await supabase.from("ccss_statements").upsert({
-    user_id: workspace.userId,
-    ccss_profile_id: profile.id,
-    company_id: workspace.company.id,
-    contribution_month: contributionMonth,
-    statement_issue_date: issueDate,
-    amount_due: amountDue,
-    due_date: due.toISOString().slice(0, 10),
-    payment_status: paymentStatus,
-    paid_date: paymentStatus === "paid" ? paidDate : null,
-    source_document_id: sourceDocumentId,
-  }, { onConflict: "user_id,company_id,contribution_month" });
+  const { error } = await supabase.from("ccss_statements").upsert(
+    {
+      user_id: workspace.userId,
+      ccss_profile_id: profile.id,
+      company_id: workspace.company.id,
+      contribution_month: contributionMonth,
+      statement_issue_date: issueDate,
+      amount_due: amountDue,
+      due_date: due.toISOString().slice(0, 10),
+      payment_status: paymentStatus,
+      paid_date: paymentStatus === "paid" ? paidDate : null,
+      source_document_id: sourceDocumentId,
+    },
+    { onConflict: "user_id,company_id,contribution_month" },
+  );
   if (error) return { status: "error", message: userFacingDataError(error) };
   refresh();
-  return { status: "success", message: localized(workspace, "CCSS statement recorded with its official payment deadline.", "L’extrait CCSS et son échéance officielle ont été enregistrés.") };
+  return {
+    status: "success",
+    message: localized(
+      workspace,
+      "CCSS statement recorded with its official payment deadline.",
+      "L’extrait CCSS et son échéance officielle ont été enregistrés.",
+    ),
+  };
 }

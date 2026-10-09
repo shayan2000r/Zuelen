@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import { needsMfaChallenge } from "../src/lib/mfa-assurance.ts";
 import { safeInternalDestination } from "../src/lib/safe-navigation.ts";
+import { readRawSource as readSource } from "./source-text.ts";
 
 function read(path: string) {
-  return readFileSync(new URL(path, import.meta.url), "utf8");
+  return readSource(new URL(path, import.meta.url));
 }
 
 test("OAuth and email confirmation destinations reject external redirects", () => {
@@ -13,7 +13,7 @@ test("OAuth and email confirmation destinations reject external redirects", () =
   assert.equal(safeInternalDestination("/%2f%2fevil.example"), null);
   assert.equal(safeInternalDestination("/\\evil.example"), null);
   assert.equal(safeInternalDestination("/app/settings/security"), "/app/settings/security");
-  assert.match(read("../src/components/sign-in-form.tsx"), /signInWithOAuth\(\{ provider: "google"/);
+  assert.match(read("../src/components/sign-in-form.tsx"), /signInWithOAuth\(\{\s*provider: "google"/);
   assert.match(read("../src/app/auth/confirm/route.ts"), /safeInternalDestination/);
   assert.match(read("../src/app/auth/callback/route.ts"), /new URL\("\/auth\/resolve"/);
 });
@@ -57,7 +57,8 @@ test("expensive authenticated actions use the database-backed limiter", () => {
     "../src/app/app/copilot/actions.ts",
     "../src/app/app/settings/billing/actions.ts",
     "../src/app/accountants/manage/actions.ts",
-  ]) assert.match(read(path), /assertActionRateLimit/);
+  ])
+    assert.match(read(path), /assertActionRateLimit/);
   const migration = read("../db/archive/pre-baseline-migrations/20260828073949_security_hardening.sql");
   assert.match(migration, /primary key \(user_id, action\)/i);
   assert.match(migration, /security definer\s+set search_path = ''/i);
@@ -67,7 +68,14 @@ test("expensive authenticated actions use the database-backed limiter", () => {
 
 test("cross-tenant regression script covers every sensitive data family", () => {
   const sql = read("../db/tests/cross_tenant_isolation.sql");
-  for (const table of ["organization_members", "source_transactions", "bank_transactions", "sales_invoices", "documents", "journal_entries"]) {
+  for (const table of [
+    "organization_members",
+    "source_transactions",
+    "bank_transactions",
+    "sales_invoices",
+    "documents",
+    "journal_entries",
+  ]) {
     assert.match(sql, new RegExp(`public\\.${table}`));
   }
   assert.match(sql, /set local role authenticated/i);
@@ -88,14 +96,23 @@ test("Stripe webhook claims an event before processing and makes failed or stale
 test("browser hardening headers and patched spreadsheet parser are configured", () => {
   const config = read("../next.config.ts");
   assert.match(config, /poweredByHeader:\s*false/);
-  for (const header of ["Content-Security-Policy", "Strict-Transport-Security", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy", "X-Frame-Options"]) assert.match(config, new RegExp(header));
+  for (const header of [
+    "Content-Security-Policy",
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "Referrer-Policy",
+    "Permissions-Policy",
+    "X-Frame-Options",
+  ])
+    assert.match(config, new RegExp(header));
   assert.match(config, /frame-ancestors 'none'/);
   assert.match(read("../package.json"), /xlsx-0\.20\.3/);
 });
 
 test("CI validates lint, types, tests, and the production build", () => {
   const workflow = read("../.github/workflows/ci.yml");
-  for (const command of ["pnpm lint", "pnpm typecheck", "pnpm test", "pnpm build"]) assert.match(workflow, new RegExp(command));
+  for (const command of ["pnpm lint", "pnpm typecheck", "pnpm test", "pnpm build"])
+    assert.match(workflow, new RegExp(command));
   assert.match(workflow, /pnpm install --frozen-lockfile/);
 });
 
@@ -121,7 +138,10 @@ test("password recovery is isolated, browser-independent, and opened from a dedi
   assert.match(resetForm, /if \(!ready\)/);
   assert.match(resetForm, /updateUser\(\{ password \}\)/);
   assert.match(proxy, /passwordRecoveryPath/);
-  assert.match(migration, /grant execute on function public\.consume_password_recovery_rate_limit\([^;]+\) to service_role/i);
+  assert.match(
+    migration,
+    /grant execute on function public\.consume_password_recovery_rate_limit\([^;]+\) to service_role/i,
+  );
   assert.doesNotMatch(migration, /grant execute[^;]+to anon/i);
   assert.doesNotMatch(migration, /grant execute[^;]+to authenticated/i);
 });
