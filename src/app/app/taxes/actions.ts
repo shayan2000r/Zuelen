@@ -9,12 +9,6 @@ import { userFacingDataError } from "@/lib/user-facing-error";
 export type VatProfileState={status:"idle"|"success"|"error";message:string;upgradeRequired?:boolean};
 function refresh(){for(const p of ["/app","/app/taxes","/app/compliance","/app/banking","/app/year-end"])revalidatePath(p)}
 
-export async function saveVatProfile(_previous:VatProfileState,formData:FormData):Promise<VatProfileState>{
- const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company)return{status:"error",message:"Your session expired. Please sign in again."};
- const frequency=String(formData.get("frequency")??""),year=Number(formData.get("year"));if(!["annual","quarterly","monthly"].includes(frequency))return{status:"error",message:"Choose the VAT filing frequency assigned to your company."};if(!Number.isInteger(year)||year<2000||year>2100)return{status:"error",message:"Invalid financial year."};
- const supabase=await createClient();const{error}=await supabase.from("companies").update({vat_filing_frequency:frequency,updated_at:new Date().toISOString()}).eq("id",workspace.company.id);if(error)return{status:"error",message:userFacingDataError(error)};const{error:syncError}=await supabase.rpc("sync_core_compliance_calendar",{p_company_id:workspace.company.id,p_fiscal_year:year});if(syncError)return{status:"error",message:`VAT profile saved, but calendar sync failed: ${userFacingDataError(syncError)}`};refresh();return{status:"success",message:"VAT profile saved. Your filing calendar is synchronized."};
-}
-
 export async function matchTaxPaymentAction(_previous:VatProfileState,formData:FormData):Promise<VatProfileState>{
  const workspace=await getWorkspace();if(!workspace.authenticated||!workspace.company||!workspace.organization)return{status:"error",message:"Your session expired."};
  if(!(await hasPremiumAccess(workspace.organization.id)))return{status:"error",upgradeRequired:true,message:workspace.profile?.locale==="fr"?"Les estimations fiscales restent disponibles avec Basic. Le rapprochement des paiements fiscaux et le suivi des dossiers sont inclus avec Premium.":"Tax estimates remain available on Basic. Matching tax payments and managing tax cases are included with Premium."};

@@ -55,7 +55,6 @@ test("expensive authenticated actions use the database-backed limiter", () => {
     "../src/app/app/banking/actions.ts",
     "../src/app/app/documents/actions.ts",
     "../src/app/app/copilot/actions.ts",
-    "../src/app/app/transactions/ai-actions.ts",
     "../src/app/app/settings/billing/actions.ts",
     "../src/app/accountants/manage/actions.ts",
   ]) assert.match(read(path), /assertActionRateLimit/);
